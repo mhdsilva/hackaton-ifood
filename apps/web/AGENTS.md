@@ -4,7 +4,7 @@ Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávi
 
 ## Contexto e estado atual
 
-O setup implementado usa Next.js com App Router, React, TypeScript estrito, Tailwind CSS e shadcn/ui. A rota `/` é uma página provisória com variantes de um único `Button` compartilhado. O design final, a jornada da Party, mocks de interação, integração API/MCP e animações ainda serão implementados.
+O setup implementado usa Next.js com App Router, React, TypeScript estrito, Tailwind CSS e shadcn/ui. A rota `/` é uma página provisória com acesso à vitrine em `/dev/components`, que demonstra variantes, tamanhos e estados de um único `Button` compartilhado. A vitrine é uma ferramenta de desenvolvimento, fora da jornada final do app. Acrescentar componentes conforme forem necessários nas telas e atualizar os exemplos quando o design do Figma for aplicado. O design final, a jornada da Party, mocks de interação, integração API/MCP e animações ainda serão implementados. Conforme alinhamento com Matheus, a API ainda não está pronta para uso pelo frontend; começar a jornada com mocks tipados até a integração ser liberada.
 
 O monorepo possui npm workspaces, API em memória, contratos TypeScript e uma fixture compartilhada. O recorte de produto atual vai de criar/entrar na Party até `READY_FOR_THEME`, passando pelo fechamento do grupo e questionário. Carrinhos, pedidos, entregas, jogo e retrospectiva estão fora deste checkpoint. Os scripts do frontend já existem; o build da raiz contempla API e web, e `build:api` preserva o build exclusivo do backend.
 
