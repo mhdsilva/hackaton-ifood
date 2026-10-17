@@ -61,7 +61,7 @@ function bearerToken(request: IncomingMessage): string {
   return authorization.slice(7).trim();
 }
 
-async function handle(
+async function routeRequest(
   request: IncomingMessage,
   response: ServerResponse,
   service: PartyService,
@@ -133,32 +133,43 @@ async function handle(
   }
 }
 
+export async function handlePartyRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  service: PartyService,
+  options: PartyServerOptions,
+): Promise<void> {
+  try {
+    await routeRequest(request, response, service, options);
+  } catch (error: unknown) {
+    if (error instanceof PartyError) {
+      const body: ApiErrorBody = {
+        error: {
+          code: error.code,
+          message: error.message,
+          ...(error.details ? { details: error.details } : {}),
+        },
+      };
+      sendJson(response, error.statusCode, body, options.allowedOrigin);
+      return;
+    }
+
+    console.error(error);
+    sendJson(
+      response,
+      500,
+      { error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } } satisfies ApiErrorBody,
+      options.allowedOrigin,
+    );
+  }
+}
+
 export function createPartyServer(
   service: PartyService,
   options: PartyServerOptions,
 ): Server {
   return createServer((request, response) => {
-    handle(request, response, service, options).catch((error: unknown) => {
-      if (error instanceof PartyError) {
-        const body: ApiErrorBody = {
-          error: {
-            code: error.code,
-            message: error.message,
-            ...(error.details ? { details: error.details } : {}),
-          },
-        };
-        sendJson(response, error.statusCode, body, options.allowedOrigin);
-        return;
-      }
-
-      console.error(error);
-      sendJson(
-        response,
-        500,
-        { error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } } satisfies ApiErrorBody,
-        options.allowedOrigin,
-      );
-    });
+    void handlePartyRequest(request, response, service, options);
   });
 }
 
