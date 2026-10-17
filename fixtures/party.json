@@ -1,0 +1,39 @@
+{
+  "party": {
+    "id": "party-123",
+    "code": "CAOS42",
+    "name": "Caos Crocante",
+    "status": "REVIEWING_CARTS"
+  },
+  "participants": [
+    {
+      "id": "ana",
+      "name": "Ana",
+      "budget": 35,
+      "restrictions": ["vegetarian"],
+      "cartStatus": "ready",
+      "orderStatus": null,
+      "total": 31.9,
+      "etaMinutes": 38
+    },
+    {
+      "id": "bruno",
+      "name": "Bruno",
+      "budget": 40,
+      "restrictions": [],
+      "cartStatus": "pending",
+      "orderStatus": null,
+      "total": null,
+      "etaMinutes": null
+    }
+  ],
+  "mission": {
+    "name": "Sobrevivência Crocante",
+    "mode": "competitive",
+    "roles": [
+      "item_crocante",
+      "bebida_desconhecida",
+      "item_surpresa"
+    ]
+  }
+}

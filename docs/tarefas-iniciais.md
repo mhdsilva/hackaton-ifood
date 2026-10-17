@@ -327,10 +327,10 @@ configuração de integração e deploy
 
 ### Tarefas
 
-- [ ] Criar a estrutura inicial do repositório.
-- [ ] Publicar a fixture e congelar o contrato do sprint.
-- [ ] Definir os tipos compartilhados.
-- [ ] Criar uma API em memória:
+- [x] Criar a estrutura inicial do repositório.
+- [x] Publicar a fixture e congelar o contrato do sprint.
+- [x] Definir os tipos compartilhados.
+- [x] Criar uma API em memória:
 
 ```text
 POST /parties
@@ -343,7 +343,7 @@ POST /parties/:id/order-status
 POST /parties/:id/advance
 ```
 
-- [ ] Implementar os estados:
+- [x] Implementar os estados:
 
 ```text
 LOBBY
@@ -357,15 +357,15 @@ PLAYING
 COMPLETED
 ```
 
-- [ ] Aplicar as regras mínimas:
+- [x] Aplicar as regras mínimas:
   - a Party começa em `LOBBY`;
   - dois participantes permitem avançar;
   - todos precisam responder ao questionário;
   - cada pessoa confirma individualmente;
   - a missão é liberada quando todos recebem;
   - `advance` permite controlar a demonstração.
-- [ ] Manter uma lista de bloqueios e decisões.
-- [ ] Impedir mudanças de escopo durante o sprint.
+- [x] Manter uma lista de bloqueios e decisões em `docs/desenvolvimento.md`.
+- [x] Impedir mudanças de escopo durante o sprint com contratos congelados até o checkpoint.
 
 ### Entregável do checkpoint
 

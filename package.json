@@ -1,0 +1,19 @@
+{
+  "name": "sidequest-party",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @sidequest/contracts && npm run build --workspace @sidequest/api",
+    "dev:api": "npm run dev --workspace @sidequest/api",
+    "start:api": "npm run start --workspace @sidequest/api"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

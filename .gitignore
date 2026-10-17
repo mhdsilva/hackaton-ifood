@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.*
+
+# Materiais de referência locais: leitura apenas, nunca versionar.
+Ifood apresentação_original.txt
+index-v2.html
