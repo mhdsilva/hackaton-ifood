@@ -30,4 +30,6 @@ export interface McpOAuthProvider {
   readonly mode: McpOAuthMode;
   createAuthorizationUrl(input: OAuthAuthorizationInput): string;
   exchangeCode(input: OAuthExchangeInput): Promise<OAuthTokenResponse>;
+  /** Opcional: o provider `demo` não renova tokens. */
+  refreshTokens?(refreshToken: string): Promise<OAuthTokenResponse>;
 }

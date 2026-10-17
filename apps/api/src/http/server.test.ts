@@ -4,6 +4,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable, Writable } from "node:stream";
 import { test } from "node:test";
 
+import { createDemoIntegration, type PartyAgentIntegration } from "../agent/integration.js";
+import { AgentError } from "../agent/pick-address.js";
 import { McpOAuthFlow } from "../mcp/oauth-flow.js";
 import type {
   McpOAuthProvider,
@@ -62,6 +64,7 @@ interface TestApi {
   service: PartyService;
   sessions: McpSessionRegistry;
   oauth: McpOAuthFlow;
+  agent?: PartyAgentIntegration;
 }
 
 class MemoryResponse extends Writable {
@@ -121,7 +124,7 @@ async function request(
     incoming,
     response as unknown as ServerResponse,
     api.service,
-    { allowedOrigins, frontendUrl, oauth: api.oauth } as any,
+    { allowedOrigins, frontendUrl, oauth: api.oauth, agent: api.agent } as any,
   );
   await finished;
   return response;
@@ -308,12 +311,205 @@ test("completes OAuth without exposing tokens and rejects a foreign Party token"
   assert.equal(replay.json().error.code, "OAUTH_STATE_INVALID");
 });
 
-test("only allows the demo OAuth mode until iFood homologates the agent", () => {
+test("accepts the iFood OAuth mode only with the agent configuration", () => {
   assert.equal(resolveMcpOAuthMode(undefined), "demo");
   assert.equal(resolveMcpOAuthMode("demo"), "demo");
   assert.equal(resolveMcpOAuthMode(" DEMO "), "demo");
-  assert.throws(() => resolveMcpOAuthMode("ifood"), /não está implementado/);
+  assert.throws(() => resolveMcpOAuthMode("ifood", {}), /IFOOD_CLIENT_ID/);
+  assert.equal(
+    resolveMcpOAuthMode("ifood", {
+      IFOOD_CLIENT_ID: "client",
+      IFOOD_CLIENT_SECRET: "secret",
+      PUBLIC_API_URL: "https://api.example",
+    }),
+    "ifood",
+  );
   assert.throws(() => resolveMcpOAuthMode("bogus"), /inválido/);
+});
+
+async function createHostAndAuthorize(api: TestApi) {
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const authorization = await request(
+    api,
+    "POST",
+    `/parties/${host.party.party.id}/mcp-connection/authorize`,
+    {},
+    host.participantToken,
+  );
+  const state = new URL(authorization.json().authorizationUrl).searchParams.get("state");
+  assert.ok(state);
+  return { host, state };
+}
+
+test("completes OAuth on the single callback, finding the Party from state", async () => {
+  const api = createApi();
+  const { host, state } = await createHostAndAuthorize(api);
+
+  const callback = await request(
+    api,
+    "GET",
+    `/mcp-connection/callback?code=approved&state=${encodeURIComponent(state)}`,
+  );
+
+  assert.equal(callback.statusCode, 302);
+  assert.equal(
+    callback.responseHeaders.get("location"),
+    `${frontendUrl}?partyId=${host.party.party.id}&mcp=connected`,
+  );
+  assert.equal(api.sessions.get(host.party.party.id, "ana")?.accessToken, "private-access-token");
+});
+
+test("serves the callback on the path registered in the iFood agent", async () => {
+  const api = createApi();
+  const { state } = await createHostAndAuthorize(api);
+  const options = { allowedOrigins: [allowedOrigin], frontendUrl, oauth: api.oauth, callbackPath: "/callback" };
+  const run = async (path: string) => {
+    const incoming = Object.assign(Readable.from([]), {
+      method: "GET",
+      url: path,
+      headers: { origin: allowedOrigin },
+    }) as unknown as IncomingMessage;
+    const response = new MemoryResponse();
+    const finished = once(response, "finish");
+    await handlePartyRequest(incoming, response as unknown as ServerResponse, api.service, options);
+    await finished;
+    return response;
+  };
+
+  assert.equal((await run(`/mcp-connection/callback?code=x&state=${state}`)).statusCode, 404);
+  assert.equal((await run(`/callback?code=approved&state=${encodeURIComponent(state)}`)).statusCode, 302);
+});
+
+test("marks the connection as error when the iFood read check fails", async () => {
+  const api: TestApi = {
+    ...createApi(),
+    agent: {
+      validateConnection: async () => "error",
+      resolveOptions: async () => {
+        throw new Error("unused");
+      },
+    },
+  };
+  const { host, state } = await createHostAndAuthorize(api);
+
+  const callback = await request(
+    api,
+    "GET",
+    `/mcp-connection/callback?code=approved&state=${encodeURIComponent(state)}`,
+  );
+
+  assert.equal(
+    callback.responseHeaders.get("location"),
+    `${frontendUrl}?partyId=${host.party.party.id}&mcp=error`,
+  );
+  const snapshot = await request(api, "GET", `/parties/${host.party.party.id}`);
+  assert.equal(snapshot.json().participants[0].mcpConnectionStatus, "error");
+});
+
+test("returns simulated local options in demo mode for the token owner", async () => {
+  const api: TestApi = { ...createApi(), agent: createDemoIntegration() };
+  const { host } = await createHostAndAuthorize(api);
+  const path = `/parties/${host.party.party.id}/options`;
+
+  const unauthenticated = await request(api, "POST", path, { theme: "italiano", budget: 60 });
+  assert.equal(unauthenticated.statusCode, 401);
+
+  const invalid = await request(api, "POST", path, { theme: "", budget: 60 }, host.participantToken);
+  assert.equal(invalid.statusCode, 400);
+
+  const options = await request(
+    api,
+    "POST",
+    path,
+    { theme: "italiano", budget: 60, restrictions: [] },
+    host.participantToken,
+  );
+  assert.equal(options.statusCode, 200);
+  assert.equal(options.json().participantId, "ana");
+  assert.equal(options.json().source, "simulated");
+  assert.ok(options.json().options.length > 0);
+});
+
+test("demo checkout: cart, consent-gated order and tracking per participant", async () => {
+  let now = Date.parse("2026-10-17T20:00:00Z");
+  const api: TestApi = { ...createApi(), agent: createDemoIntegration(() => now) };
+  const { host } = await createHostAndAuthorize(api);
+  const partyId = host.party.party.id;
+  const token = host.participantToken;
+
+  const options = (
+    await request(api, "POST", `/parties/${partyId}/options`, { theme: "italiano", budget: 60 }, token)
+  ).json();
+  const cart = await request(api, "POST", `/parties/${partyId}/cart`, { option: options.options[0] }, token);
+  assert.equal(cart.statusCode, 200);
+  assert.equal(cart.json().paymentMethod, "PIX");
+  assert.equal(cart.json().simulated, true);
+
+  const invalidCart = await request(api, "POST", `/parties/${partyId}/cart`, { option: {} }, token);
+  assert.equal(invalidCart.statusCode, 400);
+
+  const noConsent = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/order`,
+    { cartId: cart.json().cartId },
+    token,
+  );
+  assert.equal(noConsent.statusCode, 400);
+  assert.equal(noConsent.json().error.code, "CONSENT_REQUIRED");
+
+  const order = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/order`,
+    { cartId: cart.json().cartId, userConsent: true },
+    token,
+  );
+  assert.equal(order.statusCode, 201);
+  const orderId = order.json().orderId;
+
+  const first = await request(api, "GET", `/parties/${partyId}/order/${orderId}`, undefined, token);
+  assert.deepEqual(
+    [first.json().statusCode, first.json().terminal, first.json().retryAfterSeconds],
+    ["CONFIRMED", false, 5],
+  );
+  now += 61_000;
+  const last = await request(api, "GET", `/parties/${partyId}/order/${orderId}`, undefined, token);
+  assert.deepEqual([last.json().statusCode, last.json().terminal], ["CONCLUDED", true]);
+
+  const unauthenticated = await request(api, "GET", `/parties/${partyId}/order/${orderId}`);
+  assert.equal(unauthenticated.statusCode, 401);
+});
+
+test("asks the participant to choose an address without exposing it", async () => {
+  const api: TestApi = {
+    ...createApi(),
+    agent: {
+      resolveOptions: async () => {
+        throw new AgentError("ADDRESS_SELECTION_REQUIRED", "Escolha em qual endereço quer receber", {
+          candidates: [{ addressId: "a", label: "Casa", isLastUsed: true }],
+        });
+      },
+    },
+  };
+  const { host } = await createHostAndAuthorize(api);
+
+  const response = await request(
+    api,
+    "POST",
+    `/parties/${host.party.party.id}/options`,
+    { theme: "italiano", budget: 60 },
+    host.participantToken,
+  );
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().error.code, "ADDRESS_SELECTION_REQUIRED");
+  assert.equal(response.json().error.details.candidates[0].label, "Casa");
 });
 
 test("marks the participant as error when token exchange fails", async () => {

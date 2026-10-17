@@ -1,0 +1,123 @@
+{
+  "_meta": {
+    "capturedAt": "2026-10-17",
+    "note": "Respostas reais do Cart MCP (carrinho criado sem envio de pedido). Removidos deliveryAddress e descrições longas. O total muda depois de setCartDelivery: o iFood aplica benefícios só nessa etapa."
+  },
+  "createCart": {
+    "cartId": "3901f018-d1c8-4ac1-9c08-ffd349dd9d2a",
+    "merchant": {
+      "merchantId": "6cd1f53c-b9ca-4497-8c40-f3f63b8c56f2",
+      "merchantName": "Italin House Macarrão Gourmet - São Carlos",
+      "orderMinimumPrice": 19.9
+    },
+    "items": [
+      {
+        "itemId": "de94e756-7501-45a6-a0cd-22b33f11066d",
+        "cartItemId": "73c54da1-a72c-4e02-a842-d18457820944",
+        "quantity": 1,
+        "unitPrice": 50.9,
+        "name": "Macarrão ou Nhoque - Ragu de Costela",
+        "options": [
+          { "optionId": "d3dcfe25-cdca-4964-9dbd-027b42745787", "quantity": 1, "name": "Ragu de Costela Box P (aprox. 450g)" },
+          { "optionId": "92818ed2-314b-41a4-8ef5-55b290745970", "quantity": 1, "name": "Talharim" }
+        ]
+      }
+    ],
+    "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "deliveryMethodName": "Padrão",
+      "fee": 0,
+      "estimatedMinutes": { "min": 40, "max": 50 }
+    },
+    "fees": [{ "name": "Taxa de serviço", "amount": 1.27 }],
+    "summary": {
+      "totalAmount": 52.17,
+      "subtotalAmount": 50.9,
+      "deliveryFeeAmount": 0,
+      "feeTotalAmount": 1.27,
+      "benefitsTotalAmount": 0,
+      "voucherTotalAmount": 0
+    }
+  },
+  "getCartDeliveryMethods": {
+    "cartId": "3901f018-d1c8-4ac1-9c08-ffd349dd9d2a",
+    "deliveryMethods": [
+      {
+        "deliveryMethodId": "DEFAULT",
+        "deliveryMethodMode": "DELIVERY",
+        "deliveryMethodName": "Padrão",
+        "fee": 0,
+        "estimatedMinutes": { "min": 40, "max": 50 }
+      },
+      {
+        "deliveryMethodId": "TAKEOUT",
+        "deliveryMethodMode": "TAKEOUT",
+        "deliveryMethodName": "Retirada",
+        "fee": 0,
+        "estimatedMinutes": { "min": 25, "max": 35 }
+      }
+    ]
+  },
+  "listPaymentMethods": {
+    "paymentMethods": [
+      {
+        "paymentMethodId": "75354fd8-e916-41db-9286-93be2232efe2",
+        "kind": "PIX",
+        "displayName": "Pix",
+        "brand": "PIX"
+      }
+    ],
+    "agentHints": {
+      "nextStepBeforeCheckout": "Call tool setCartPayment with the payment data selected by the user"
+    }
+  },
+  "submitOrder": {
+    "orderId": "0c1046a0-b22b-448d-9797-6db25f62e9da",
+    "agentHints": {
+      "nextStep": "Call tool `trackOrder` with orderId=0c1046a0-b22b-448d-9797-6db25f62e9da to follow up the user's order status"
+    }
+  },
+  "trackOrderPixCreated": {
+    "_note": "Código Pix encurtado e invalidado para a fixture.",
+    "status": {
+      "code": "PIX_CREATED",
+      "description": "Event published when PIX is created - QR Code: 000201FIXTURE-PIX-CODE-NOT-PAYABLE"
+    },
+    "statusHistory": [
+      {
+        "code": "PIX_CREATED",
+        "description": "Event published when PIX is created - QR Code: 000201FIXTURE-PIX-CODE-NOT-PAYABLE (2026-10-17T23:23:44.511Z)"
+      }
+    ],
+    "agentHints": {
+      "retryMessage": "Please call again in 60 seconds for updates",
+      "moreStatusEvents": null,
+      "pollingStop": null,
+      "stopMessage": null
+    }
+  },
+  "getCart": {
+    "cartId": "3901f018-d1c8-4ac1-9c08-ffd349dd9d2a",
+    "paymentMethod": {
+      "paymentMethodId": "75354fd8-e916-41db-9286-93be2232efe2",
+      "kind": "PIX",
+      "displayName": "Pix",
+      "brand": "PIX"
+    },
+    "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "fee": 0,
+      "estimatedMinutes": { "min": 40, "max": 50 }
+    },
+    "summary": {
+      "totalAmount": 26.72,
+      "subtotalAmount": 50.9,
+      "deliveryFeeAmount": 0,
+      "feeTotalAmount": 1.27,
+      "benefitsTotalAmount": 25.45,
+      "voucherTotalAmount": 0
+    }
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "_meta": {
+    "capturedAt": "2026-10-17",
+    "theme": "italiano",
+    "city": "São Carlos, SP",
+    "note": "Respostas reais do iFood MCP, reduzidas e sanitizadas. Sem endereço, coordenadas, addressId, nome, e-mail ou telefone do usuário. Só dados públicos dos estabelecimentos."
+  },
+  "searchOffers": {
+    "massa": {
+      "resultKind": "ITEM",
+      "results": [
+        {
+          "itemId": "de94e756-7501-45a6-a0cd-22b33f11066d",
+          "itemName": "Macarrão ou Nhoque - Ragu de Costela",
+          "unitPrice": 50.9,
+          "promotionalUnitPrice": 38.17,
+          "merchant": {
+            "merchantId": "6cd1f53c-b9ca-4497-8c40-f3f63b8c56f2",
+            "merchantName": "Italin House Macarrão Gourmet - São Carlos",
+            "isOpen": true,
+            "minimumOrderAmount": 19.9,
+            "reviewRating": 4.8,
+            "ratingCount": 627,
+            "straightLineDistanceKm": 0.19,
+            "deliveryMethod": {
+              "deliveryMethodId": "DEFAULT",
+              "deliveryMethodMode": "DELIVERY",
+              "estimatedMinutes": { "min": 20, "max": 30 },
+              "fee": 0,
+              "promotionalFee": 0
+            }
+          }
+        }
+      ]
+    },
+    "pizza": {
+      "resultKind": "ITEM",
+      "results": [
+        {
+          "itemId": "f3d10467-a8d8-418e-8ac5-57045ce03b35",
+          "itemName": "1 pizza 22cm + 1 Tomatinho Doce",
+          "unitPrice": 43.9,
+          "promotionalUnitPrice": 19.9,
+          "merchant": {
+            "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+            "merchantName": "Tomate Cru Pizzaria",
+            "isOpen": true,
+            "minimumOrderAmount": 29.9,
+            "reviewRating": 4.9,
+            "ratingCount": 862,
+            "straightLineDistanceKm": 0.31,
+            "deliveryMethod": {
+              "deliveryMethodId": "DEFAULT",
+              "deliveryMethodMode": "DELIVERY",
+              "estimatedMinutes": { "min": 24, "max": 34 },
+              "fee": 6.99,
+              "promotionalFee": 0
+            }
+          }
+        },
+        {
+          "itemId": "2033a0fa-2a13-4641-8b07-843efe5df2f0",
+          "itemName": "Pizza Grande | 1/2 Frango C/ Catupiry 1/2 Calabresa",
+          "unitPrice": 56.9,
+          "promotionalUnitPrice": 42.68,
+          "merchant": {
+            "merchantId": "31131a36-760e-4a12-b724-f1d20096f123",
+            "merchantName": "Pizzaria Achei Pizza",
+            "isOpen": true,
+            "minimumOrderAmount": 35,
+            "reviewRating": 4.8,
+            "ratingCount": 225,
+            "straightLineDistanceKm": 0.18,
+            "deliveryMethod": {
+              "deliveryMethodId": "DEFAULT",
+              "deliveryMethodMode": "DELIVERY",
+              "estimatedMinutes": { "min": 60, "max": 70 },
+              "fee": 0,
+              "promotionalFee": 0
+            }
+          }
+        }
+      ]
+    }
+  },
+  "getItem": {
+    "de94e756-7501-45a6-a0cd-22b33f11066d": {
+      "itemId": "de94e756-7501-45a6-a0cd-22b33f11066d",
+      "itemName": "Macarrão ou Nhoque - Ragu de Costela",
+      "merchantId": "6cd1f53c-b9ca-4497-8c40-f3f63b8c56f2",
+      "merchantMinimumOrderAmount": 19.9,
+      "unitPrice": 50.9,
+      "promotionalUnitPrice": 38.17,
+      "optionGroups": [
+        {
+          "optionGroupId": "66a6d016-59ce-4265-85c6-5289496b1bc9",
+          "name": "Escolha o Tamanho do seu Box - Ragu",
+          "minSelections": 1,
+          "maxSelections": 1,
+          "options": [
+            { "optionId": "d3dcfe25-cdca-4964-9dbd-027b42745787", "name": "Ragu de Costela Box P (aprox. 450g)", "additionalPrice": 0 },
+            { "optionId": "43539502-2ac9-492e-a8e8-ba724c0e1f7e", "name": "Ragu de Costela Box G (aprox. 800g)", "additionalPrice": 12 }
+          ]
+        },
+        {
+          "optionGroupId": "371a1e66-b3f8-40fa-a680-8522311ebbca",
+          "name": "Escolha sua Massa!",
+          "minSelections": 1,
+          "maxSelections": 1,
+          "options": [
+            { "optionId": "92818ed2-314b-41a4-8ef5-55b290745970", "name": "Talharim", "additionalPrice": 0 },
+            { "optionId": "dcf01446-5de0-4bd2-85f1-f033270693a2", "name": "Penne", "additionalPrice": 0 },
+            { "optionId": "bb04b79a-218b-4d4a-a7ad-10b68c2fd1a4", "name": "Nhoque Tradicional", "additionalPrice": 10 }
+          ]
+        },
+        {
+          "optionGroupId": "af763b34-dfc1-4b3a-ab31-a5abda66c82c",
+          "name": "Turbine seu Box - Ragu de Costela",
+          "minSelections": 0,
+          "maxSelections": 6,
+          "options": [
+            { "optionId": "943014cf-ac56-4ad0-b087-d9a586fcf343", "name": "Extra Queijo - (aprox. 45g)", "additionalPrice": 6 }
+          ]
+        }
+      ]
+    },
+    "f3d10467-a8d8-418e-8ac5-57045ce03b35": {
+      "itemId": "f3d10467-a8d8-418e-8ac5-57045ce03b35",
+      "itemName": "1 pizza 22cm + 1 Tomatinho Doce",
+      "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+      "merchantMinimumOrderAmount": 29.9,
+      "unitPrice": 43.9,
+      "promotionalUnitPrice": 19.9,
+      "optionGroups": [
+        {
+          "optionGroupId": "9a3ce4c6-db6d-4598-abbd-c7e7d906a0de",
+          "name": "Escolha sua Pizza",
+          "minSelections": 1,
+          "maxSelections": 1,
+          "options": [
+            { "optionId": "e6f261eb-55c7-481c-9e69-7167e44beb45", "name": "Mussarela", "additionalPrice": 0 },
+            { "optionId": "6bdbe9f5-35d7-4c96-aa41-5c4e0ca80008", "name": "Marguerita", "additionalPrice": 2 },
+            { "optionId": "c93b758e-2cff-4fef-87ab-6305069cedfe", "name": "Calabresa", "additionalPrice": 5 }
+          ]
+        },
+        {
+          "optionGroupId": "1a390e60-aee7-475f-be11-1d72e6d67a40",
+          "name": "Escolha seu recheio",
+          "minSelections": 1,
+          "maxSelections": 1,
+          "options": [
+            { "optionId": "56703c55-ade7-454d-bb10-d8822ebbc5c6", "name": "Chocolate ao Leite", "additionalPrice": 0 },
+            { "optionId": "2c73f469-1c82-42a5-8cc9-181f74d913f5", "name": "Nutella", "additionalPrice": 0 }
+          ]
+        },
+        {
+          "optionGroupId": "ae15882b-c19d-4b11-b186-8362b8fced60",
+          "name": "Que tal uma bebida?",
+          "minSelections": 0,
+          "maxSelections": 1,
+          "options": [
+            { "optionId": "5f6e5a75-f19e-4847-8c71-8db8ad736688", "name": "Coca Cola Lata", "additionalPrice": 8.9 }
+          ]
+        }
+      ]
+    }
+  }
+}

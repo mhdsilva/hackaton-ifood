@@ -13,10 +13,7 @@ export class DemoMcpOAuthProvider implements McpOAuthProvider {
   constructor(private readonly publicApiUrl: string) {}
 
   createAuthorizationUrl(input: OAuthAuthorizationInput): string {
-    const url = new URL(
-      `/parties/${encodeURIComponent(input.partyId)}/mcp-connection/callback`,
-      this.publicApiUrl,
-    );
+    const url = new URL("/mcp-connection/callback", this.publicApiUrl);
     url.searchParams.set("code", "demo-approved");
     url.searchParams.set("state", input.state);
     return url.toString();

@@ -4,6 +4,51 @@
 > (`https://mcp-developer.ifood.com.br`). Este documento é a referência de como conectar a
 > Party ao iFood MCP. Ele substitui o modelo antigo de "cada participante cola uma chave".
 
+## Verificado na prática (17/10/2026)
+
+Os valores abaixo foram confirmados com o agente do time e com uma conta real, pelo provider de
+`apps/api/src/ifood/`. **Quando divergirem do restante deste documento, valem estes.**
+
+| Item | Valor real |
+| --- | --- |
+| Endpoint MCP | `https://consumer-mcp.ifood.com.br/marketplace` — um único endpoint com as 23 tools (User, Discovery, Cart, Order) |
+| Servidor de autorização | `https://id.ifood.com.br`: `/authorize`, `/token`, `/revoke`, `/introspect`, `/userinfo` |
+| Grants aceitos | `authorization_code` e `refresh_token` (não há `client_credentials` nem device code no metadata) |
+| PKCE | obrigatório, `S256` |
+| Parâmetro extra | `resource=https://consumer-mcp.ifood.com.br/marketplace` no authorize |
+| Autenticação do cliente | `client_secret_basic` (usado pelo provider) ou `client_secret_post` |
+| `scope` | não precisa ser enviado: o iFood concede os escopos marcados no agente (17 na nossa conta) |
+| Escopos concedidos | `mcp.user`, `mcp.user.basic.read`, `mcp.user.advanced.read`, `mcp.user.behavior.read`, `mcp.user.addresses.read`, `mcp.user.addresses.write`, `mcp.discovery`, `mcp.discovery.search.read`, `mcp.discovery.browse.read`, `mcp.discovery.recommendation.read`, `mcp.discovery.details.read`, `mcp.cart`, `mcp.cart.read`, `mcp.cart.write`, `mcp.cart.checkout`, `mcp.cart.payment`, `mcp.orders.read` |
+| Redirect URI | precisa estar cadastrada no agente. Em `localhost`, só a **porta** pode variar; o **caminho** tem de ser idêntico (`/mcp-connection/callback` foi recusado com `invalid_request` enquanto só `/callback` estava cadastrado). Cadastrar `http://localhost:8080/mcp-connection/callback` para dev e `https://<api>/mcp-connection/callback` para a demo |
+| Callback da Party | **único**: `PUBLIC_API_URL/mcp-connection/callback`. A Party e o participante vêm do `state`, nunca do caminho |
+| Homologação | não foi bloqueio: o agente do time já tem Client ID e Secret e funciona |
+| Transporte MCP | Streamable HTTP (JSON-RPC 2.0); `initialize` responde em SSE e devolve `Mcp-Session-Id` |
+
+### Inconsistência de `issuer`
+
+`https://consumer-mcp.ifood.com.br/.well-known/oauth-protected-resource/marketplace` anuncia o
+servidor `https://id.ifood.com.br`, mas `https://id.ifood.com.br/.well-known/openid-configuration`
+declara `issuer: https://id.ifood.com.br/3p`, e `/.well-known/oauth-authorization-server`
+responde `400`. Clientes que fazem descoberta estrita (RFC 8414 §3.3) abortam com
+`Issuer mismatch` — foi o que aconteceu com o opencode. O nosso provider **não faz descoberta**:
+monta `<IFOOD_AUTH_BASE_URL>/authorize` e `/token` a partir da configuração.
+
+### Configuração do provider
+
+| Variável | Obrigatória | Padrão |
+| --- | --- | --- |
+| `IFOOD_CLIENT_ID` | sim | — |
+| `IFOOD_CLIENT_SECRET` | sim | — |
+| `PUBLIC_API_URL` ou `IFOOD_REDIRECT_URI` | um dos dois | redirect = `PUBLIC_API_URL/mcp-connection/callback` |
+| `IFOOD_AUTH_BASE_URL` | não | `https://id.ifood.com.br` |
+| `IFOOD_MCP_URL` | não | `https://consumer-mcp.ifood.com.br/marketplace` |
+
+### Spike de sessões (ADR 0001)
+
+`apps/api/src/ifood/spike-sessions.ts` faz o login de N contas e chama `getUser` intercalado.
+Resultado em 17/10/2026 com **uma** conta: tokens obtidos pelo nosso provider, três rodadas,
+mesmo dono, zero vazamentos. **Falta repetir com duas contas** para provar o isolamento.
+
 ## Resumo em uma frase
 
 O iFood MCP não usa chave colada por pessoa. Ele usa **OAuth 2.1 com PKCE**: o time registra
@@ -30,6 +75,9 @@ Consequências:
   agente nunca manipula o `userId` diretamente.
 
 ## Pré-requisitos no portal (uma vez, pelo time)
+
+> Texto do portal, mantido como referência. Na prática, o item 3 não bloqueou: ver a seção
+> "Verificado na prática".
 
 1. Criar conta de desenvolvedor em `https://mcp-developer.ifood.com.br/sign-up`. O perfil
    **Personal** libera o sandbox na hora; o **Professional** passa por validação (24–48 h).
@@ -65,7 +113,7 @@ A própria doc recomenda **Pending Action** para "AI Agent / Bot" e "Server / CL
 exatamente o papel do backend da Party. **Web Login** é o encaixe mais natural no fluxo
 "entrar na Party pelo navegador do celular".
 
-## Fluxo OAuth 2.1 + PKCE (detalhado)
+## Fluxo OAuth 2.1 + PKCE (como o provider faz)
 
 ```
 1. Backend gera, por tentativa de conexão:
@@ -74,14 +122,14 @@ exatamente o papel do backend da Party. **Web Login** é o encaixe mais natural 
      state          = string aleatória vinculada a partyId + participantId
 
 2. Backend redireciona o navegador do participante para:
-     GET https://dev-auth.ifood.com/authorize
-       ?client_id=<client_id>
-       &redirect_uri=<callback registrado>
-       &response_type=code
-       &scope=openid profile email user:read discovery:read cart:read cart:write order:read
+     GET https://id.ifood.com.br/authorize
+       ?response_type=code
+       &client_id=<client_id>
+       &redirect_uri=<PUBLIC_API_URL>/mcp-connection/callback
        &code_challenge=<code_challenge>
        &code_challenge_method=S256
        &state=<state>
+       &resource=https://consumer-mcp.ifood.com.br/marketplace
 
 3. O participante autentica no iFood e consente com os escopos.
 
@@ -89,14 +137,13 @@ exatamente o papel do backend da Party. **Web Login** é o encaixe mais natural 
      <callback>?code=<authorization_code>&state=<state>
 
 5. Backend valida o state, então troca o code por tokens:
-     POST https://dev-auth.ifood.com/token
+     POST https://id.ifood.com.br/token
+       Authorization: Basic base64(client_id:client_secret)   # só no backend
        Content-Type: application/x-www-form-urlencoded
        grant_type=authorization_code
-       client_id=<client_id>
-       client_secret=<client_secret>      # confidencial; só no backend
        code=<authorization_code>
        code_verifier=<code_verifier>
-       redirect_uri=<callback registrado>
+       redirect_uri=<o mesmo do passo 2>
 
 6. Resposta: { access_token, refresh_token, expires_in, ... }
      Backend guarda os tokens no registro privado (partyId + participantId)
@@ -124,12 +171,13 @@ Escopos MCP relevantes para a Party:
 | `cart:payment` | Consultar formas de pagamento |
 | `order:read` | Consultar pedidos e status |
 
-Pedir **somente** o necessário. Os nomes técnicos exatos (por exemplo `mcp.cart.write`)
-só são liberados **após a homologação** do agente.
+Os nomes acima são os da documentação geral. Os nomes **reais** concedidos ao agente são os
+`mcp.*` listados em "Verificado na prática"; o `scope` não precisa ser enviado no authorize.
 
 ## MCPs e ferramentas (ponta a ponta de um pedido)
 
-Quatro servidores compostos, todos em `https://dev-api-mcp.ifood.com`:
+Na prática, as quatro famílias abaixo ficam **no mesmo endpoint**,
+`https://consumer-mcp.ifood.com.br/marketplace`. As bases `/v3/*` são da documentação geral:
 
 | MCP | Base | Ferramentas principais |
 | --- | --- | --- |
@@ -150,13 +198,13 @@ createCart → addItemToCart → getCartDeliveryMethods → setCartDelivery
 
 ## Ambientes
 
-| Ambiente | Servidor de autenticação | Gateway MCP |
+| Uso | Servidor de autenticação | MCP |
 | --- | --- | --- |
-| Desenvolvimento (sandbox) | `https://dev-auth.ifood.com` | `https://dev-api-mcp.ifood.com` |
-| Produção | `https://auth.ifood.com` | `https://api-mcp.ifood.com` |
+| **Verificado (usado pelo provider)** | `https://id.ifood.com.br` | `https://consumer-mcp.ifood.com.br/marketplace` |
+| Citado na doc geral, não verificado | `https://dev-auth.ifood.com`, `https://auth.ifood.com` | `https://dev-api-mcp.ifood.com`, `https://api-mcp.ifood.com` |
 
-Endpoints de autenticação: `GET /authorize`, `POST /token`, `GET /userinfo`,
-`POST /introspect`, `POST /revoke`, `POST /device` (device code).
+Endpoints de autenticação verificados: `GET /authorize`, `POST /token`, `GET /userinfo`,
+`POST /introspect`, `POST /revoke`. O metadata não anuncia device code.
 
 ## Tokens: validade, refresh e revogação
 
@@ -165,10 +213,11 @@ Endpoints de autenticação: `GET /authorize`, `POST /token`, `GET /userinfo`,
 - **Renovar com 5 minutos de folga**, sem esperar o `401`.
   ```
   POST /token
+    Authorization: Basic base64(client_id:client_secret)
     grant_type=refresh_token
-    client_id=<client_id>
     refresh_token=<refresh_token>
   ```
+  Se o iFood não devolver um `refresh_token` novo, o anterior continua valendo.
 - Logout/revogação: `POST /revoke` com o token → invalida; depois apagar o token do registro.
 - Guardar tokens em memória no backend, nunca em `localStorage`; o estado público
   (`PartySnapshot`) só expõe `mcpConnectionStatus`.
@@ -184,15 +233,23 @@ Fluxo pretendido, no lugar de `POST /parties/:id/mcp-connection { apiKey }`:
 1. `POST /parties/:id/mcp-connection/authorize` (Bearer `participantToken`)
    → backend gera `state` + PKCE e responde `{ authorizationUrl, status: "validating" }`.
 2. Frontend abre `authorizationUrl` no navegador do participante.
-3. `GET /parties/:id/mcp-connection/callback?code&state` (sem Bearer; o `state` carrega
-   `partyId + participantId`) → backend valida `state`, troca `code` por tokens, guarda no
+3. `GET /mcp-connection/callback?code&state` — **callback único**, sem `:id` no caminho, porque
+   o iFood compara a `redirect_uri` inteira. Sem Bearer; o `state` carrega
+   `partyId + participantId` → backend valida `state`, troca `code` por tokens, guarda no
    registro privado, marca `connected` e redireciona o navegador de volta ao frontend.
+   (Hoje a rota ainda é `/parties/:id/mcp-connection/callback`; a troca é do Matheus.)
 4. `GET /parties/:id` mostra `mcpConnectionStatus` apenas como `not_connected` | `validating` |
    `connected` | `error`.
 
-O registro privado passa a guardar, por `partyId + participantId`, os tokens e seus prazos, e a
-renovar o `access_token` antes de expirar. O `McpSessionRegistry` atual (que guarda uma `apiKey`)
-é apenas o placeholder deste recorte e deve ser substituído por esse armazenamento.
+Peças prontas em `apps/api/src/ifood/`:
+
+| Arquivo | Papel |
+| --- | --- |
+| `index.ts` | `createIfoodProvider(env)` — o que o `server.ts` usa em `MCP_OAUTH_MODE=ifood` |
+| `oauth-provider.ts` | authorize, troca do code e refresh (`IfoodMcpOAuthProvider`) |
+| `client.ts` | `IfoodMcpClient` — um por participante, Bearer por instância, refresh automático |
+| `validate-connection.ts` | `getUser` → `connected` ou `error`, sem expor dados pessoais |
+| `spike-sessions.ts` | prova de várias sessões no mesmo processo |
 
 ## O que NÃO fazer
 
@@ -203,7 +260,8 @@ renovar o `access_token` antes de expirar. O `McpSessionRegistry` atual (que gua
 - Não usar o `client_secret` no frontend; PKCE existe justamente para não precisar dele ali.
 - Não compartilhar token entre participantes: cada chamada MCP usa o token do seu dono.
 - Não submeter pedido sem `userConsent: true` explícito do participante.
-- Não usar contas reais no sandbox: usar a **test account** (pagamento simulado).
+- Preferir a **test account** (pagamento simulado). Em conta real, nunca chamar `submitOrder`
+  sem decisão explícita do grupo e do dono da conta.
 
 ## Referências
 
