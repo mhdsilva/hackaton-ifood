@@ -1,6 +1,6 @@
 # Diretrizes de desenvolvimento do frontend
 
-Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávio no SideQuest Party. O objetivo é entregar uma jornada demonstrável, com estrutura simples e adequada ao hackathon.
+Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávio no iFood Party (anteriormente SideQuest Party). O objetivo é entregar uma jornada demonstrável, com estrutura simples e adequada ao hackathon.
 
 ## Contexto e estado atual
 

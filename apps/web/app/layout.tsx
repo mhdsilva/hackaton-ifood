@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SideQuest Party",
+  title: "iFood Party",
   description: "Experiências compartilhadas entre amigos em endereços diferentes.",
 };
 
