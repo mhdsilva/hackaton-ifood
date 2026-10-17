@@ -11,6 +11,7 @@ import type {
 } from "@sidequest/contracts";
 
 import { ParticipantAccessStore, type ParticipantActor } from "./access.js";
+import { getQuestionnaire, validateAnswers } from "./questionnaire.js";
 import { PartyStore } from "./store.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -147,6 +148,14 @@ export class PartyService {
       input?.questionnaireVersion,
       "questionnaireVersion",
     );
+    const definition = getQuestionnaire(questionnaireVersion);
+    if (!definition) {
+      throw new PartyError(
+        400,
+        "QUESTIONNAIRE_VERSION_UNKNOWN",
+        `Unknown questionnaire version: ${questionnaireVersion}`,
+      );
+    }
     if (
       !input?.answers ||
       typeof input.answers !== "object" ||
@@ -154,6 +163,16 @@ export class PartyService {
       input.completed !== true
     ) {
       throw new PartyError(400, "INVALID_INPUT", "A complete answers object is required");
+    }
+
+    const issues = validateAnswers(definition, input.answers as Record<string, unknown>);
+    if (issues.length > 0) {
+      throw new PartyError(
+        400,
+        "INVALID_ANSWERS",
+        "Some answers are missing or invalid",
+        { issues },
+      );
     }
 
     const participant = snapshot.participants.find(

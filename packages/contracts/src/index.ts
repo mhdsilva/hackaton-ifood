@@ -77,6 +77,7 @@ export interface McpAuthorizationResponse {
 
 export type QuestionnaireQuestionType =
   | "text"
+  | "address"
   | "single_choice"
   | "multi_choice"
   | "scale";

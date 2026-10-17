@@ -14,7 +14,7 @@ function createService(): PartyService {
 function answers(value: string): SubmitAnswersRequest {
   return {
     questionnaireVersion: "v1",
-    answers: { preference: value },
+    answers: { address: value },
     completed: true,
   };
 }
@@ -110,7 +110,7 @@ test("answers are isolated by token and the final answer advances the Party", ()
   );
   assert.equal(afterLast.party.status, "READY_FOR_THEME");
 
-  const replacement = { preference: "risoto" };
+  const replacement = { address: "risoto" };
   const afterReplacement = service.submitAnswers(host.party.party.id, host.participantToken, {
     questionnaireVersion: "v1",
     answers: replacement,
@@ -121,5 +121,58 @@ test("answers are isolated by token and the final answer advances the Party", ()
     afterReplacement.participants.find((participant) => participant.id === "ana")
       ?.questionnaireResponse?.answers,
     replacement,
+  );
+});
+
+test("rejects unknown versions and invalid answers", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  service.join(host.party.party.id, { participant: { id: "bruno", name: "Bruno" } });
+  service.closeMembership(host.party.party.id, host.participantToken);
+  const partyId = host.party.party.id;
+
+  assert.throws(
+    () =>
+      service.submitAnswers(partyId, host.participantToken, {
+        questionnaireVersion: "v9",
+        answers: { address: "casa" },
+        completed: true,
+      }),
+    (error: unknown) =>
+      error instanceof PartyError && error.code === "QUESTIONNAIRE_VERSION_UNKNOWN",
+  );
+
+  assert.throws(
+    () =>
+      service.submitAnswers(partyId, host.participantToken, {
+        questionnaireVersion: "v1",
+        answers: {},
+        completed: true,
+      }),
+    (error: unknown) => error instanceof PartyError && error.code === "INVALID_ANSWERS",
+  );
+
+  assert.throws(
+    () =>
+      service.submitAnswers(partyId, host.participantToken, {
+        questionnaireVersion: "v1",
+        answers: { address: "casa", restrictions: ["inexistente"] },
+        completed: true,
+      }),
+    (error: unknown) => error instanceof PartyError && error.code === "INVALID_ANSWERS",
+  );
+
+  const accepted = service.submitAnswers(partyId, host.participantToken, {
+    questionnaireVersion: "v1",
+    answers: { address: "casa", restrictions: ["vegetariano"] },
+    completed: true,
+  });
+  assert.deepEqual(
+    accepted.participants.find((participant) => participant.id === "ana")
+      ?.questionnaireResponse?.answers,
+    { address: "casa", restrictions: ["vegetariano"] },
   );
 });
