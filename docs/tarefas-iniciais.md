@@ -15,6 +15,9 @@ packages/contracts/**
 apps/api/openapi.yaml
 ```
 
+`apps/api/src/mcp/**` é o fluxo OAuth genérico (PKCE, state, registro); o provider real do iFood é
+do Maeda, em `apps/api/src/ifood/**`. Ver [`docs/coordenacao-maeda.md`](coordenacao-maeda.md).
+
 Tarefas:
 
 - [ ] substituir o contrato antigo pelos estados `OPEN`, `COLLECTING_ANSWERS` e `READY_FOR_THEME`;
@@ -46,7 +49,7 @@ Tarefas que podem começar sem outras decisões:
 - [ ] enviar respostas genéricas sem fixar campos no cliente de API;
 - [ ] exibir o estado da conexão MCP sem expor tokens nem segredos.
 
-## Maeda — isolamento MCP
+## Maeda — provider MCP real e isolamento
 
 Área:
 
@@ -56,15 +59,21 @@ apps/api/src/agent/**
 fixtures/*ifood*.json
 ```
 
+O fluxo OAuth genérico (`apps/api/src/mcp/**`) já está pronto e é do Matheus; a fronteira e o
+contrato estão em [`docs/coordenacao-maeda.md`](coordenacao-maeda.md).
+
 Tarefas:
 
 - [ ] ler [`docs/ifood-mcp.md`](ifood-mcp.md) e confirmar o modelo OAuth 2.1 com os organizadores;
 - [ ] registrar o agente e obter `client_id` + `client_secret` após a homologação;
 - [ ] criar test accounts no sandbox;
+- [ ] implementar o provider real (`apps/api/src/ifood/**`) atrás de `McpOAuthProvider`;
+- [ ] definir `redirectUri` no authorize e no exchange;
+- [ ] implementar o refresh do `access_token` no provider;
+- [ ] ler `IFOOD_CLIENT_ID`/`IFOOD_CLIENT_SECRET`/`IFOOD_AUTH_BASE_URL` do ambiente e ligar `MCP_OAUTH_MODE=ifood`;
 - [ ] executar o spike descrito no [ADR de sessões MCP](adr/0001-uma-sessao-mcp-por-participante.md);
 - [ ] autorizar e provar duas, depois três sessões no mesmo processo;
 - [ ] confirmar autenticação por token, sem variável global;
-- [ ] validar o refresh do `access_token` com o `refresh_token`;
 - [ ] sanitizar respostas antes de criar fixtures;
 - [ ] expor uma validação que não devolva nem registre tokens ou segredos;
 - [ ] documentar o fallback caso a biblioteca use credencial global.
