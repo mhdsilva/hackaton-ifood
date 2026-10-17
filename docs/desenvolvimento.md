@@ -68,32 +68,32 @@ O que falta para produção:
 
 Detalhes do modelo real em [`docs/ifood-mcp.md`](ifood-mcp.md).
 
-## Publicação na Oracle
+## Publicação na Oracle (Coolify/Traefik)
 
-No servidor, configure DNS para o IP da instância e execute:
+O servidor Oracle já roda o Coolify, que opera o Traefik nas portas 80 e 443. Não há proxy no `compose.yaml`: o Coolify gera as labels de roteamento e o certificado TLS.
 
-```bash
-API_HOST=api.exemplo.com \
-PUBLIC_API_URL=https://api.exemplo.com \
-CORS_ORIGIN=https://party.exemplo.com \
-docker compose up -d --build
-```
+Aponte o DNS do domínio para o IP da instância e, no Coolify, crie um recurso **Application** com build pack Docker Compose apontando para este repositório:
+
+- Docker Compose Location: `/compose.yaml`;
+- Domínio no serviço `api`: `https://api.exemplo.com`, porta interna `3333`;
+- Variáveis de ambiente:
+  - `PUBLIC_API_URL=https://api.exemplo.com`;
+  - `CORS_ORIGIN=https://party.exemplo.com`;
+  - `MCP_OAUTH_MODE=demo` (padrão).
 
 `PUBLIC_API_URL` é obrigatório no deploy: é a base do callback OAuth e precisa ser a URL HTTPS
 pública da API (não `localhost`), alcançável pelo navegador do participante. `MCP_OAUTH_MODE`
 tem padrão `demo`; qualquer outro valor recusa subir até o provedor real existir.
 
-Caddy publica somente as portas 80 e 443 e encaminha para a API dentro da rede do Compose. A porta 3333 não é publicada no host.
+A porta 3333 não é publicada no host. O proxy do Coolify alcança o contêiner `api` pela rede do recurso.
 
 Verifique:
 
 ```bash
 curl https://api.exemplo.com/health
-docker compose ps
-docker compose logs --tail=100 api caddy
 ```
 
-O domínio concreto e qualquer credencial ficam no ambiente do servidor, fora do Git.
+Esperado: `{"status":"ok"}`. Status, logs e o domínio concreto ficam no painel do Coolify, fora do Git.
 
 ## Decisões deste recorte
 

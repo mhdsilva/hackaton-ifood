@@ -6,23 +6,6 @@ services:
       PUBLIC_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
       MCP_OAUTH_MODE: ${MCP_OAUTH_MODE:-demo}
       PORT: 3333
+    expose:
+      - "3333"
     restart: unless-stopped
-
-  caddy:
-    image: caddy:2.8-alpine
-    depends_on:
-      - api
-    environment:
-      API_HOST: ${API_HOST:?API_HOST is required}
-    ports:
-      - "80:80"
-      - "443:443"
-    restart: unless-stopped
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-
-volumes:
-  caddy_data:
-  caddy_config:
