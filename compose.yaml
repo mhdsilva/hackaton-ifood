@@ -3,6 +3,8 @@ services:
     build: .
     environment:
       CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+      MCP_OAUTH_MODE: ${MCP_OAUTH_MODE:-demo}
       PORT: 3333
     restart: unless-stopped
 
