@@ -41,19 +41,32 @@ type SubmitAnswersRequest = {
 }
 ```
 
-## Handoff para o Maeda
+## Conexão MCP (OAuth por participante)
 
-O endpoint `POST /parties/:id/mcp-connection` é apenas um placeholder deste recorte: hoje ele recebe uma `apiKey` e isola por Party e participante. **O iFood MCP não funciona assim.** O modelo correto é OAuth 2.1 por participante, descrito em [`docs/ifood-mcp.md`](ifood-mcp.md).
+O fluxo OAuth 2.1 com PKCE já está implementado atrás de duas rotas:
 
-Substituir o placeholder por:
+1. `POST /parties/:id/mcp-connection/authorize` (Bearer do participante) → gera `state` e PKCE,
+   devolve `{ authorizationUrl, status: "validating", mode }`;
+2. `GET /parties/:id/mcp-connection/callback?code&state` (sem Bearer; o `state` identifica
+   `partyId + participantId`) → troca o `code` por tokens, guarda no registro privado e
+   redireciona o navegador de volta ao frontend.
 
-1. `POST /parties/:id/mcp-connection/authorize` (Bearer do participante) → gera `state` + PKCE e devolve a `authorizationUrl`;
-2. `GET /parties/:id/mcp-connection/callback` (sem Bearer; o `state` identifica `partyId + participantId`) → troca o `code` por tokens e guarda no registro privado;
-3. renovar o `access_token` com o `refresh_token` antes de expirar.
+`McpOAuthFlow` (`apps/api/src/mcp/oauth-flow.ts`) mantém `state` de uso único com expiração e o
+`code_verifier`; `McpSessionRegistry` guarda os tokens isolados por Party e participante. O
+estado público só expõe `mcpConnectionStatus` (`validating`, `connected` ou `error`); nunca
+`client_secret`, `access_token`, `refresh_token` ou codes.
 
-Atualizar somente `mcpConnectionStatus` para `validating`, `connected` ou `error`. Nunca adicionar `client_secret`, `access_token`, `refresh_token` ou codes a `PartySnapshot`, prompts, fixtures, logs ou erros.
+O que falta para produção:
 
-Executar primeiro o spike do [ADR de sessões](adr/0001-uma-sessao-mcp-por-participante.md). A interface pública da Party não depende de a biblioteca usar clientes no mesmo processo ou processos trabalhadores.
+- trocar `DemoMcpOAuthProvider` pelo provedor real do iFood quando o agente for homologado
+  (`MCP_OAUTH_MODE` só aceita `demo`; qualquer outro valor recusa subir de propósito);
+- renovar o `access_token` com o `refresh_token` antes de expirar (hoje os tokens são apenas
+  guardados);
+- executar o spike do [ADR de sessões](adr/0001-uma-sessao-mcp-por-participante.md). A interface
+  pública da Party não depende de a biblioteca usar clientes no mesmo processo ou processos
+  trabalhadores.
+
+Detalhes do modelo real em [`docs/ifood-mcp.md`](ifood-mcp.md).
 
 ## Publicação na Oracle
 
@@ -61,9 +74,14 @@ No servidor, configure DNS para o IP da instância e execute:
 
 ```bash
 API_HOST=api.exemplo.com \
+PUBLIC_API_URL=https://api.exemplo.com \
 CORS_ORIGIN=https://party.exemplo.com \
 docker compose up -d --build
 ```
+
+`PUBLIC_API_URL` é obrigatório no deploy: é a base do callback OAuth e precisa ser a URL HTTPS
+pública da API (não `localhost`), alcançável pelo navegador do participante. `MCP_OAUTH_MODE`
+tem padrão `demo`; qualquer outro valor recusa subir até o provedor real existir.
 
 Caddy publica somente as portas 80 e 443 e encaminha para a API dentro da rede do Compose. A porta 3333 não é publicada no host.
 
@@ -80,6 +98,7 @@ O domínio concreto e qualquer credencial ficam no ambiente do servidor, fora do
 ## Decisões deste recorte
 
 - estado e tokens ficam em memória;
+- a conexão MCP usa OAuth 2.1 por participante, em modo de demonstração até a homologação;
 - duas pessoas no mínimo e quatro no máximo;
 - somente o anfitrião fecha o grupo;
 - depois do fechamento, o último participante a concluir causa a transição automática;

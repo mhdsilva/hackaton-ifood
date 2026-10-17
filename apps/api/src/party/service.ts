@@ -211,6 +211,23 @@ export class PartyService {
     return this.store.save(snapshot);
   }
 
+  setMcpConnectionStatusForParticipant(
+    idOrCode: string,
+    participantId: string,
+    status: McpConnectionStatus,
+  ): PartySnapshot {
+    const snapshot = this.get(idOrCode);
+    const participant = snapshot.participants.find(
+      (candidate) => candidate.id === participantId,
+    );
+    if (!participant) {
+      throw new PartyError(404, "PARTICIPANT_NOT_FOUND", "Participant not found");
+    }
+
+    participant.mcpConnectionStatus = status;
+    return this.store.save(snapshot);
+  }
+
   private createCode(): string {
     for (;;) {
       let code = "";
