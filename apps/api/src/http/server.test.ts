@@ -165,14 +165,14 @@ test("exposes the onboarding flow and a token-free polling snapshot", async () =
     api,
     "POST",
     `/parties/${host.party.party.id}/answers`,
-    { questionnaireVersion: "v1", answers: { preference: "massa" }, completed: true },
+    { questionnaireVersion: "v1", answers: { address: "massa" }, completed: true },
     host.participantToken,
   );
   const finalAnswer = await request(
     api,
     "POST",
     `/parties/${host.party.party.id}/answers`,
-    { questionnaireVersion: "v1", answers: { preference: "pizza" }, completed: true },
+    { questionnaireVersion: "v1", answers: { address: "pizza" }, completed: true },
     guest.participantToken,
   );
   assert.equal(finalAnswer.statusCode, 200);
@@ -581,4 +581,39 @@ test("reflects any configured origin and falls back for the rest", async () => {
     fallback.responseHeaders.get("access-control-allow-origin"),
     allowedOrigin,
   );
+});
+
+test("rejects invalid questionnaire answers over HTTP", async () => {
+  const api = createApi();
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const partyId = host.party.party.id;
+  await request(api, "POST", `/parties/${partyId}/join`, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
+
+  const invalid = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/answers`,
+    { questionnaireVersion: "v1", answers: {}, completed: true },
+    host.participantToken,
+  );
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(invalid.json().error.code, "INVALID_ANSWERS");
+
+  const unknown = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/answers`,
+    { questionnaireVersion: "v9", answers: { address: "casa" }, completed: true },
+    host.participantToken,
+  );
+  assert.equal(unknown.statusCode, 400);
+  assert.equal(unknown.json().error.code, "QUESTIONNAIRE_VERSION_UNKNOWN");
 });

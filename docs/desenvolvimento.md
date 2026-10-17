@@ -33,7 +33,7 @@ Consultar `GET /parties/:id` a cada 1–2 segundos. Parar o polling ao desmontar
 
 **Validar a sessão ao carregar:** `GET /parties/:id/session` (Bearer) devolve `{ participant }`. Como o estado é em memória, um restart da API invalida os tokens; use esta rota para tratar "sessão expirada, entrar de novo" antes de montar a tela.
 
-**Renderizar o formulário dinamicamente:** `GET /questionnaire` devolve a definição atual (`{ version, title, introduction?, questions[] }`). Cada questão tem `id`, `type` (`text`, `single_choice`, `multi_choice`, `scale`), `label`, `required` e, quando couber, `options`/`min`/`max`. As perguntas ainda são provisórias; a tela não deve fixar campos. Envie as respostas neste envelope, usando o `version` recebido:
+**Renderizar o formulário dinamicamente:** `GET /questionnaire` devolve a definição atual (`{ version, title, introduction?, questions[] }`). Cada questão tem `id`, `type` (`text`, `address`, `single_choice`, `multi_choice`, `scale`), `label`, `required` e, quando couber, `options`/`min`/`max`/`helpText`. A questão `address` não tem `options` — as opções vêm do iFood (`listAddresses`). As perguntas ainda são provisórias; a tela não deve fixar campos. Envie as respostas neste envelope, usando o `version` recebido:
 
 ```ts
 type SubmitAnswersRequest = {
@@ -42,6 +42,8 @@ type SubmitAnswersRequest = {
   completed: true
 }
 ```
+
+O backend valida as respostas contra a definição. Erros possíveis em `POST /parties/:id/answers`: `QUESTIONNAIRE_VERSION_UNKNOWN` (versão inexistente) e `INVALID_ANSWERS` (faltou obrigatório ou tipo inválido; o corpo traz `details.issues` com `{ questionId, reason }`).
 
 ## Conexão MCP (OAuth por participante)
 

@@ -250,7 +250,7 @@ components:
         id: { type: string }
         type:
           type: string
-          enum: [text, single_choice, multi_choice, scale]
+          enum: [text, address, single_choice, multi_choice, scale]
         label: { type: string }
         required: { type: boolean }
         helpText: { type: string }
