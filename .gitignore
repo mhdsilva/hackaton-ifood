@@ -6,3 +6,6 @@ dist/
 # Materiais de referência locais: leitura apenas, nunca versionar.
 Ifood apresentação_original.txt
 index-v2.html
+
+# Isolated implementation worktrees
+.worktrees/

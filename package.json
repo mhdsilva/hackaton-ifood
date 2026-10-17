@@ -9,11 +9,15 @@
   "scripts": {
     "build": "npm run build --workspace @sidequest/contracts && npm run build --workspace @sidequest/api",
     "dev:api": "npm run dev --workspace @sidequest/api",
-    "start:api": "npm run start --workspace @sidequest/api"
+    "start:api": "npm run start --workspace @sidequest/api",
+    "test": "npm run build --workspace @sidequest/contracts && npm run test --workspace @sidequest/api"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "yaml": "^2.9.1"
   }
 }

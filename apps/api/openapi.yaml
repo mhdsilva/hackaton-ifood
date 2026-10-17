@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: SideQuest Party API
-  version: 0.1.0
-  description: Contrato do Sprint 0 para coordenar uma Party em memória.
+  version: 0.2.0
+  description: API em memória para o onboarding multiusuário da Party.
 servers:
   - url: http://localhost:3333
 paths:
@@ -28,13 +28,14 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/CreatePartyRequest" }
       responses:
-        "201": { $ref: "#/components/responses/PartyResponse" }
+        "201": { $ref: "#/components/responses/PartySessionResponse" }
         "400": { $ref: "#/components/responses/ErrorResponse" }
   /parties/{partyId}:
     parameters:
       - $ref: "#/components/parameters/PartyId"
     get:
       operationId: getParty
+      description: Endpoint público de polling; consultar a cada 1–2 segundos.
       responses:
         "200": { $ref: "#/components/responses/PartyResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
@@ -49,128 +50,137 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [participant]
               properties:
                 participant: { $ref: "#/components/schemas/ParticipantIdentity" }
       responses:
-        "200": { $ref: "#/components/responses/PartyResponse" }
+        "200": { $ref: "#/components/responses/PartySessionResponse" }
         "400": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/close:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: closePartyMembership
+      security:
+        - participantToken: []
+      description: Fecha o grupo com 2–4 participantes; somente o anfitrião pode executar.
+      responses:
+        "200": { $ref: "#/components/responses/PartyResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
   /parties/{partyId}/answers:
     parameters:
       - $ref: "#/components/parameters/PartyId"
     post:
-      operationId: saveAnswers
+      operationId: submitQuestionnaireAnswers
+      security:
+        - participantToken: []
+      description: Substitui a resposta do participante identificado pelo token.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/SaveAnswersRequest" }
+            schema: { $ref: "#/components/schemas/SubmitAnswersRequest" }
       responses:
         "200": { $ref: "#/components/responses/PartyResponse" }
         "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
-  /parties/{partyId}/plan:
+  /parties/{partyId}/mcp-connection:
     parameters:
       - $ref: "#/components/parameters/PartyId"
     post:
-      operationId: planParty
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/PlanPartyRequest" }
-      responses:
-        "200": { $ref: "#/components/responses/PartyResponse" }
-        "400": { $ref: "#/components/responses/ErrorResponse" }
-        "404": { $ref: "#/components/responses/ErrorResponse" }
-        "409": { $ref: "#/components/responses/ErrorResponse" }
-  /parties/{partyId}/ready:
-    parameters:
-      - $ref: "#/components/parameters/PartyId"
-    post:
-      operationId: setParticipantReady
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [participantId, ready]
-              properties:
-                participantId: { type: string }
-                ready: { type: boolean }
-      responses:
-        "200": { $ref: "#/components/responses/PartyResponse" }
-        "400": { $ref: "#/components/responses/ErrorResponse" }
-        "404": { $ref: "#/components/responses/ErrorResponse" }
-        "409": { $ref: "#/components/responses/ErrorResponse" }
-  /parties/{partyId}/order-status:
-    parameters:
-      - $ref: "#/components/parameters/PartyId"
-    post:
-      operationId: setOrderStatus
+      operationId: registerMcpConnection
+      deprecated: true
+      security:
+        - participantToken: []
+      description: |
+        PLACEHOLDER deste recorte, mantido apenas para o ensaio atual.
+
+        O iFood MCP NÃO usa chave colada por participante: ele usa OAuth 2.1 com PKCE, com
+        `client_id` + `client_secret` do agente no backend e um par `access_token` +
+        `refresh_token` por participante. O contrato correto é:
+
+        - `POST /parties/{partyId}/mcp-connection/authorize` (Bearer) -> devolve `authorizationUrl`;
+        - `GET /parties/{partyId}/mcp-connection/callback?code&state` -> troca o code por tokens.
+
+        Ver docs/ifood-mcp.md. Substituir esta rota pelo fluxo OAuth.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [participantId, status]
+              additionalProperties: false
+              required: [apiKey]
               properties:
-                participantId: { type: string }
-                status: { $ref: "#/components/schemas/OrderStatus" }
+                apiKey:
+                  type: string
+                  minLength: 1
+                  writeOnly: true
       responses:
-        "200": { $ref: "#/components/responses/PartyResponse" }
+        "200":
+          description: Chave armazenada e aguardando validação (placeholder)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { const: validating }
         "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
-        "409": { $ref: "#/components/responses/ErrorResponse" }
-  /parties/{partyId}/advance:
-    parameters:
-      - $ref: "#/components/parameters/PartyId"
-    post:
-      operationId: advanceParty
-      description: Avança exatamente um estado quando suas condições mínimas forem satisfeitas.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                targetStatus: { $ref: "#/components/schemas/PartyStatus" }
-      responses:
-        "200": { $ref: "#/components/responses/PartyResponse" }
-        "400": { $ref: "#/components/responses/ErrorResponse" }
-        "404": { $ref: "#/components/responses/ErrorResponse" }
-        "409": { $ref: "#/components/responses/ErrorResponse" }
 components:
+  securitySchemes:
+    participantToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque participant token
   parameters:
     PartyId:
       name: partyId
       in: path
       required: true
+      description: UUID ou código de seis caracteres da Party.
       schema: { type: string }
   responses:
     PartyResponse:
-      description: Estado atualizado da Party
+      description: Estado público atual da Party
       content:
         application/json:
           schema: { $ref: "#/components/schemas/PartySnapshot" }
+    PartySessionResponse:
+      description: Estado público e token privado do participante atual
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [party, participantToken]
+            properties:
+              party: { $ref: "#/components/schemas/PartySnapshot" }
+              participantToken:
+                type: string
     ErrorResponse:
-      description: Erro de entrada, recurso ou transição
+      description: Erro de entrada, autorização, recurso ou estado
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ApiError" }
   schemas:
     PartyStatus:
       type: string
-      enum: [LOBBY, COLLECTING_ANSWERS, PLANNING, REVIEWING_CARTS, ORDERING, WAITING_DELIVERIES, READY_TO_PLAY, PLAYING, COMPLETED]
-    OrderStatus:
+      enum: [OPEN, COLLECTING_ANSWERS, READY_FOR_THEME]
+    McpConnectionStatus:
       type: string
-      enum: [submitted, confirmed, preparing, dispatched, delivered, cancelled]
+      enum: [not_connected, validating, connected, error]
     ParticipantIdentity:
       type: object
       additionalProperties: false
@@ -185,119 +195,54 @@ components:
       properties:
         name: { type: string, minLength: 1 }
         host: { $ref: "#/components/schemas/ParticipantIdentity" }
-    QuestionnaireAnswers:
+    SubmitAnswersRequest:
       type: object
       additionalProperties: false
-      required: [budget, restrictions, category, surpriseLevel, vibe]
+      required: [questionnaireVersion, answers, completed]
       properties:
-        budget: { type: number, exclusiveMinimum: 0 }
-        restrictions:
-          type: array
-          items: { type: string }
-        category:
-          type: string
-          enum: [restaurant, market, sweets_and_drinks, surprise]
-        surpriseLevel:
-          type: string
-          enum: [safe, curious, chaotic]
-        vibe:
-          type: string
-          enum: [competitive, cooperative, conversation, discover, improvise]
-    SaveAnswersRequest:
+        questionnaireVersion: { type: string, minLength: 1 }
+        answers: { type: object, additionalProperties: true }
+        completed: { const: true }
+    QuestionnaireResponse:
       type: object
       additionalProperties: false
-      required: [participantId, answers]
+      required: [questionnaireVersion, answers, completed, submittedAt]
       properties:
-        participantId: { type: string }
-        answers: { $ref: "#/components/schemas/QuestionnaireAnswers" }
-    Mission:
-      type: object
-      additionalProperties: false
-      required: [name, mode, roles]
-      properties:
-        name: { type: string }
-        mode: { type: string, enum: [competitive, cooperative, conversation] }
-        roles:
-          type: array
-          minItems: 1
-          items: { type: string }
-    ResolvedKit:
-      type: object
-      additionalProperties: false
-      required: [merchant, items, total, estimatedDeliveryMinutes]
-      properties:
-        merchant:
-          type: object
-          required: [id, name]
-          properties:
-            id: { type: string }
-            name: { type: string }
-        items:
-          type: array
-          items:
-            type: object
-            required: [role, itemId, name, price]
-            properties:
-              role: { type: string }
-              itemId: { type: string }
-              name: { type: string }
-              price: { type: number, minimum: 0 }
-        total: { type: number, minimum: 0 }
-        estimatedDeliveryMinutes: { type: integer, minimum: 0 }
-    PlanPartyRequest:
-      type: object
-      additionalProperties: false
-      required: [mission, kits]
-      properties:
-        mission: { $ref: "#/components/schemas/Mission" }
-        kits:
-          type: array
-          items:
-            type: object
-            required: [participantId, kit]
-            properties:
-              participantId: { type: string }
-              kit: { $ref: "#/components/schemas/ResolvedKit" }
+        questionnaireVersion: { type: string, minLength: 1 }
+        answers: { type: object, additionalProperties: true }
+        completed: { const: true }
+        submittedAt: { type: string, format: date-time }
     Participant:
       type: object
-      required: [id, name, budget, restrictions, cartStatus, orderStatus, total, etaMinutes]
+      required: [id, name, questionnaireResponse, mcpConnectionStatus]
       properties:
         id: { type: string }
         name: { type: string }
-        budget: { type: [number, "null"] }
-        restrictions:
-          type: array
-          items: { type: string }
-        answers: { $ref: "#/components/schemas/QuestionnaireAnswers" }
-        cartStatus: { type: string, enum: [pending, resolving, ready, confirmed, failed] }
-        orderStatus:
+        questionnaireResponse:
           oneOf:
-            - $ref: "#/components/schemas/OrderStatus"
+            - $ref: "#/components/schemas/QuestionnaireResponse"
             - type: "null"
-        total: { type: [number, "null"] }
-        etaMinutes: { type: [integer, "null"] }
-        kit: { $ref: "#/components/schemas/ResolvedKit" }
+        mcpConnectionStatus: { $ref: "#/components/schemas/McpConnectionStatus" }
     PartySnapshot:
       type: object
-      required: [party, participants, mission]
+      required: [party, participants]
       properties:
         party:
           type: object
-          required: [id, code, name, status]
+          required: [id, code, name, status, hostParticipantId, membershipLocked, createdAt]
           properties:
-            id: { type: string }
-            code: { type: string }
+            id: { type: string, format: uuid }
+            code: { type: string, minLength: 6, maxLength: 6 }
             name: { type: string }
             status: { $ref: "#/components/schemas/PartyStatus" }
             hostParticipantId: { type: string }
+            membershipLocked: { type: boolean }
             createdAt: { type: string, format: date-time }
         participants:
           type: array
+          minItems: 1
+          maxItems: 4
           items: { $ref: "#/components/schemas/Participant" }
-        mission:
-          oneOf:
-            - $ref: "#/components/schemas/Mission"
-            - type: "null"
     ApiError:
       type: object
       required: [error]
@@ -306,6 +251,8 @@ components:
           type: object
           required: [code, message]
           properties:
-            code: { type: string }
+            code:
+              type: string
+              examples: [ACCESS_TOKEN_REQUIRED, ACCESS_DENIED, PARTY_FULL, PARTY_CLOSED]
             message: { type: string }
             details: { type: object, additionalProperties: true }

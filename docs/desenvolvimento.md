@@ -1,4 +1,4 @@
-# Desenvolvimento — Sprint 0
+# Desenvolvimento — fundação da Party
 
 ## Início rápido
 
@@ -6,94 +6,82 @@ Requisitos: Node.js 22 e npm 10.
 
 ```bash
 npm install
+npm test
 npm run dev:api
 ```
 
-A API fica disponível em `http://localhost:3333`. Para conferir que o processo está no ar:
+A API local usa `http://localhost:3333` e aceita por padrão o frontend em `http://localhost:5173`. Para outra origem:
 
 ```bash
-curl http://localhost:3333/health
+CORS_ORIGIN=https://party.exemplo.com npm run dev:api
 ```
 
-O contrato HTTP está em [`apps/api/openapi.yaml`](../apps/api/openapi.yaml) e os tipos compartilhados estão em [`packages/contracts/src/index.ts`](../packages/contracts/src/index.ts).
+## Fontes de verdade
 
-A estratégia para múltiplas chaves e sessões está registrada em [`docs/adr/0001-uma-sessao-mcp-por-participante.md`](adr/0001-uma-sessao-mcp-por-participante.md).
-
-## Fronteiras de trabalho
-
-| Pessoa | Pode editar agora | Contrato que consome |
-| --- | --- | --- |
-| Otávio | `apps/web/**` | `PartySnapshot` ou `fixtures/party.json` |
-| Maeda | `apps/api/src/ifood/**`, `apps/api/src/agent/**`, fixtures do iFood | `ResolveKitInput` e `ResolveKitOutput` |
-| Matheus | `apps/api/src/party/**`, `packages/contracts/**`, integração | Todos os contratos |
-| Júlio | Figma, fluxo, textos e roteiro | estados de `PartyStatus` |
-
-Até o checkpoint, mudanças nos tipos compartilhados passam pelo Matheus. Implementações de frontend e MCP não devem alterar `apps/api/src/party/**`.
-
-## Fluxo da API
-
-```text
-POST /parties
-POST /parties/:id/join
-POST /parties/:id/advance          LOBBY → COLLECTING_ANSWERS
-POST /parties/:id/answers          uma vez por participante
-POST /parties/:id/advance          COLLECTING_ANSWERS → PLANNING
-POST /parties/:id/plan             PLANNING → REVIEWING_CARTS
-POST /parties/:id/ready            uma vez por participante
-POST /parties/:id/advance          REVIEWING_CARTS → ORDERING
-POST /parties/:id/order-status     uma vez por participante
-POST /parties/:id/advance          ORDERING → WAITING_DELIVERIES
-POST /parties/:id/order-status     atualizar até delivered
-POST /parties/:id/advance          WAITING_DELIVERIES → READY_TO_PLAY
-POST /parties/:id/advance          READY_TO_PLAY → PLAYING
-POST /parties/:id/advance          PLAYING → COMPLETED
-```
-
-`advance` move apenas para o próximo estado e valida as condições coletivas. Quando algo ainda falta, a resposta `409` inclui os participantes pendentes em `error.details.participantIds`.
+- [especificação deste recorte](superpowers/specs/2026-10-17-party-foundation-design.md);
+- [plano de implementação](superpowers/plans/2026-10-17-party-foundation.md);
+- [OpenAPI](../apps/api/openapi.yaml);
+- [autenticação do iFood MCP](ifood-mcp.md);
+- [decisão de sessões MCP](adr/0001-uma-sessao-mcp-por-participante.md);
+- [ensaio em três dispositivos](rehearsal-party-foundation.md).
 
 ## Handoff para o Otávio
 
-Começar com a fixture:
+Ao criar ou entrar, salvar `participantToken` em `sessionStorage`. Enviar o valor como `Authorization: Bearer <token>` somente nas rotas privadas. Nunca colocar o token na URL ou no estado compartilhado.
+
+Consultar `GET /parties/:id` a cada 1–2 segundos. Parar o polling ao desmontar a tela e tratar `404` como Party indisponível.
+
+O questionário deve produzir este envelope sem fixar suas perguntas no cliente de API:
 
 ```ts
-import demoParty from "../../../fixtures/party.json"
-```
-
-Depois trocar por:
-
-```ts
-const response = await fetch(`${API_URL}/parties/${partyId}`)
-const party = response.ok ? await response.json() : demoParty
-```
-
-O backend habilita CORS no Sprint 0. Não há WebSocket; a tela de acompanhamento pode consultar `GET /parties/:id` periodicamente.
-
-## Handoff para o Maeda
-
-O adaptador do agente deve expor esta fronteira:
-
-```ts
-import type { ResolveKitInput, ResolveKitOutput } from "@sidequest/contracts"
-
-export async function resolveKit(input: ResolveKitInput): Promise<ResolveKitOutput> {
-  // Implementação isolada em apps/api/src/agent/**
+type SubmitAnswersRequest = {
+  questionnaireVersion: string
+  answers: Record<string, unknown>
+  completed: true
 }
 ```
 
-Cada item devolvido precisa cumprir um `role` da missão. O `POST /plan` aceita um kit por participante e valida se todos os papéis foram atendidos.
+## Handoff para o Maeda
 
-## Decisões congeladas até o checkpoint
+O endpoint `POST /parties/:id/mcp-connection` é apenas um placeholder deste recorte: hoje ele recebe uma `apiKey` e isola por Party e participante. **O iFood MCP não funciona assim.** O modelo correto é OAuth 2.1 por participante, descrito em [`docs/ifood-mcp.md`](ifood-mcp.md).
 
-- A API guarda dados apenas em memória; reiniciar o processo apaga as Parties.
-- Cada participante usa um único estabelecimento e um único carrinho.
-- O MCP não é chamado pelo Party Coordinator neste sprint.
-- Cada participante confirma seu carrinho e seu pedido individualmente.
-- O frontend pode usar a fixture como fallback durante toda a demo.
-- `POST /advance` controla a máquina de estados; não existe transição em segundo plano.
+Substituir o placeholder por:
 
-## Bloqueios a validar no checkpoint
+1. `POST /parties/:id/mcp-connection/authorize` (Bearer do participante) → gera `state` + PKCE e devolve a `authorizationUrl`;
+2. `GET /parties/:id/mcp-connection/callback` (sem Bearer; o `state` identifica `partyId + participantId`) → troca o `code` por tokens e guarda no registro privado;
+3. renovar o `access_token` com o `refresh_token` antes de expirar.
 
-- quantidade de sessões simultâneas permitidas pelo iFood MCP;
-- formato real das estimativas de entrega retornadas pelo MCP;
-- estratégia da demo para participantes sem sessão autenticada;
-- quais campos precisam ser sanitizados nas fixtures reais.
+Atualizar somente `mcpConnectionStatus` para `validating`, `connected` ou `error`. Nunca adicionar `client_secret`, `access_token`, `refresh_token` ou codes a `PartySnapshot`, prompts, fixtures, logs ou erros.
+
+Executar primeiro o spike do [ADR de sessões](adr/0001-uma-sessao-mcp-por-participante.md). A interface pública da Party não depende de a biblioteca usar clientes no mesmo processo ou processos trabalhadores.
+
+## Publicação na Oracle
+
+No servidor, configure DNS para o IP da instância e execute:
+
+```bash
+API_HOST=api.exemplo.com \
+CORS_ORIGIN=https://party.exemplo.com \
+docker compose up -d --build
+```
+
+Caddy publica somente as portas 80 e 443 e encaminha para a API dentro da rede do Compose. A porta 3333 não é publicada no host.
+
+Verifique:
+
+```bash
+curl https://api.exemplo.com/health
+docker compose ps
+docker compose logs --tail=100 api caddy
+```
+
+O domínio concreto e qualquer credencial ficam no ambiente do servidor, fora do Git.
+
+## Decisões deste recorte
+
+- estado e tokens ficam em memória;
+- duas pessoas no mínimo e quatro no máximo;
+- somente o anfitrião fecha o grupo;
+- depois do fechamento, o último participante a concluir causa a transição automática;
+- polling substitui WebSocket;
+- o recorte termina em `READY_FOR_THEME`.

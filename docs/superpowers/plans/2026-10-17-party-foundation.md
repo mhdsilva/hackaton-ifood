@@ -278,6 +278,11 @@ git commit -m "feat: expose party onboarding API"
 
 ### Task 4: Add the private MCP connection boundary
 
+> Nota (pós-implementação): este task constrói um placeholder de `apiKey`. O iFood MCP real
+> conecta por OAuth 2.1 por participante; ver [`docs/ifood-mcp.md`](../../ifood-mcp.md) e o
+> [ADR 0001](../../adr/0001-uma-sessao-mcp-por-participante.md). O `McpSessionRegistry` deve ser
+> substituído por um registro de tokens.
+
 **Files:**
 - Create: `apps/api/src/mcp/session-registry.ts`
 - Create: `apps/api/src/mcp/session-registry.test.ts`

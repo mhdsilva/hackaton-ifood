@@ -5,115 +5,76 @@ date: 2026-10-17
 
 # Uma sessão MCP por participante sob um coordenador central
 
-Cada participante da Party usará uma chave própria do iFood MCP, cadastrada durante a entrada na sala. O backend central coordenará a experiência, mas cada catálogo, carrinho e pedido será resolvido por um cliente MCP isolado e vinculado a somente um participante. Escolhemos esse desenho para preservar identidade, endereço, consentimento e carrinho individuais sem introduzir uma rede de agentes autônomos negociando entre si.
+Cada participante da Party conectará a própria conta do iFood MCP durante a entrada na sala, por um fluxo OAuth 2.1 autorizado individualmente. O backend central coordenará a experiência, mas endereço, catálogo, carrinho e pedido serão operados por um cliente MCP isolado e vinculado a somente uma pessoa. Escolhemos esse desenho para preservar identidade e consentimento individuais sem introduzir agentes autônomos negociando entre si.
 
-## Topologia escolhida
+O iFood MCP usa OAuth 2.1 com PKCE: o time registra um agente (o backend) e recebe um `client_id` + `client_secret`; cada participante autoriza o agente e recebe o próprio par `access_token` + `refresh_token`. O `client_secret` identifica o aplicativo e nunca dá acesso à conta de ninguém. Detalhes em [`docs/ifood-mcp.md`](../ifood-mcp.md).
+
+## Topologia
 
 ```mermaid
 flowchart LR
-    UIA[Dispositivo da Ana] --> PARTY[Party Coordinator]
-    UIB[Dispositivo do Bruno] --> PARTY
-    UIC[Dispositivo do Caio] --> PARTY
-
-    PARTY --> RA[Resolver da Ana]
-    PARTY --> RB[Resolver do Bruno]
-    PARTY --> RC[Resolver do Caio]
-
-    RA --> CA[Cliente MCP + chave A]
-    RB --> CB[Cliente MCP + chave B]
-    RC --> CC[Cliente MCP + chave C]
-
+    PARTY[Party Coordinator]
+    PARTY --> RA[Resolver A]
+    PARTY --> RB[Resolver B]
+    PARTY --> RC[Resolver C]
+    RA --> CA[Cliente MCP + token A]
+    RB --> CB[Cliente MCP + token B]
+    RC --> CC[Cliente MCP + token C]
     CA --> MCP[iFood MCP]
     CB --> MCP
     CC --> MCP
 ```
 
-O **Party Coordinator** decide a missão compartilhada e envia o mesmo contrato semântico para cada resolver. Um **resolver individual** usa apenas a chave, o endereço, o orçamento e as restrições daquele participante. Ele devolve um `ResolveKitOutput` estruturado; não conversa livremente com os outros resolvers.
+O Party Coordinator combina as respostas do grupo e, em uma etapa futura, fornecerá a cada resolver uma solicitação estruturada para montar opções locais coerentes com o tema escolhido. Cada resolver usa somente os dados e a sessão daquele participante e devolve JSON ao coordenador.
 
-## Cadastro da chave durante a Party
+## Cadastro durante a Party
 
-Fluxo previsto:
+1. O participante entra na Party e recebe um token temporário.
+2. Aciona "conectar iFood" e é levado à autorização OAuth do iFood (Web Login ou Pending Action).
+3. O iFood devolve um `authorization_code` ao callback do backend.
+4. A API troca o code por tokens, validando com uma operação de leitura do MCP (por exemplo `getUser`).
+5. Os tokens permanecem somente em um registro privado na memória, indexados por `partyId + participantId`.
+6. O estado público expõe apenas `not_connected`, `validating`, `connected` ou `error`.
+7. Os tokens são descartados quando a Party termina ou o processo reinicia.
+8. O `access_token` é renovado com o `refresh_token` antes de expirar.
 
-1. o participante entra na Party e recebe uma identidade temporária;
-2. cola sua chave MCP em uma tela privada;
-3. o frontend envia a chave por HTTPS para a API;
-4. a API valida a chave com uma operação de leitura do MCP;
-5. a API mantém a chave somente em memória e devolve apenas o estado `connected`;
-6. o Party Coordinator referencia a conexão por um identificador interno;
-7. a chave é descartada ao encerrar a Party ou reiniciar o processo.
+## Limites de segurança
 
-O estado público da sala pode conter:
-
-```json
-{
-  "participantId": "ana",
-  "mcpConnection": "connected"
-}
-```
-
-Ele nunca contém a chave.
-
-## Limites de segurança do MVP
-
-- aceitar chaves somente por HTTPS;
-- não incluir chaves em `PartySnapshot`, fixtures, prompts, logs ou mensagens de erro;
-- não persistir chaves em banco ou arquivo;
-- exigir o token temporário do participante para cadastrar ou substituir sua própria chave;
-- manter um registro privado `participantId → MCP client`, separado do estado público;
-- nunca permitir que um participante execute ferramentas na sessão de outro;
-- manter `userConsent` individual no envio de cada pedido.
-
-## Contrato entre coordenador e resolver
-
-O Party Coordinator chama cada resolver com dados estruturados:
-
-```ts
-type ResolveParticipantKitInput = {
-  partyId: string
-  participantId: string
-  mcpSessionRef: string
-  budget: number
-  restrictions: string[]
-  roles: string[]
-}
-```
-
-O resolver devolve o contrato `ResolveKitOutput` já definido em `packages/contracts`. A chave real é recuperada pelo backend por `mcpSessionRef`; ela não faz parte do argumento enviado ao modelo.
-
-Os três resolvers podem ser iniciados em paralelo, mas uma falha não cancela os demais. O coordenador deve registrar o resultado de cada participante separadamente e permitir nova tentativa individual.
+- nunca incluir `client_secret`, `access_token`, `refresh_token` ou codes em `PartySnapshot`, fixtures, prompts, logs ou erros;
+- manter o `client_secret` somente no backend e o consentimento OAuth sempre no navegador do participante;
+- exigir o token do participante para iniciar a conexão da sua sessão;
+- manter um registro privado `partyId + participantId → tokens do participante`;
+- nunca executar uma ferramenta na sessão de outro participante;
+- manter consentimento individual no futuro envio do pedido (`userConsent: true`).
 
 ## Alternativas rejeitadas
 
-### Um único cliente MCP compartilhado
+**Um cliente MCP compartilhado:** pode misturar identidade, endereço, carrinho e consentimento.
 
-Foi rejeitado porque pode misturar identidade, endereço, carrinho e consentimento entre participantes.
+**Um agente autônomo em cada dispositivo:** adiciona execução local, comunicação entre agentes e falhas distribuídas sem necessidade para o MVP.
 
-### Um agente autônomo em cada dispositivo
+**Uma sessão real e duas simuladas:** permanece como contingência do pitch, não como fluxo principal.
 
-Foi rejeitado para o MVP porque exigiria execução local, coordenação agente a agente e tratamento de falhas distribuídas. O isolamento necessário pode ser obtido no backend com clientes MCP separados e contratos JSON previsíveis.
+## Prova técnica do Maeda
 
-### Uma única sessão real e dois carrinhos simulados
+Antes da integração:
 
-Continua como fallback de demonstração, mas não representa o fluxo principal enquanto houver três chaves de sandbox disponíveis.
+1. registrar o agente (aplicativo) e obter `client_id` + `client_secret` após a homologação;
+2. criar duas test accounts no sandbox;
+3. autorizar cada conta pelo fluxo OAuth e guardar os dois pares de tokens;
+4. consultar identidade ou endereço (`getUser`/`listAddresses`) com cada token;
+5. intercalar chamadas e verificar que o contexto não vaza entre os tokens;
+6. repetir com três contas simultâneas;
+7. confirmar que a biblioteca/agente recebe autenticação por token, sem variável global;
+8. validar o refresh do `access_token` e registrar limites, erros e dados a sanitizar.
 
-## Prova técnica obrigatória para o Maeda
-
-A documentação conceitual não garante que a biblioteca usada aceite várias credenciais no mesmo processo. Antes da integração, executar um spike com estas verificações:
-
-1. criar dois clientes MCP apontando para o mesmo servidor com chaves diferentes;
-2. executar uma consulta de identidade ou endereço em cada cliente;
-3. confirmar que as respostas pertencem aos perfis esperados;
-4. repetir chamadas intercaladas para detectar vazamento de contexto;
-5. testar três clientes simultâneos e registrar limites ou erros;
-6. confirmar se o transporte aceita autenticação por instância, sem variável global.
-
-Se a biblioteca mantiver a credencial globalmente, o fallback técnico será executar um processo trabalhador por chave. O contrato entre coordenador e resolver permanece o mesmo; não será necessário adotar agentes autônomos negociando entre si.
+Se a biblioteca mantiver credenciais globalmente, cada sessão será executada em um processo trabalhador isolado. A interface com o Party Coordinator continuará a mesma.
 
 ## Responsabilidades
 
-| Pessoa | Responsabilidade nesta decisão |
+| Pessoa | Responsabilidade |
 | --- | --- |
-| Maeda | validar múltiplos clientes, implementar o adaptador MCP e garantir isolamento das chamadas |
-| Matheus | manter o registro privado de sessões, autorização temporária e orquestração dos resolvers |
-| Otávio | criar a entrada privada da chave e mostrar apenas o estado da conexão |
-| Júlio | definir textos de conexão, validação, erro e nova tentativa |
+| Maeda | validar múltiplas sessões OAuth e implementar o adaptador MCP |
+| Matheus | guardar referências privadas, autorizar participantes e coordenar as chamadas |
+| Otávio | criar o botão de conexão OAuth e exibir somente o estado da conexão |
+| Júlio | definir textos de conexão, erro e nova tentativa |

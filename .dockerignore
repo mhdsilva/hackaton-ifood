@@ -1,0 +1,9 @@
+.git
+.worktrees
+.superpowers
+node_modules
+**/dist
+.env
+.env.*
+Ifood apresentação_original.txt
+index-v2.html
