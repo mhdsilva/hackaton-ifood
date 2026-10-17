@@ -1,6 +1,8 @@
 # Ensaio — fundação da Party em três dispositivos
 
-Este ensaio valida somente criação, entrada, fechamento do grupo, respostas, polling e cadastro privado da chave MCP. Tema, cardápios e pedidos ficam fora deste checkpoint.
+Este ensaio valida somente criação, entrada, fechamento do grupo, respostas, polling e o registro privado da conexão MCP. Tema, cardápios e pedidos ficam fora deste checkpoint.
+
+> O passo 3 usa o placeholder de `apiKey` do recorte atual. O iFood MCP real conecta por OAuth 2.1 por participante — ver [`docs/ifood-mcp.md`](ifood-mcp.md). Quando o adaptador OAuth entrar, o passo 3 vira um redirecionamento de autorização.
 
 ## Antes do ensaio
 
@@ -54,9 +56,9 @@ Conferir nos três dispositivos, após no máximo dois segundos:
 - cada navegador possui seu próprio token;
 - nenhum token aparece em `GET /parties/:id`.
 
-## 3. Cadastrar três chaves de ensaio
+## 3. Registrar três conexões MCP de ensaio (placeholder)
 
-Cada dispositivo chama:
+Placeholder do recorte: cada dispositivo chama a rota de conexão com uma `apiKey` fictícia.
 
 ```http
 POST /parties/:id/mcp-connection
@@ -73,7 +75,9 @@ Conferir:
 - a chave não aparece na resposta nem no polling;
 - uma requisição com token de outra Party retorna `403 ACCESS_DENIED`.
 
-Use chaves falsas neste primeiro ensaio. O Maeda substituirá `validating` pela validação real.
+Use chaves falsas neste primeiro ensaio. Na versão correta, o participante autoriza a conta por
+OAuth 2.1 (`POST .../mcp-connection/authorize` → navegador → `GET .../mcp-connection/callback`) e
+o backend guarda os tokens, nunca uma chave colada.
 
 ## 4. Fechar o grupo
 

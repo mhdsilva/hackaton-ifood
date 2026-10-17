@@ -98,9 +98,20 @@ paths:
       - $ref: "#/components/parameters/PartyId"
     post:
       operationId: registerMcpConnection
+      deprecated: true
       security:
         - participantToken: []
-      description: Registra uma chave write-only para o participante autenticado. A validação real será adicionada pelo adaptador MCP.
+      description: |
+        PLACEHOLDER deste recorte, mantido apenas para o ensaio atual.
+
+        O iFood MCP NÃO usa chave colada por participante: ele usa OAuth 2.1 com PKCE, com
+        `client_id` + `client_secret` do agente no backend e um par `access_token` +
+        `refresh_token` por participante. O contrato correto é:
+
+        - `POST /parties/{partyId}/mcp-connection/authorize` (Bearer) -> devolve `authorizationUrl`;
+        - `GET /parties/{partyId}/mcp-connection/callback?code&state` -> troca o code por tokens.
+
+        Ver docs/ifood-mcp.md. Substituir esta rota pelo fluxo OAuth.
       requestBody:
         required: true
         content:
@@ -116,7 +127,7 @@ paths:
                   writeOnly: true
       responses:
         "200":
-          description: Chave armazenada e aguardando validação
+          description: Chave armazenada e aguardando validação (placeholder)
           content:
             application/json:
               schema:

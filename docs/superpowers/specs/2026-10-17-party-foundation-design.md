@@ -29,7 +29,7 @@ As transições são automáticas após o fechamento do grupo. O endpoint `advan
 
 Ao criar ou entrar na Party, a API devolve um token opaco do participante. O frontend guarda esse token no dispositivo e o envia como Bearer token nas ações privadas. O token não aparece no `PartySnapshot` nem é compartilhado com outros participantes.
 
-Somente o token do anfitrião pode fechar o grupo. Cada token permite enviar respostas e cadastrar a chave MCP apenas para o participante ao qual pertence.
+Somente o token do anfitrião pode fechar o grupo. Cada token permite enviar respostas e conectar a conta do iFood apenas para o participante ao qual pertence.
 
 ## Questionário flexível
 
@@ -50,7 +50,7 @@ Uma nova resposta do mesmo participante substitui a anterior. A Party chega a `R
 
 ## Fronteira MCP
 
-Cada participante poderá cadastrar sua chave MCP durante a Party. A chave trafega por HTTPS, fica somente em um registro privado na memória do backend e nunca integra o estado público, logs, fixtures ou prompts.
+Cada participante conectará a própria conta do iFood MCP por autorização OAuth 2.1 durante a Party. O backend guarda apenas os tokens resultantes, em um registro privado na memória, indexado por `partyId + participantId`; eles nunca integram o estado público, logs, fixtures ou prompts. O `client_secret` do agente fica somente no backend. O modelo completo está em [`docs/ifood-mcp.md`](../../ifood-mcp.md).
 
 Neste recorte, a API define a rota, o armazenamento privado e a interface de validação. O adaptador real do iFood MCP será implementado pelo Maeda conforme [`docs/adr/0001-uma-sessao-mcp-por-participante.md`](../../adr/0001-uma-sessao-mcp-por-participante.md).
 
@@ -62,7 +62,7 @@ O frontend consulta `GET /parties/:id` a cada 1–2 segundos. WebSocket não faz
 
 - Node.js 22 e npm 10.
 - Um único processo da API na Oracle.
-- Estado, tokens e chaves apenas em memória.
+- Estado e tokens (da Party e dos participantes) apenas em memória.
 - Duas pessoas no mínimo; até quatro participantes no MVP.
 - Três participantes serão usados no pitch.
 - CORS configurável para a origem do frontend.

@@ -21,6 +21,7 @@ CORS_ORIGIN=https://party.exemplo.com npm run dev:api
 - [especificação deste recorte](superpowers/specs/2026-10-17-party-foundation-design.md);
 - [plano de implementação](superpowers/plans/2026-10-17-party-foundation.md);
 - [OpenAPI](../apps/api/openapi.yaml);
+- [autenticação do iFood MCP](ifood-mcp.md);
 - [decisão de sessões MCP](adr/0001-uma-sessao-mcp-por-participante.md);
 - [ensaio em três dispositivos](rehearsal-party-foundation.md).
 
@@ -42,9 +43,15 @@ type SubmitAnswersRequest = {
 
 ## Handoff para o Maeda
 
-O endpoint `POST /parties/:id/mcp-connection` já recebe e isola a chave por Party e participante. Hoje ele responde `validating` sem chamar o MCP.
+O endpoint `POST /parties/:id/mcp-connection` é apenas um placeholder deste recorte: hoje ele recebe uma `apiKey` e isola por Party e participante. **O iFood MCP não funciona assim.** O modelo correto é OAuth 2.1 por participante, descrito em [`docs/ifood-mcp.md`](ifood-mcp.md).
 
-Implementar a validação real por trás do registro privado e atualizar somente `mcpConnectionStatus` para `connected` ou `error`. Não adicionar a chave a `PartySnapshot`, prompts, fixtures, logs ou erros.
+Substituir o placeholder por:
+
+1. `POST /parties/:id/mcp-connection/authorize` (Bearer do participante) → gera `state` + PKCE e devolve a `authorizationUrl`;
+2. `GET /parties/:id/mcp-connection/callback` (sem Bearer; o `state` identifica `partyId + participantId`) → troca o `code` por tokens e guarda no registro privado;
+3. renovar o `access_token` com o `refresh_token` antes de expirar.
+
+Atualizar somente `mcpConnectionStatus` para `validating`, `connected` ou `error`. Nunca adicionar `client_secret`, `access_token`, `refresh_token` ou codes a `PartySnapshot`, prompts, fixtures, logs ou erros.
 
 Executar primeiro o spike do [ADR de sessões](adr/0001-uma-sessao-mcp-por-participante.md). A interface pública da Party não depende de a biblioteca usar clientes no mesmo processo ou processos trabalhadores.
 
@@ -72,7 +79,7 @@ O domínio concreto e qualquer credencial ficam no ambiente do servidor, fora do
 
 ## Decisões deste recorte
 
-- estado, tokens e chaves ficam em memória;
+- estado e tokens ficam em memória;
 - duas pessoas no mínimo e quatro no máximo;
 - somente o anfitrião fecha o grupo;
 - depois do fechamento, o último participante a concluir causa a transição automática;

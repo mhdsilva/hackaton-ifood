@@ -8,7 +8,7 @@ Este README descreve a solução atual. A proposta anterior baseada em missões,
 
 ## A ideia
 
-Uma pessoa cria uma Party e compartilha seu código. Cada participante entra pelo próprio dispositivo, conecta uma chave individual do iFood MCP e responde a um questionário curto. A aplicação combina as respostas, sugere um tema comum, como italiano, e monta opções locais compatíveis para cada endereço.
+Uma pessoa cria uma Party e compartilha seu código. Cada participante entra pelo próprio dispositivo, conecta a própria conta do iFood MCP por OAuth e responde a um questionário curto. A aplicação combina as respostas, sugere um tema comum, como italiano, e monta opções locais compatíveis para cada endereço.
 
 Os restaurantes e produtos podem variar. O tema e a decisão são compartilhados; cada catálogo, carrinho, consentimento e pedido continuam individuais.
 
@@ -46,6 +46,7 @@ Leia:
 
 - [especificação da fundação](docs/superpowers/specs/2026-10-17-party-foundation-design.md);
 - [plano de implementação](docs/superpowers/plans/2026-10-17-party-foundation.md);
+- [autenticação do iFood MCP](docs/ifood-mcp.md);
 - [decisão de sessões MCP](docs/adr/0001-uma-sessao-mcp-por-participante.md);
 - [pesquisa de impacto](docs/pesquisa-impacto.md).
 
@@ -74,11 +75,11 @@ flowchart LR
 - fecha a lista de participantes por comando do anfitrião;
 - guarda respostas sem conhecer o formato definitivo do questionário;
 - avança estados automaticamente quando todos concluem a etapa;
-- mantém chaves MCP fora do estado público.
+- mantém tokens MCP fora do estado público.
 
 ### Sessão MCP individual
 
-- usa uma chave própria do participante;
+- conecta a conta do participante por autorização OAuth 2.1;
 - opera endereço, catálogo, carrinho e pedido daquela pessoa;
 - não compartilha credenciais com outros participantes;
 - devolve resultados estruturados ao coordenador.
@@ -87,10 +88,10 @@ flowchart LR
 
 - A demonstração usará aproximadamente três dispositivos.
 - O anfitrião fecha o grupo; depois disso, as etapas avançam automaticamente.
-- Cada integrante pode gerar e cadastrar sua própria chave MCP durante a Party.
+- Cada integrante autoriza sua própria conta do iFood MCP durante a Party, por OAuth 2.1.
 - Um único backend na Oracle coordena clientes MCP isolados.
 - O frontend usa polling a cada 1–2 segundos; WebSocket não é necessário agora.
-- A API e as chaves ficam somente em memória durante o MVP.
+- A API e os tokens dos participantes ficam somente em memória durante o MVP.
 - O participante usa um único botão para consentir e confirmar o pedido na etapa futura.
 - Haverá fixtures previamente capturadas como contingência da demonstração.
 
@@ -133,7 +134,7 @@ A API usa `http://localhost:3333`. O contrato HTTP está em [`apps/api/openapi.y
 | --- | --- |
 | Júlio | Produto, questionário, escolha do tema, fluxos e textos |
 | Otávio | Frontend multiusuário e polling da Party |
-| Maeda | Clientes MCP isolados e validação das chaves |
+| Maeda | Sessões MCP isoladas por OAuth e validação dos tokens |
 | Matheus | Party Coordinator, contratos, segurança das sessões e integração |
 
 ## Impacto

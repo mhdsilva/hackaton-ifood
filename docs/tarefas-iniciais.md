@@ -23,7 +23,7 @@ Tarefas:
 - [ ] permitir que somente o anfitrião feche o grupo;
 - [ ] receber respostas genéricas vinculadas ao token;
 - [ ] avançar automaticamente quando todos responderem;
-- [ ] manter chaves MCP em um registro privado;
+- [ ] manter os tokens MCP dos participantes em um registro privado;
 - [ ] publicar a API na Oracle;
 - [ ] ensaiar o fluxo em três dispositivos.
 
@@ -44,7 +44,7 @@ Tarefas que podem começar sem outras decisões:
 - [ ] consultar `GET /parties/:id` a cada 1–2 segundos;
 - [ ] renderizar um formulário a partir da definição temporária do Júlio;
 - [ ] enviar respostas genéricas sem fixar campos no cliente de API;
-- [ ] exibir o estado da conexão MCP sem mostrar a chave.
+- [ ] exibir o estado da conexão MCP sem expor tokens nem segredos.
 
 ## Maeda — isolamento MCP
 
@@ -58,11 +58,15 @@ fixtures/*ifood*.json
 
 Tarefas:
 
+- [ ] ler [`docs/ifood-mcp.md`](ifood-mcp.md) e confirmar o modelo OAuth 2.1 com os organizadores;
+- [ ] registrar o agente e obter `client_id` + `client_secret` após a homologação;
+- [ ] criar test accounts no sandbox;
 - [ ] executar o spike descrito no [ADR de sessões MCP](adr/0001-uma-sessao-mcp-por-participante.md);
-- [ ] provar duas e depois três chaves no mesmo processo;
-- [ ] confirmar autenticação por instância;
+- [ ] autorizar e provar duas, depois três sessões no mesmo processo;
+- [ ] confirmar autenticação por token, sem variável global;
+- [ ] validar o refresh do `access_token` com o `refresh_token`;
 - [ ] sanitizar respostas antes de criar fixtures;
-- [ ] expor uma validação de chave que não devolva nem registre o segredo;
+- [ ] expor uma validação que não devolva nem registre tokens ou segredos;
 - [ ] documentar o fallback caso a biblioteca use credencial global.
 
 ## Júlio — produto
