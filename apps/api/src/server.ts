@@ -9,20 +9,29 @@ import type {
 } from "@sidequest/contracts";
 
 import { DemoMcpOAuthProvider } from "./mcp/demo-oauth-provider.js";
-import {
-  McpOAuthError,
-  McpOAuthFlow,
-  type McpOAuthMode,
-} from "./mcp/oauth-flow.js";
+import { McpOAuthError, McpOAuthFlow } from "./mcp/oauth-flow.js";
+import type { McpOAuthMode } from "./ifood/provider.js";
 import { McpSessionRegistry } from "./mcp/session-registry.js";
 import { ParticipantAccessStore } from "./party/access.js";
+import { getQuestionnaire } from "./party/questionnaire.js";
 import { PartyError, PartyService } from "./party/service.js";
 import { PartyStore } from "./party/store.js";
 
 export interface PartyServerOptions {
-  allowedOrigin: string;
+  allowedOrigins: string[];
   frontendUrl: string;
   oauth: McpOAuthFlow;
+}
+
+function resolveAllowedOrigin(
+  request: IncomingMessage,
+  allowedOrigins: string[],
+): string {
+  const origin = request.headers.origin;
+  if (typeof origin === "string" && allowedOrigins.includes(origin)) {
+    return origin;
+  }
+  return allowedOrigins[0] ?? "http://localhost:5173";
 }
 
 function sendJson(
@@ -36,6 +45,7 @@ function sendJson(
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Origin": allowedOrigin,
     "Content-Type": "application/json; charset=utf-8",
+    Vary: "Origin",
   });
   response.end(statusCode === 204 ? undefined : JSON.stringify(body));
 }
@@ -80,23 +90,48 @@ async function routeRequest(
   response: ServerResponse,
   service: PartyService,
   options: PartyServerOptions,
+  allowedOrigin: string,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = new URL(request.url ?? "/", "http://localhost");
 
   if (method === "OPTIONS") {
-    sendJson(response, 204, null, options.allowedOrigin);
+    sendJson(response, 204, null, allowedOrigin);
     return;
   }
 
   if (method === "GET" && url.pathname === "/health") {
-    sendJson(response, 200, { status: "ok" }, options.allowedOrigin);
+    sendJson(response, 200, { status: "ok" }, allowedOrigin);
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/questionnaire") {
+    const definition = getQuestionnaire(url.searchParams.get("version") ?? undefined);
+    if (!definition) {
+      throw new PartyError(
+        404,
+        "QUESTIONNAIRE_NOT_FOUND",
+        "Questionnaire version not found",
+      );
+    }
+    sendJson(response, 200, definition, allowedOrigin);
     return;
   }
 
   if (method === "POST" && url.pathname === "/parties") {
     const result = service.create(await readJson<CreatePartyRequest>(request));
-    sendJson(response, 201, result, options.allowedOrigin);
+    sendJson(response, 201, result, allowedOrigin);
+    return;
+  }
+
+  const sessionRoute = url.pathname.match(/^\/parties\/([^/]+)\/session$/);
+  if (sessionRoute) {
+    if (method !== "GET") {
+      throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+    }
+    const partyId = decodeURIComponent(sessionRoute[1]);
+    const participant = service.getSession(partyId, bearerToken(request));
+    sendJson(response, 200, { participant }, allowedOrigin);
     return;
   }
 
@@ -112,7 +147,7 @@ async function routeRequest(
       const actor = service.authorizeParticipant(partyId, token);
       const authorization = options.oauth.start(actor);
       service.setMcpConnectionStatus(partyId, token, "validating");
-      sendJson(response, 200, authorization, options.allowedOrigin);
+      sendJson(response, 200, authorization, allowedOrigin);
       return;
     }
 
@@ -148,7 +183,7 @@ async function routeRequest(
   const partyId = decodeURIComponent(route[1]);
   const action = route[2];
   if (method === "GET" && !action) {
-    sendJson(response, 200, service.get(partyId), options.allowedOrigin);
+    sendJson(response, 200, service.get(partyId), allowedOrigin);
     return;
   }
   if (method !== "POST" || !action) {
@@ -161,7 +196,7 @@ async function routeRequest(
         response,
         200,
         service.join(partyId, await readJson<JoinPartyRequest>(request)),
-        options.allowedOrigin,
+        allowedOrigin,
       );
       return;
     case "close":
@@ -169,7 +204,7 @@ async function routeRequest(
         response,
         200,
         service.closeMembership(partyId, bearerToken(request)),
-        options.allowedOrigin,
+        allowedOrigin,
       );
       return;
     case "answers":
@@ -181,7 +216,7 @@ async function routeRequest(
           bearerToken(request),
           await readJson<SubmitAnswersRequest>(request),
         ),
-        options.allowedOrigin,
+        allowedOrigin,
       );
       return;
   }
@@ -193,8 +228,9 @@ export async function handlePartyRequest(
   service: PartyService,
   options: PartyServerOptions,
 ): Promise<void> {
+  const allowedOrigin = resolveAllowedOrigin(request, options.allowedOrigins);
   try {
-    await routeRequest(request, response, service, options);
+    await routeRequest(request, response, service, options, allowedOrigin);
   } catch (error: unknown) {
     if (error instanceof McpOAuthError) {
       if (error.actor) {
@@ -207,7 +243,7 @@ export async function handlePartyRequest(
       const body: ApiErrorBody = {
         error: { code: error.code, message: error.message },
       };
-      sendJson(response, 400, body, options.allowedOrigin);
+      sendJson(response, 400, body, allowedOrigin);
       return;
     }
     if (error instanceof PartyError) {
@@ -218,7 +254,7 @@ export async function handlePartyRequest(
           ...(error.details ? { details: error.details } : {}),
         },
       };
-      sendJson(response, error.statusCode, body, options.allowedOrigin);
+      sendJson(response, error.statusCode, body, allowedOrigin);
       return;
     }
 
@@ -229,7 +265,7 @@ export async function handlePartyRequest(
       response,
       500,
       { error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } } satisfies ApiErrorBody,
-      options.allowedOrigin,
+      allowedOrigin,
     );
   }
 }
@@ -265,8 +301,11 @@ export function resolveMcpOAuthMode(raw: string | undefined): McpOAuthMode {
 
 if (isEntrypoint) {
   const port = Number(process.env.PORT ?? 3333);
-  const allowedOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
-  const frontendUrl = process.env.FRONTEND_URL ?? allowedOrigin;
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+  const frontendUrl = process.env.FRONTEND_URL ?? allowedOrigins[0] ?? "http://localhost:5173";
   const publicApiUrl = process.env.PUBLIC_API_URL ?? `http://localhost:${port}`;
   const oauthMode = resolveMcpOAuthMode(process.env.MCP_OAUTH_MODE);
   const service = new PartyService(new PartyStore(), new ParticipantAccessStore());
@@ -276,7 +315,7 @@ if (isEntrypoint) {
     sessions,
   );
   const server = createPartyServer(service, {
-    allowedOrigin,
+    allowedOrigins,
     frontendUrl,
     oauth,
   });

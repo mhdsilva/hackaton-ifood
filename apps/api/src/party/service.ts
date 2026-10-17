@@ -193,6 +193,18 @@ export class PartyService {
     return actor;
   }
 
+  getSession(idOrCode: string, actorToken: string): Participant {
+    const snapshot = this.get(idOrCode);
+    const actor = this.authorizeParticipant(idOrCode, actorToken);
+    const participant = snapshot.participants.find(
+      (candidate) => candidate.id === actor.participantId,
+    );
+    if (!participant) {
+      throw new PartyError(403, "ACCESS_DENIED", "Token does not identify a participant");
+    }
+    return participant;
+  }
+
   setMcpConnectionStatus(
     idOrCode: string,
     actorToken: string,

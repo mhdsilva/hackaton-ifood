@@ -69,6 +69,41 @@ export interface PartySessionResponse {
   participantToken: string;
 }
 
+export interface McpAuthorizationResponse {
+  authorizationUrl: string;
+  status: "validating";
+  mode: "demo" | "ifood";
+}
+
+export type QuestionnaireQuestionType =
+  | "text"
+  | "single_choice"
+  | "multi_choice"
+  | "scale";
+
+export interface QuestionnaireQuestionOption {
+  id: string;
+  label: string;
+}
+
+export interface QuestionnaireQuestion {
+  id: string;
+  type: QuestionnaireQuestionType;
+  label: string;
+  required: boolean;
+  helpText?: string;
+  options?: QuestionnaireQuestionOption[];
+  min?: number;
+  max?: number;
+}
+
+export interface QuestionnaireDefinition {
+  version: string;
+  title: string;
+  introduction?: string;
+  questions: QuestionnaireQuestion[];
+}
+
 export interface ApiErrorBody {
   error: {
     code: string;

@@ -5,7 +5,7 @@ import type {
   OAuthAuthorizationInput,
   OAuthExchangeInput,
   OAuthTokenResponse,
-} from "./oauth-flow.js";
+} from "../ifood/provider.js";
 
 export class DemoMcpOAuthProvider implements McpOAuthProvider {
   readonly mode = "demo" as const;

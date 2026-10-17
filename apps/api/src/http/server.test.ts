@@ -4,13 +4,13 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable, Writable } from "node:stream";
 import { test } from "node:test";
 
-import {
-  McpOAuthFlow,
-  type McpOAuthProvider,
-  type OAuthAuthorizationInput,
-  type OAuthExchangeInput,
-  type OAuthTokenResponse,
-} from "../mcp/oauth-flow.js";
+import { McpOAuthFlow } from "../mcp/oauth-flow.js";
+import type {
+  McpOAuthProvider,
+  OAuthAuthorizationInput,
+  OAuthExchangeInput,
+  OAuthTokenResponse,
+} from "../ifood/provider.js";
 import { McpSessionRegistry } from "../mcp/session-registry.js";
 import { ParticipantAccessStore } from "../party/access.js";
 import { PartyService } from "../party/service.js";
@@ -101,6 +101,8 @@ async function request(
   path: string,
   body?: unknown,
   token?: string,
+  origin: string = allowedOrigin,
+  allowedOrigins: string[] = [allowedOrigin],
 ): Promise<MemoryResponse> {
   const payload = body === undefined ? "" : JSON.stringify(body);
   const source = Readable.from(payload ? [Buffer.from(payload)] : []);
@@ -108,7 +110,7 @@ async function request(
     method,
     url: path,
     headers: {
-      origin: allowedOrigin,
+      origin,
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
   }) as unknown as IncomingMessage;
@@ -119,7 +121,7 @@ async function request(
     incoming,
     response as unknown as ServerResponse,
     api.service,
-    { allowedOrigin, frontendUrl, oauth: api.oauth } as any,
+    { allowedOrigins, frontendUrl, oauth: api.oauth } as any,
   );
   await finished;
   return response;
@@ -479,4 +481,104 @@ test("authorizes two participants of the same Party without mixing tokens", asyn
   );
   assert.equal(snapshot.text().includes("access-ana-code"), false);
   assert.equal(snapshot.text().includes("access-bruno-code"), false);
+});
+
+test("serves the current questionnaire definition for the frontend", async () => {
+  const api = createApi();
+  const response = await request(api, "GET", "/questionnaire");
+  assert.equal(response.statusCode, 200);
+  const definition = response.json();
+  assert.equal(definition.version, "v1");
+  assert.equal(typeof definition.title, "string");
+  assert.ok(Array.isArray(definition.questions));
+  assert.ok(definition.questions.length >= 1);
+  for (const question of definition.questions) {
+    assert.equal(typeof question.id, "string");
+    assert.equal(typeof question.label, "string");
+    assert.equal(typeof question.type, "string");
+  }
+
+  const explicit = await request(api, "GET", "/questionnaire?version=v1");
+  assert.equal(explicit.statusCode, 200);
+
+  const unknown = await request(api, "GET", "/questionnaire?version=v9");
+  assert.equal(unknown.statusCode, 404);
+  assert.equal(unknown.json().error.code, "QUESTIONNAIRE_NOT_FOUND");
+});
+
+test("validates a participant session and rejects foreign tokens", async () => {
+  const api = createApi();
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const foreign = (
+    await request(api, "POST", "/parties", {
+      name: "Outra Party",
+      host: { id: "bia", name: "Bia" },
+    })
+  ).json();
+  const partyId = host.party.party.id;
+
+  const ok = await request(
+    api,
+    "GET",
+    `/parties/${partyId}/session`,
+    undefined,
+    host.participantToken,
+  );
+  assert.equal(ok.statusCode, 200);
+  assert.equal(ok.json().participant.id, "ana");
+  assert.equal(ok.json().participant.mcpConnectionStatus, "not_connected");
+
+  const missing = await request(api, "GET", `/parties/${partyId}/session`);
+  assert.equal(missing.statusCode, 401);
+  assert.equal(missing.json().error.code, "ACCESS_TOKEN_REQUIRED");
+
+  const denied = await request(
+    api,
+    "GET",
+    `/parties/${partyId}/session`,
+    undefined,
+    foreign.participantToken,
+  );
+  assert.equal(denied.statusCode, 403);
+  assert.equal(denied.json().error.code, "ACCESS_DENIED");
+  assert.equal(denied.text().includes(host.participantToken), false);
+});
+
+test("reflects any configured origin and falls back for the rest", async () => {
+  const api = createApi();
+  const allowed = [allowedOrigin, "https://second.example.com"];
+
+  const reflected = await request(
+    api,
+    "GET",
+    "/health",
+    undefined,
+    undefined,
+    "https://second.example.com",
+    allowed,
+  );
+  assert.equal(
+    reflected.responseHeaders.get("access-control-allow-origin"),
+    "https://second.example.com",
+  );
+  assert.equal(reflected.responseHeaders.get("vary"), "Origin");
+
+  const fallback = await request(
+    api,
+    "GET",
+    "/health",
+    undefined,
+    undefined,
+    "https://evil.example.com",
+    allowed,
+  );
+  assert.equal(
+    fallback.responseHeaders.get("access-control-allow-origin"),
+    allowedOrigin,
+  );
 });
