@@ -1,39 +1,47 @@
 {
   "party": {
     "id": "party-123",
-    "code": "CAOS42",
-    "name": "Caos Crocante",
-    "status": "REVIEWING_CARTS"
+    "code": "JUNTA3",
+    "name": "Jantar de sexta",
+    "status": "COLLECTING_ANSWERS",
+    "hostParticipantId": "ana",
+    "membershipLocked": true,
+    "createdAt": "2026-10-17T20:00:00.000Z"
   },
   "participants": [
     {
       "id": "ana",
       "name": "Ana",
-      "budget": 35,
-      "restrictions": ["vegetarian"],
-      "cartStatus": "ready",
-      "orderStatus": null,
-      "total": 31.9,
-      "etaMinutes": 38
+      "questionnaireResponse": {
+        "questionnaireVersion": "v1",
+        "answers": {
+          "budget": 40,
+          "preference": "massa"
+        },
+        "completed": true,
+        "submittedAt": "2026-10-17T20:02:00.000Z"
+      },
+      "mcpConnectionStatus": "connected"
     },
     {
       "id": "bruno",
       "name": "Bruno",
-      "budget": 40,
-      "restrictions": [],
-      "cartStatus": "pending",
-      "orderStatus": null,
-      "total": null,
-      "etaMinutes": null
+      "questionnaireResponse": {
+        "questionnaireVersion": "v1",
+        "answers": {
+          "budget": 35,
+          "preference": "pizza"
+        },
+        "completed": true,
+        "submittedAt": "2026-10-17T20:03:00.000Z"
+      },
+      "mcpConnectionStatus": "connected"
+    },
+    {
+      "id": "caio",
+      "name": "Caio",
+      "questionnaireResponse": null,
+      "mcpConnectionStatus": "not_connected"
     }
-  ],
-  "mission": {
-    "name": "Sobrevivência Crocante",
-    "mode": "competitive",
-    "roles": [
-      "item_crocante",
-      "bebida_desconhecida",
-      "item_surpresa"
-    ]
-  }
+  ]
 }
