@@ -93,6 +93,41 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/mcp-connection:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: registerMcpConnection
+      security:
+        - participantToken: []
+      description: Registra uma chave write-only para o participante autenticado. A validação real será adicionada pelo adaptador MCP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [apiKey]
+              properties:
+                apiKey:
+                  type: string
+                  minLength: 1
+                  writeOnly: true
+      responses:
+        "200":
+          description: Chave armazenada e aguardando validação
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { const: validating }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
 components:
   securitySchemes:
     participantToken:

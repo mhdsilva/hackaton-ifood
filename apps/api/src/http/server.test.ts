@@ -4,12 +4,18 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable, Writable } from "node:stream";
 import { test } from "node:test";
 
+import { McpSessionRegistry } from "../mcp/session-registry.js";
 import { ParticipantAccessStore } from "../party/access.js";
 import { PartyService } from "../party/service.js";
 import { PartyStore } from "../party/store.js";
 import { handlePartyRequest } from "../server.js";
 
 const allowedOrigin = "https://party.example.com";
+
+interface TestApi {
+  service: PartyService;
+  sessions: McpSessionRegistry;
+}
 
 class MemoryResponse extends Writable {
   statusCode = 200;
@@ -43,7 +49,7 @@ class MemoryResponse extends Writable {
 }
 
 async function request(
-  service: PartyService,
+  api: TestApi,
   method: string,
   path: string,
   body?: unknown,
@@ -65,20 +71,23 @@ async function request(
   await handlePartyRequest(
     incoming,
     response as unknown as ServerResponse,
-    service,
-    { allowedOrigin },
+    api.service,
+    { allowedOrigin, mcpSessions: api.sessions } as any,
   );
   await finished;
   return response;
 }
 
-function createService(): PartyService {
-  return new PartyService(new PartyStore(), new ParticipantAccessStore());
+function createApi(): TestApi {
+  return {
+    service: new PartyService(new PartyStore(), new ParticipantAccessStore()),
+    sessions: new McpSessionRegistry(),
+  };
 }
 
 test("exposes the onboarding flow and a token-free polling snapshot", async () => {
-  const service = createService();
-  const createResponse = await request(service, "POST", "/parties", {
+  const api = createApi();
+  const createResponse = await request(api, "POST", "/parties", {
     name: "Jantar de sexta",
     host: { id: "ana", name: "Ana" },
   });
@@ -86,14 +95,14 @@ test("exposes the onboarding flow and a token-free polling snapshot", async () =
   assert.equal(createResponse.responseHeaders.get("access-control-allow-origin"), allowedOrigin);
   const host = createResponse.json();
 
-  const joinResponse = await request(service, "POST", `/parties/${host.party.party.code}/join`, {
+  const joinResponse = await request(api, "POST", `/parties/${host.party.party.code}/join`, {
     participant: { id: "bruno", name: "Bruno" },
   });
   assert.equal(joinResponse.statusCode, 200);
   const guest = joinResponse.json();
 
   const closeResponse = await request(
-    service,
+    api,
     "POST",
     `/parties/${host.party.party.id}/close`,
     {},
@@ -102,14 +111,14 @@ test("exposes the onboarding flow and a token-free polling snapshot", async () =
   assert.equal(closeResponse.statusCode, 200);
 
   await request(
-    service,
+    api,
     "POST",
     `/parties/${host.party.party.id}/answers`,
     { questionnaireVersion: "v1", answers: { preference: "massa" }, completed: true },
     host.participantToken,
   );
   const finalAnswer = await request(
-    service,
+    api,
     "POST",
     `/parties/${host.party.party.id}/answers`,
     { questionnaireVersion: "v1", answers: { preference: "pizza" }, completed: true },
@@ -119,7 +128,7 @@ test("exposes the onboarding flow and a token-free polling snapshot", async () =
   assert.equal(finalAnswer.json().party.status, "READY_FOR_THEME");
 
   const pollingResponse = await request(
-    service,
+    api,
     "GET",
     `/parties/${host.party.party.id}`,
   );
@@ -129,25 +138,25 @@ test("exposes the onboarding flow and a token-free polling snapshot", async () =
 });
 
 test("requires a Party-scoped Bearer token and keeps CORS on errors", async () => {
-  const service = createService();
+  const api = createApi();
   const host = (
-    await request(service, "POST", "/parties", {
+    await request(api, "POST", "/parties", {
       name: "Jantar de sexta",
       host: { id: "ana", name: "Ana" },
     })
   ).json();
-  await request(service, "POST", `/parties/${host.party.party.id}/join`, {
+  await request(api, "POST", `/parties/${host.party.party.id}/join`, {
     participant: { id: "bruno", name: "Bruno" },
   });
   const foreign = (
-    await request(service, "POST", "/parties", {
+    await request(api, "POST", "/parties", {
       name: "Outra Party",
       host: { id: "intruso", name: "Intruso" },
     })
   ).json();
 
   const missingToken = await request(
-    service,
+    api,
     "POST",
     `/parties/${host.party.party.id}/close`,
     {},
@@ -157,7 +166,7 @@ test("requires a Party-scoped Bearer token and keeps CORS on errors", async () =
   assert.equal(missingToken.responseHeaders.get("access-control-allow-origin"), allowedOrigin);
 
   const foreignToken = await request(
-    service,
+    api,
     "POST",
     `/parties/${host.party.party.id}/close`,
     {},
@@ -166,4 +175,53 @@ test("requires a Party-scoped Bearer token and keeps CORS on errors", async () =
   assert.equal(foreignToken.statusCode, 403);
   assert.equal(foreignToken.json().error.code, "ACCESS_DENIED");
   assert.equal(foreignToken.responseHeaders.get("access-control-allow-origin"), allowedOrigin);
+});
+
+test("stores an MCP key privately and rejects a token from another Party", async () => {
+  const api = createApi();
+  const secret = "super-secret-key-ana-987";
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const foreign = (
+    await request(api, "POST", "/parties", {
+      name: "Outra Party",
+      host: { id: "intruso", name: "Intruso" },
+    })
+  ).json();
+
+  const connection = await request(
+    api,
+    "POST",
+    `/parties/${host.party.party.id}/mcp-connection`,
+    { apiKey: secret },
+    host.participantToken,
+  );
+  assert.equal(connection.statusCode, 200);
+  assert.deepEqual(connection.json(), { status: "validating" });
+  assert.equal(connection.text().includes(secret), false);
+  assert.equal(api.sessions.get(host.party.party.id, "ana"), secret);
+
+  const polling = await request(api, "GET", `/parties/${host.party.party.id}`);
+  assert.equal(polling.text().includes(secret), false);
+  assert.equal(
+    polling.json().participants.find((participant: any) => participant.id === "ana")
+      .mcpConnectionStatus,
+    "validating",
+  );
+
+  const rejected = await request(
+    api,
+    "POST",
+    `/parties/${host.party.party.id}/mcp-connection`,
+    { apiKey: "foreign-secret-key" },
+    foreign.participantToken,
+  );
+  assert.equal(rejected.statusCode, 403);
+  assert.equal(rejected.text().includes("foreign-secret-key"), false);
+  assert.equal(api.sessions.get(host.party.party.id, "intruso"), undefined);
+  assert.equal(api.sessions.get(host.party.party.id, "ana"), secret);
 });

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type {
   CreatePartyRequest,
   JoinPartyRequest,
+  McpConnectionStatus,
   Participant,
   PartySessionResponse,
   PartySnapshot,
@@ -111,7 +112,7 @@ export class PartyService {
 
   closeMembership(idOrCode: string, actorToken: string): PartySnapshot {
     const snapshot = this.get(idOrCode);
-    const actor = this.resolveActor(snapshot, actorToken);
+    const actor = this.authorizeParticipant(idOrCode, actorToken);
     if (actor.participantId !== snapshot.party.hostParticipantId) {
       throw new PartyError(403, "HOST_ONLY", "Only the host can close the Party");
     }
@@ -137,7 +138,7 @@ export class PartyService {
     input: SubmitAnswersRequest,
   ): PartySnapshot {
     const snapshot = this.get(idOrCode);
-    const actor = this.resolveActor(snapshot, actorToken);
+    const actor = this.authorizeParticipant(idOrCode, actorToken);
     if (snapshot.party.status === "OPEN") {
       throw new PartyError(409, "QUESTIONNAIRE_NOT_OPEN", "Close membership before answering");
     }
@@ -183,12 +184,31 @@ export class PartyService {
     }
   }
 
-  private resolveActor(snapshot: PartySnapshot, token: string): ParticipantActor {
+  authorizeParticipant(idOrCode: string, token: string): ParticipantActor {
+    const snapshot = this.get(idOrCode);
     const actor = this.access.resolve(requiredText(token, "participantToken"));
     if (!actor || actor.partyId !== snapshot.party.id) {
       throw new PartyError(403, "ACCESS_DENIED", "Token does not belong to this Party");
     }
     return actor;
+  }
+
+  setMcpConnectionStatus(
+    idOrCode: string,
+    actorToken: string,
+    status: McpConnectionStatus,
+  ): PartySnapshot {
+    const snapshot = this.get(idOrCode);
+    const actor = this.authorizeParticipant(idOrCode, actorToken);
+    const participant = snapshot.participants.find(
+      (candidate) => candidate.id === actor.participantId,
+    );
+    if (!participant) {
+      throw new PartyError(403, "ACCESS_DENIED", "Token does not identify a participant");
+    }
+
+    participant.mcpConnectionStatus = status;
+    return this.store.save(snapshot);
   }
 
   private createCode(): string {

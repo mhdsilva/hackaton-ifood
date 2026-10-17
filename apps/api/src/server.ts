@@ -8,12 +8,14 @@ import type {
   SubmitAnswersRequest,
 } from "@sidequest/contracts";
 
+import { McpSessionRegistry } from "./mcp/session-registry.js";
 import { ParticipantAccessStore } from "./party/access.js";
 import { PartyError, PartyService } from "./party/service.js";
 import { PartyStore } from "./party/store.js";
 
 export interface PartyServerOptions {
   allowedOrigin: string;
+  mcpSessions: McpSessionRegistry;
 }
 
 function sendJson(
@@ -86,7 +88,9 @@ async function routeRequest(
     return;
   }
 
-  const route = url.pathname.match(/^\/parties\/([^/]+)(?:\/(join|close|answers))?$/);
+  const route = url.pathname.match(
+    /^\/parties\/([^/]+)(?:\/(join|close|answers|mcp-connection))?$/,
+  );
   if (!route) {
     throw new PartyError(404, "ROUTE_NOT_FOUND", "Route not found");
   }
@@ -130,6 +134,19 @@ async function routeRequest(
         options.allowedOrigin,
       );
       return;
+    case "mcp-connection": {
+      const token = bearerToken(request);
+      const actor = service.authorizeParticipant(partyId, token);
+      const input = await readJson<{ apiKey?: unknown }>(request);
+      if (typeof input.apiKey !== "string" || input.apiKey.trim().length === 0) {
+        throw new PartyError(400, "INVALID_INPUT", "apiKey is required");
+      }
+
+      options.mcpSessions.set(actor.partyId, actor.participantId, input.apiKey);
+      service.setMcpConnectionStatus(partyId, token, "validating");
+      sendJson(response, 200, { status: "validating" }, options.allowedOrigin);
+      return;
+    }
   }
 }
 
@@ -181,7 +198,10 @@ if (isEntrypoint) {
   const port = Number(process.env.PORT ?? 3333);
   const allowedOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
   const service = new PartyService(new PartyStore(), new ParticipantAccessStore());
-  const server = createPartyServer(service, { allowedOrigin });
+  const server = createPartyServer(service, {
+    allowedOrigin,
+    mcpSessions: new McpSessionRegistry(),
+  });
 
   server.listen(port, () => {
     console.log(`SideQuest Party API listening on http://localhost:${port}`);
