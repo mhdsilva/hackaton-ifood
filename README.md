@@ -1,336 +1,429 @@
-# SideQuest
+# SideQuest Party
 
-> **A cidade vira um tutorial.**
+> **Amigos distantes já dividem a tela. Com o SideQuest, eles passam a dividir a experiência.**
 
-SideQuest transforma o comércio disponível em uma cidade em missões personalizadas para quem acabou de chegar, está conhecendo um bairro ou quer sair da própria rotina.
+Projeto para o hackathon do iFood na SEMCOMP, em São Carlos.
 
-O projeto está sendo desenvolvido para o hackathon do iFood na SEMCOMP, em São Carlos. Este documento serve como fonte de contexto para o grupo e para os agentes que colaborarem no projeto.
+Este README é a fonte principal de contexto para o grupo e para os agentes que colaborarem no projeto. A definição atual substitui a proposta anterior de exploração física da cidade.
 
 ## A ideia em uma frase
 
-Quando alguém chega a uma cidade, recebe um endereço, mas não recebe um tutorial. O SideQuest usa o iFood MCP para transformar necessidades reais — encontrar mercado, farmácia, comida e itens essenciais — em uma campanha de exploração do novo território.
+SideQuest é uma Party em que amigos em endereços diferentes respondem a um questionário curto, conectam suas contas do iFood e recebem pedidos personalizados que cumprem os mesmos papéis em uma experiência sincronizada.
+
+> **O agente sincroniza significados, não produtos.**
 
 ## O problema
 
-Chegar a uma cidade ou a um bairro desconhecido envolve pequenas decisões difíceis:
+Amigos que vivem longe já conseguem compartilhar conversa, vídeo e jogos. Mesmo durante a mesma chamada, cada pessoa continua vivendo uma noite fisicamente diferente:
 
-- Onde encontro o básico perto de casa?
-- O que consigo resolver com o orçamento e o tempo que tenho?
-- Quais lugares estão abertos agora?
-- Como descubro opções além das escolhas mais óbvias?
-- Como começo a criar familiaridade com o lugar?
+- cada participante decide sozinho o que pedir;
+- catálogos, preços e prazos variam por endereço;
+- combinar uma atividade exige planejamento;
+- a comida chega em momentos diferentes;
+- a chamada pode continuar sem uma experiência comum além da tela.
 
-Os aplicativos atuais ajudam a encontrar produtos e estabelecimentos. Eles não transformam esse processo em uma jornada coerente, memorável e adaptada ao momento da pessoa.
+O desafio é criar uma experiência física compartilhada sem exigir que todos estejam na mesma cidade, encontrem o mesmo produto ou comprem pelo mesmo estabelecimento.
 
 ## A proposta
 
-O usuário descreve seu contexto em linguagem natural:
+Uma pessoa cria uma Party e compartilha o link no Discord ou em outro canal. Cada participante:
 
-> "Cheguei hoje em São Carlos, moro perto da USP, tenho R$ 100, uma hora livre e preciso sobreviver à primeira noite."
+1. entra na sala;
+2. conecta sua própria conta do iFood;
+3. responde a um mini questionário;
+4. recebe um carrinho compatível com seu endereço, orçamento e restrições;
+5. revisa e confirma seu próprio pedido;
+6. acompanha a chegada dos pedidos do grupo;
+7. começa a missão quando todos estiverem prontos.
 
-O agente interpreta objetivos e restrições, consulta estabelecimentos e produtos reais e monta uma sequência de missões:
+Os produtos podem ser diferentes. O agente atribui a eles funções equivalentes na mesma narrativa.
 
-1. **Construa sua base:** encontre itens essenciais sem ultrapassar o orçamento.
-2. **Descubra sua taverna:** conheça uma opção próxima e aberta para comer.
-3. **Encontre o healer:** identifique onde obter itens básicos de farmácia.
-4. **Desbloqueie o mapa:** descubra um estabelecimento fora do padrão habitual.
+| Papel na missão | Pessoa em São Carlos | Pessoa em Campinas |
+| --- | --- | --- |
+| Artefato picante | Salgadinho apimentado | Molho de pimenta |
+| Poção desconhecida | Refrigerante diferente | Suco exótico |
+| Item crocante | Biscoito | Amendoim |
+| Item surpresa | Escolha local do agente | Outra escolha local |
 
-Ao final, a pessoa resolveu necessidades concretas e começou a construir uma relação com o território.
+Quando todos recebem os pedidos, os itens se tornam artefatos, pistas, ingredientes, recompensas ou desafios da mesma Party.
 
 ## Tese do produto
 
-O catálogo do iFood pode funcionar como matéria-prima para experiências no mundo real.
+O SideQuest conecta duas infraestruturas que já existem:
 
-No SideQuest:
+- plataformas como Discord reúnem amigos distantes para conversar e jogar;
+- o iFood materializa produtos em endereços diferentes.
 
-- estabelecimentos são pontos do mapa;
-- produtos são artefatos;
-- necessidades são objetivos;
-- restrições são regras da partida;
-- compras e retiradas materializam o progresso;
-- imprevistos fazem o agente replanejar a campanha.
+O agente cria o elo entre elas, traduzindo uma experiência comum para catálogos locais.
 
-O jogo não é o problema resolvido. Ele é a interface usada para tornar a descoberta urbana mais simples, motivadora e memorável.
+> **SideQuest é um multiplayer do mundo físico.**
+
+Outra forma de explicar:
+
+> **É um DLC que chega na porta de cada jogador.**
 
 ## Público inicial
 
-O primeiro recorte é formado por:
+O primeiro recorte é formado por grupos de duas a quatro pessoas que:
 
-- calouros e estudantes chegando a uma cidade universitária;
-- pessoas morando sozinhas pela primeira vez;
-- pessoas que acabaram de mudar de bairro ou cidade;
-- visitantes com pouco tempo para conhecer a região.
+- já se conhecem;
+- estão em uma chamada ou pretendem iniciar uma;
+- vivem em endereços diferentes;
+- querem fazer algo além de conversar ou jogar da maneira habitual;
+- aceitam comprar um kit pequeno para aquela experiência.
 
-São Carlos e a própria SEMCOMP oferecem um cenário natural para demonstrar essa jornada.
+O MVP não tenta encontrar novos amigos nem formar grupos entre desconhecidos.
 
-## Experiência principal
-
-### 1. Briefing
-
-O jogador informa:
-
-- onde está;
-- quanto pode gastar;
-- quanto tempo possui;
-- se está sozinho ou acompanhado;
-- restrições alimentares e preferências;
-- o que precisa resolver;
-- o estilo desejado para a missão.
-
-### 2. Geração da campanha
-
-O agente consulta o iFood MCP, encontra opções viáveis e constrói uma campanha com narrativa, ordem, orçamento e critérios de conclusão.
-
-### 3. Validação
-
-Antes de apresentar a campanha, o agente verifica:
-
-- estabelecimentos abertos;
-- distância e prazo plausíveis;
-- compatibilidade com o orçamento;
-- restrições declaradas pelo usuário;
-- disponibilidade dos itens;
-- alternativas para etapas críticas.
-
-### 4. Execução
-
-A interface apresenta:
-
-- mapa ou representação do território;
-- missão atual;
-- inventário;
-- orçamento restante;
-- cronômetro;
-- progresso da campanha.
-
-Qualquer compra exige confirmação explícita do usuário.
-
-### 5. Replanejamento
-
-Se um estabelecimento fechar, um item ficar indisponível ou o orçamento mudar, o agente reescreve a missão preservando a narrativa e os objetivos já concluídos.
-
-Esse replanejamento deve ser um dos momentos centrais da demonstração técnica.
-
-## Retrospectiva jogável
-
-Depois de algumas jornadas, o SideQuest pode criar uma retrospectiva inspirada em jogos e em experiências como o Spotify Wrapped.
-
-Em vez de apenas listar pedidos, a retrospectiva transforma os hábitos em uma ficha de personagem:
-
-- classe do jogador;
-- território explorado;
-- horário de poder;
-- item recorrente;
-- nível de exploração;
-- estabelecimentos que viraram "bases";
-- regiões e categorias ainda não descobertas.
-
-A retrospectiva termina gerando a próxima missão. Ela conecta passado e ação:
-
-> "Você passou a temporada inteira no mesmo território. Sua próxima missão é descobrir uma opção fora da sua rotina, dentro de R$ 50 e a menos de 2 km."
-
-A retrospectiva deve distinguir claramente:
-
-- **dado observado:** informação retornada pelo MCP;
-- **interpretação do agente:** conclusão inferida a partir dos dados;
-- **elemento narrativo:** nome ou história criada para a experiência.
-
-Não devemos inventar quantidades, gastos ou estatísticas históricas que o MCP não forneça.
-
-## Uso do iFood MCP
-
-### Capacidades relevantes já identificadas
-
-| Área do MCP | Uso no SideQuest |
-| --- | --- |
-| User | Obter perfil comportamental e preferências do usuário |
-| Endereços do User MCP | Definir o ponto inicial e entender padrões associados aos endereços |
-| Discovery | Buscar estabelecimentos e itens por categoria, preço, distância, prazo e disponibilidade |
-| Recommendations | Encontrar favoritos, pedidos recentes, ofertas e estabelecimentos locais em destaque |
-| Merchant e Item | Validar horários, pedido mínimo, entrega, retirada, preço e opções do produto |
-| Cart | Materializar a etapa escolhida após consentimento explícito |
-| Order | Acompanhar o pedido e usar o estado da entrega no progresso da missão |
-
-### Fluxo esperado
+## Jornada da Party
 
 ```mermaid
-flowchart LR
-    A[Contexto do jogador] --> B[Perfil e endereço]
-    B --> C[Busca no catálogo]
-    C --> D[Planejador de missão]
-    D --> E{Missão viável?}
-    E -- Não --> C
-    E -- Sim --> F[Campanha interativa]
-    F --> G{Houve mudança?}
-    G -- Sim --> D
-    G -- Não --> H[Etapa concluída]
-    H --> I[Retrospectiva e próxima missão]
+stateDiagram-v2
+    [*] --> Lobby
+    Lobby --> Questionario: participantes entram
+    Questionario --> Planejamento: todos respondem
+    Planejamento --> Carrinhos: agente resolve cada catálogo
+    Carrinhos --> ReadyCheck: cada pessoa revisa
+    ReadyCheck --> Pedidos: consentimento individual
+    Pedidos --> Acompanhamento
+    Acompanhamento --> SalaDeEspera
+    SalaDeEspera --> Experiencia: todos receberam
+    Experiencia --> Retrospectiva
+    Retrospectiva --> [*]
 ```
 
-## Restrições técnicas conhecidas
+### 1. Criação da sala
 
-Estas restrições devem orientar agentes e desenvolvedores:
+O anfitrião define nome, duração, limite de participantes, horário desejado e estilo inicial. A aplicação gera um link compartilhável. O Discord funciona como canal de voz; uma integração completa com bot não é necessária no MVP.
 
-- Cada carrinho pertence a um único estabelecimento.
-- Jornadas com várias verticais podem exigir carrinhos ou pedidos separados.
-- A identidade do MCP está vinculada ao usuário autenticado; não há colaboração nativa entre várias contas.
-- O envio do pedido exige `userConsent: true` e deve acontecer somente após uma confirmação clara.
-- O MCP de pedidos é voltado à consulta e ao acompanhamento; não devemos presumir cancelamento, suporte ou conversa com entregador.
-- Não devemos depender de um histórico anual completo de compras para a retrospectiva.
-- Informações como alergênicos e dados nutricionais não devem ser presumidas quando não estiverem estruturadas na resposta.
-- Farmácia deve ser tratada como descoberta de produtos e estabelecimentos, sem diagnóstico ou recomendação médica.
-- O sandbox não realiza uma compra real, mas ainda devemos demonstrar o fluxo de consentimento corretamente.
+### 2. Mini questionário
+
+Cada participante responde no máximo cinco perguntas:
+
+1. **Orçamento:** até R$ 25, R$ 40, R$ 60 ou valor personalizado.
+2. **Restrições:** alimentares, ingredientes indesejados e outras limitações relevantes.
+3. **Categoria:** restaurante, mercado, doces e bebidas ou surpresa.
+4. **Nível de surpresa:** seguro, curioso ou caótico.
+5. **Clima da Party:** competir, cooperar, conversar, descobrir sabores ou improvisar.
+
+O endereço deve vir do iFood MCP após autenticação, evitando pedir uma informação já disponível.
+
+### 3. Contrato compartilhado
+
+O agente consolida as respostas em um contrato semântico:
+
+```json
+{
+  "party": "Caos Crocante",
+  "durationMinutes": 45,
+  "mode": "competitive",
+  "roles": [
+    { "name": "artefato_picante", "maxPrice": 15 },
+    { "name": "pocao_desconhecida", "maxPrice": 12 },
+    { "name": "item_crocante", "maxPrice": 10 }
+  ]
+}
+```
+
+Cada participante mantém suas próprias restrições:
+
+```json
+{
+  "player": "Ana",
+  "budget": 35,
+  "dietaryRestrictions": ["vegetarian"],
+  "addressSource": "ifood_mcp"
+}
+```
+
+### 4. Resolução local
+
+Para cada pessoa, o agente:
+
+1. obtém o endereço autorizado;
+2. procura estabelecimentos abertos;
+3. encontra itens capazes de cumprir os papéis;
+4. valida orçamento, prazo e restrições;
+5. prioriza uma janela de entrega compatível com o grupo;
+6. monta um carrinho individual.
+
+O modelo pode criar a narrativa, mas não pode inventar preço, disponibilidade, estabelecimento ou característica de produto.
+
+### 5. Ready check
+
+Antes de qualquer compra, a sala mostra o estado de todos:
+
+```text
+PARTY: CAOS CROCANTE
+
+✓ Ana    — carrinho pronto — R$ 31,90
+✓ Bruno  — carrinho pronto — R$ 38,40
+○ Caio   — escolhendo substituição
+
+Cada participante confirma o próprio pedido.
+```
+
+Não existe uma compra coletiva atômica. O sistema coordena decisões individuais e só avança depois das confirmações necessárias.
+
+### 6. Acompanhamento
+
+```text
+ENTREGAS
+
+Ana      ██████████  Entregue
+Bruno    ███████░░░  Em rota
+Caio     █████░░░░░  Preparando
+```
+
+Enquanto esperam, os jogadores podem escolher personagens, votar em modificadores e tentar prever o que chegará para os outros.
+
+Se um pedido atrasar, o agente pode iniciar um prólogo, reordenar etapas ou criar uma ação que não exija abrir os produtos.
+
+### 7. Experiência sincronizada
+
+Exemplo de primeira instrução:
+
+> “Coloquem o primeiro pacote diante da câmera sem revelar o nome. Vocês têm 30 segundos para convencer os outros de que receberam o melhor artefato para sobreviver ao apocalipse.”
+
+A experiência pode combinar degustações às cegas, persuasão, votação, histórias improvisadas, desafios cooperativos e comparações entre produtos locais.
+
+## O que significa sincronizar
+
+### Sincronização semântica
+
+Produtos diferentes exercem o mesmo papel no jogo.
+
+### Sincronização logística
+
+O planejador busca minimizar a diferença entre os horários estimados de entrega, respeitando orçamento e restrições.
+
+```text
+Ana:    32–42 min
+Bruno:  35–45 min
+Caio:   30–40 min
+
+Janela estimada da Party: 35–45 min
+```
+
+### Sincronização da experiência
+
+A missão principal começa depois que todos marcarem seus kits como recebidos. Sincronizar significa coordenar o grupo; não significa enviar todas as transações no mesmo instante.
 
 ## Arquitetura conceitual
 
 ```mermaid
 flowchart TB
-    UI[Interface da campanha]
-    ORQ[Orquestrador do agente]
-    PROFILE[Interpretador de contexto]
-    PLANNER[Planejador de missões]
-    VALIDATOR[Validador de restrições]
-    NARRATOR[Motor narrativo]
-    STATE[Estado da campanha]
-    MCP[iFood MCP]
+    PARTY[Party Coordinator]
+    CONTRACT[Contrato semântico]
+    STATE[Estado compartilhado]
+    GAME[Motor da experiência]
 
-    UI <--> ORQ
-    ORQ --> PROFILE
-    ORQ --> PLANNER
-    PLANNER <--> VALIDATOR
-    PLANNER <--> NARRATOR
-    ORQ <--> STATE
-    VALIDATOR <--> MCP
-    ORQ <--> MCP
+    PARTY --> CONTRACT
+    PARTY <--> STATE
+    PARTY --> GAME
+
+    PARTY --> SA[Sessão da Ana]
+    PARTY --> SB[Sessão do Bruno]
+    PARTY --> SC[Sessão do Caio]
+
+    SA --> MA[iFood MCP + endereço A]
+    SB --> MB[iFood MCP + endereço B]
+    SC --> MC[iFood MCP + endereço C]
+
+    CONTRACT --> RA[Resolver catálogo A]
+    CONTRACT --> RB[Resolver catálogo B]
+    CONTRACT --> RC[Resolver catálogo C]
+
+    RA --> CA[Carrinho A]
+    RB --> CB[Carrinho B]
+    RC --> CC[Carrinho C]
+
+    CA --> STATE
+    CB --> STATE
+    CC --> STATE
 ```
 
-O planejador deve separar dois tipos de decisão:
+### Responsabilidades
 
-1. **Fatos verificáveis:** preço, distância, disponibilidade, horário e restrições.
-2. **Liberdade criativa:** narrativa, nomes, pistas e ordem dramática.
+**Party Coordinator**
 
-O modelo pode criar livremente a narrativa, mas não pode inventar fatos comerciais.
+- mantém participantes e estados;
+- consolida o questionário;
+- cria o contrato compartilhado;
+- coordena ready check, entregas e início.
 
-## Escopo sugerido para o MVP
+**Resolver individual**
 
-O MVP deve provar uma jornada completa, não cobrir todas as possibilidades.
+- opera dentro da sessão autenticada de uma pessoa;
+- consulta endereço e catálogo local;
+- encontra equivalentes semânticos;
+- valida orçamento e restrições;
+- cria o carrinho para revisão.
+
+**Motor da experiência**
+
+- transforma os papéis em regras e narrativa;
+- libera etapas conforme o estado da Party;
+- adapta a missão a atrasos e substituições;
+- gera a retrospectiva final.
+
+## Uso do iFood MCP
+
+| Área | Uso no SideQuest |
+| --- | --- |
+| User | Obter sinais de preferência quando disponíveis |
+| Endereços do User MCP | Definir o catálogo e a logística de cada participante |
+| Discovery | Buscar estabelecimentos e itens por categoria, preço, distância e prazo |
+| Merchant e Item | Validar horário, pedido mínimo, preço e opções |
+| Cart | Criar e revisar um carrinho por participante |
+| Order | Acompanhar cada pedido e atualizar o estado compartilhado |
+
+## Restrições técnicas conhecidas
+
+- A identidade do MCP está vinculada ao usuário autenticado.
+- Cada participante precisa de sua própria sessão e deve consentir com seu pedido.
+- `submitOrder` exige `userConsent: true` e representa o ponto sem retorno.
+- Cada carrinho pertence a um único estabelecimento.
+- O MVP deve usar um estabelecimento por participante.
+- Catálogos variam por endereço; itens idênticos não podem ser exigidos.
+- O MCP não oferece colaboração multiusuário nativa; a Party é uma camada da aplicação.
+- O MCP de pedidos permite consulta e acompanhamento, mas não devemos presumir cancelamento, suporte ou conversa com entregador.
+- Informações estruturadas de alergênicos e nutrição não devem ser presumidas.
+- O sandbox não realiza compras reais, mas o fluxo de consentimento deve ser demonstrado.
+
+## Impacto
+
+A promessa concreta é criar **experiências compartilhadas sob demanda para pessoas em endereços diferentes**.
+
+O produto não deve afirmar que trata solidão ou melhora saúde mental. A pesquisa sustenta que conexão social é relevante, refeições compartilhadas estão associadas a bem-estar e refeições remotas podem produzir sensação de copresença. O efeito específico do SideQuest precisa ser medido.
+
+Leia a [pesquisa de impacto](docs/pesquisa-impacto.md) para dados, fontes e limites dos claims.
+
+### Métrica norte
+
+> **Experiências concluídas por pelo menos duas pessoas em endereços diferentes.**
+
+### Métricas auxiliares
+
+| Etapa | Métrica |
+| --- | --- |
+| Convite | Pessoas convidadas e participantes que entraram |
+| Configuração | Questionários concluídos |
+| Viabilidade | Carrinhos válidos dentro de orçamento e restrições |
+| Sincronização | Diferença entre horários reais de entrega |
+| Ativação | Participantes presentes no início da missão |
+| Participação | Pessoas que concluíram ao menos uma ação |
+| Resultado | Parties concluídas |
+| Qualidade | Diversão, participação e sensação de experiência comum |
+| Continuidade | Intenção de repetir com o grupo |
+
+## Escopo do MVP
 
 ### Essencial
 
-- formulário ou conversa para receber contexto, orçamento e tempo;
-- leitura de endereço e sinais do perfil;
-- busca real no MCP;
-- geração de uma campanha com duas ou três etapas;
-- validação de orçamento, distância, horário e restrições;
-- interface com missão, inventário e progresso;
-- um evento de replanejamento;
-- criação de um carrinho após confirmação;
-- resumo final da campanha.
+- criar uma Party e gerar um link;
+- entrada de duas ou três pessoas;
+- mini questionário individual;
+- contrato com três papéis semânticos;
+- resolução de catálogo por participante;
+- um carrinho por pessoa;
+- ready check e consentimento individual;
+- acompanhamento visual dos pedidos;
+- uma modalidade curta de jogo;
+- tratamento demonstrável de um atraso ou item indisponível;
+- retrospectiva da Party.
 
 ### Se houver tempo
 
-- modo em grupo com uma pessoa como anfitriã;
-- retrospectiva visual do personagem;
+- narração por áudio;
 - compartilhamento do resultado;
-- estilos diferentes de narrativa;
-- mapa real;
-- histórico de campanhas.
+- votação durante a missão;
+- modo espectador;
+- integração simples com Discord;
+- mais de um estilo de experiência.
 
 ### Fora do MVP
 
-- rede social completa;
-- multiplayer em tempo real;
-- pedidos simultâneos em muitos estabelecimentos;
-- gamificação extensa com moedas, ranking e temporadas;
-- qualquer fluxo que dependa de recursos não confirmados no MCP.
+- matchmaking entre desconhecidos;
+- rede social própria;
+- transação coletiva atômica;
+- muitos estabelecimentos por participante;
+- bot completo para Discord;
+- temporadas, ranking e economia virtual;
+- claims clínicos sobre solidão ou saúde mental.
 
-## Métricas de impacto
+## Demonstração sugerida
 
-O protótipo pode representar o resultado de uma campanha com métricas como:
+Três participantes entram na mesma sala:
 
-```text
-CAMPANHA CONCLUÍDA
+- São Carlos: orçamento de R$ 30;
+- Campinas: orçamento de R$ 35;
+- São Paulo: orçamento de R$ 25;
+- uma pessoa vegetariana;
+- todos conectados na mesma chamada.
 
-4 necessidades resolvidas
-3 estabelecimentos descobertos
-R$ 92 de R$ 100 utilizados
-2,1 km do território explorados
-1 nova base estabelecida
-```
+O agente define três papéis: algo crocante, uma bebida desconhecida e um item que possa virar punição ou recompensa. Cada sessão encontra produtos locais e cria um carrinho. A interface mostra o ready check, as entregas e o início sincronizado.
 
-Em uma validação real, acompanharíamos:
-
-- necessidades concluídas dentro do orçamento;
-- novos estabelecimentos descobertos;
-- diversidade de categorias exploradas;
-- missões iniciadas e concluídas;
-- retorno posterior aos lugares descobertos;
-- tempo até a pessoa concluir sua primeira campanha.
-
-As métricas exibidas na demo devem ser derivadas da sessão. Não usar números fictícios como evidência de impacto real.
+Se o sandbox não permitir três contas autenticadas durante a apresentação, uma sessão pode operar ao vivo e as demais podem usar respostas do MCP capturadas previamente. A interface deve identificar claramente quais dados são reais e quais foram simulados.
 
 ## Critérios do hackathon
 
 ### Originalidade
 
-O SideQuest trata catálogo, localização e disponibilidade como uma game engine para o mundo real.
+Produtos diferentes, entregues em cidades diferentes, tornam-se componentes da mesma experiência.
 
 ### Arquitetura e engenharia
 
-O desafio técnico está em gerar missões que sejam simultaneamente narrativas e executáveis, validando restrições e replanejando diante de mudanças.
+O desafio combina múltiplas sessões, resolução semântica, restrições individuais, otimização da janela de entrega, consentimento distribuído e replanejamento.
 
 ### Experiência do usuário
 
-A metáfora de RPG transforma uma jornada complexa em briefing, mapa, missões, inventário e progresso.
+A metáfora da Party organiza convite, questionário, ready check, lobby, entrega e missão em um fluxo conhecido por jogadores.
 
 ### Impacto
 
-O produto ajuda pessoas a resolver necessidades iniciais, conhecer o entorno e criar referências práticas em um território desconhecido. Para o iFood, cria uma jornada de descoberta que atravessa diferentes verticais.
+O produto cria uma ocasião compartilhada para amizades à distância e mede participação, conclusão e percepção de experiência comum.
 
 ### Pitch
 
-A demonstração começa com alguém chegando a São Carlos e termina com uma campanha gerada a partir de estabelecimentos e produtos reais.
+A banca acompanha produtos diferentes se transformando, ao vivo, em uma única missão.
 
-## Princípios para decisões do grupo e dos agentes
+## Princípios para o grupo e para os agentes
 
-Ao propor ou implementar algo, seguir estes princípios:
+1. **A Party é o produto.** Recomendações e carrinhos servem à experiência compartilhada.
+2. **Sincronizar significa coordenar.** Não prometer atomicidade entre pedidos.
+3. **Equivalência vale mais que igualdade.** Os itens cumprem papéis comuns sem precisar ser idênticos.
+4. **Cada pessoa controla sua compra.** Consentimento, orçamento e restrições são individuais.
+5. **Fatos comerciais vêm do MCP.** Narrativa pode ser inventada; preço e disponibilidade não.
+6. **Atrasos fazem parte do jogo.** A experiência deve se adaptar sem excluir participantes.
+7. **Impacto precisa ser medido.** Usar participação e conclusão, não alegações clínicas.
+8. **Uma Party completa vale mais que vários modos incompletos.**
 
-1. **A missão precisa resolver uma necessidade real.** Diversão sem utilidade não sustenta a proposta.
-2. **A narrativa deve nascer de dados reais.** Produtos e estabelecimentos não podem ser inventados.
-3. **O jogador mantém o controle.** Toda ação comercial irreversível exige consentimento explícito.
-4. **O orçamento é uma regra rígida.** Considerar itens, taxas e pedidos mínimos.
-5. **Falhas fazem parte da experiência.** O agente deve replanejar sem quebrar a campanha.
-6. **A interface deve mostrar o raciocínio útil.** Explicar por que cada etapa cabe no tempo, orçamento e contexto.
-7. **O MVP deve contar uma história completa.** Uma campanha convincente vale mais que vários modos incompletos.
-
-## Riscos do conceito
+## Riscos e respostas
 
 | Risco | Resposta proposta |
 | --- | --- |
-| Parecer apenas uma caça ao tesouro | Ancorar cada missão em uma necessidade concreta de quem chegou à cidade |
-| Impacto pouco demonstrável | Exibir necessidades resolvidas, orçamento respeitado e estabelecimentos descobertos |
-| Muitas compras e taxas | Usar uma compra principal e outros locais como descobertas ou checkpoints |
-| Narrativa inventar fatos | Validar todas as informações comerciais antes de gerar a missão |
-| Escopo grande para o hackathon | Demonstrar uma campanha curta com um replanejamento bem executado |
-| Perfil de teste com poucos dados | Fazer o briefing funcionar mesmo sem histórico e tratar personalização como enriquecimento |
+| Produtos idênticos não existem em todas as regiões | Trabalhar com papéis semânticos equivalentes |
+| Um pedido atrasa | Prólogo, reordenação de etapas e estados de espera |
+| Uma pessoa não quer comprar | Só incluir no ready check após confirmação; permitir espectador depois do MVP |
+| Carrinhos ficam caros | Um estabelecimento por pessoa e orçamento rígido |
+| MCP não coordena contas | Manter sessões individuais sob o Party Coordinator |
+| Promessa de impacto exagerada | Medir experiência compartilhada e evitar claims clínicos |
+| Escopo de multiplayer cresce demais | Limitar o MVP a duas ou três pessoas e uma modalidade |
 
 ## Perguntas em aberto
 
-- Qual será o nome final: SideQuest, Cidade Tutorial ou outro?
-- A primeira versão será focada exclusivamente em pessoas recém-chegadas?
-- A missão será realizada por entrega, retirada ou uma combinação das duas?
-- Qual evento de falha será usado para demonstrar o replanejamento?
-- A retrospectiva entra no MVP ou apenas no pitch de evolução?
-- Qual visual representa melhor a experiência: mapa, jogo em texto ou painel de campanha?
+- Qual será o nome final: SideQuest Party, SameQuest ou outro?
+- Qual modalidade única será apresentada na demo?
+- Como o participante autentica sua sessão dentro da Party?
+- Qual tolerância de diferença entre entregas é aceitável?
+- O MVP exige compra de todos ou permite espectador?
+- Quais papéis semânticos são fáceis de resolver em diferentes catálogos?
+- Como simular múltiplas contas de forma transparente se o sandbox limitar a demo?
 
-## Frases de pitch
+## Pitch
 
-> "Hoje o iFood ajuda você a decidir o que comer. O SideQuest ajuda você a decidir o que viver."
-
-> "Quando você chega a uma cidade, recebe um endereço. Nós entregamos o tutorial."
-
-> "Transformamos catálogo, disponibilidade e localização em uma game engine para o mundo real."
+> Amigos que vivem longe já conseguem compartilhar uma partida e uma conversa. Mas cada um continua vivendo uma noite fisicamente diferente. No SideQuest, eles entram em uma Party, respondem a cinco perguntas e conectam suas contas do iFood. Nosso agente cria uma experiência comum e encontra, em cada endereço, produtos diferentes que cumprem os mesmos papéis. Cada pessoa confirma seu carrinho, os pedidos são coordenados e, quando todos recebem, começa uma missão compartilhada. O SideQuest transforma delivery em multiplayer no mundo físico.
 
 ## Estado atual
 
-Conceito em definição. A prioridade seguinte é escolher a jornada única da demonstração e definir o recorte técnico do MVP.
+Conceito aprovado pelo grupo. A próxima decisão é escolher a modalidade única da demonstração e validar o fluxo multiusuário possível no sandbox do iFood MCP.
