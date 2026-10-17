@@ -10,10 +10,10 @@ npm test
 npm run dev:api
 ```
 
-A API local usa `http://localhost:3333` e aceita por padrão o frontend em `http://localhost:5173`. Para outra origem:
+A API local usa `http://localhost:3333` e aceita por padrão o frontend em `http://localhost:5173`. `CORS_ORIGIN` aceita uma lista separada por vírgula, útil para testar de portas diferentes e de celulares na mesma rede:
 
 ```bash
-CORS_ORIGIN=https://party.exemplo.com npm run dev:api
+CORS_ORIGIN=http://localhost:5173,http://192.168.0.10:5173 npm run dev:api
 ```
 
 ## Fontes de verdade
@@ -25,13 +25,15 @@ CORS_ORIGIN=https://party.exemplo.com npm run dev:api
 - [decisão de sessões MCP](adr/0001-uma-sessao-mcp-por-participante.md);
 - [ensaio em três dispositivos](rehearsal-party-foundation.md).
 
-## Handoff para o Otávio
+## Handoff para o frontend
 
 Ao criar ou entrar, salvar `participantToken` em `sessionStorage`. Enviar o valor como `Authorization: Bearer <token>` somente nas rotas privadas. Nunca colocar o token na URL ou no estado compartilhado.
 
 Consultar `GET /parties/:id` a cada 1–2 segundos. Parar o polling ao desmontar a tela e tratar `404` como Party indisponível.
 
-O questionário deve produzir este envelope sem fixar suas perguntas no cliente de API:
+**Validar a sessão ao carregar:** `GET /parties/:id/session` (Bearer) devolve `{ participant }`. Como o estado é em memória, um restart da API invalida os tokens; use esta rota para tratar "sessão expirada, entrar de novo" antes de montar a tela.
+
+**Renderizar o formulário dinamicamente:** `GET /questionnaire` devolve a definição atual (`{ version, title, introduction?, questions[] }`). Cada questão tem `id`, `type` (`text`, `single_choice`, `multi_choice`, `scale`), `label`, `required` e, quando couber, `options`/`min`/`max`. As perguntas ainda são provisórias; a tela não deve fixar campos. Envie as respostas neste envelope, usando o `version` recebido:
 
 ```ts
 type SubmitAnswersRequest = {

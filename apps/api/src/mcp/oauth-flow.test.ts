@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import {
-  McpOAuthError,
-  McpOAuthFlow,
-  type McpOAuthProvider,
-  type OAuthAuthorizationInput,
-  type OAuthExchangeInput,
-} from "./oauth-flow.js";
+import { McpOAuthError, McpOAuthFlow } from "./oauth-flow.js";
+import type {
+  McpOAuthProvider,
+  OAuthAuthorizationInput,
+  OAuthExchangeInput,
+} from "../ifood/provider.js";
 import { McpSessionRegistry } from "./session-registry.js";
 
 class RecordingProvider implements McpOAuthProvider {
