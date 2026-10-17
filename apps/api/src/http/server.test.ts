@@ -225,3 +225,24 @@ test("stores an MCP key privately and rejects a token from another Party", async
   assert.equal(api.sessions.get(host.party.party.id, "intruso"), undefined);
   assert.equal(api.sessions.get(host.party.party.id, "ana"), secret);
 });
+
+test("rejects a null MCP connection body as invalid input", async () => {
+  const api = createApi();
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+
+  const response = await request(
+    api,
+    "POST",
+    `/parties/${host.party.party.id}/mcp-connection`,
+    null,
+    host.participantToken,
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error.code, "INVALID_INPUT");
+});

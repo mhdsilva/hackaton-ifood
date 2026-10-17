@@ -137,8 +137,8 @@ async function routeRequest(
     case "mcp-connection": {
       const token = bearerToken(request);
       const actor = service.authorizeParticipant(partyId, token);
-      const input = await readJson<{ apiKey?: unknown }>(request);
-      if (typeof input.apiKey !== "string" || input.apiKey.trim().length === 0) {
+      const input = await readJson<{ apiKey?: unknown } | null>(request);
+      if (typeof input?.apiKey !== "string" || input.apiKey.trim().length === 0) {
         throw new PartyError(400, "INVALID_INPUT", "apiKey is required");
       }
 

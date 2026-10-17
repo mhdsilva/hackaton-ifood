@@ -158,7 +158,6 @@ components:
               party: { $ref: "#/components/schemas/PartySnapshot" }
               participantToken:
                 type: string
-                writeOnly: true
     ErrorResponse:
       description: Erro de entrada, autorização, recurso ou estado
       content:
@@ -194,12 +193,14 @@ components:
         answers: { type: object, additionalProperties: true }
         completed: { const: true }
     QuestionnaireResponse:
-      allOf:
-        - $ref: "#/components/schemas/SubmitAnswersRequest"
-        - type: object
-          required: [submittedAt]
-          properties:
-            submittedAt: { type: string, format: date-time }
+      type: object
+      additionalProperties: false
+      required: [questionnaireVersion, answers, completed, submittedAt]
+      properties:
+        questionnaireVersion: { type: string, minLength: 1 }
+        answers: { type: object, additionalProperties: true }
+        completed: { const: true }
+        submittedAt: { type: string, format: date-time }
     Participant:
       type: object
       required: [id, name, questionnaireResponse, mcpConnectionStatus]
