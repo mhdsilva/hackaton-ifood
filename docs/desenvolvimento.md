@@ -17,6 +17,8 @@ curl http://localhost:3333/health
 
 O contrato HTTP está em [`apps/api/openapi.yaml`](../apps/api/openapi.yaml) e os tipos compartilhados estão em [`packages/contracts/src/index.ts`](../packages/contracts/src/index.ts).
 
+A estratégia para múltiplas chaves e sessões está registrada em [`docs/adr/0001-uma-sessao-mcp-por-participante.md`](adr/0001-uma-sessao-mcp-por-participante.md).
+
 ## Fronteiras de trabalho
 
 | Pessoa | Pode editar agora | Contrato que consome |
