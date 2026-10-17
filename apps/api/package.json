@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:party-test": "tsc -p tsconfig.party-tests.json",
     "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "npm run build:party-test && node --test dist/party/service.test.js"
   },
   "dependencies": {
     "@sidequest/contracts": "0.1.0"

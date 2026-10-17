@@ -9,7 +9,8 @@
   "scripts": {
     "build": "npm run build --workspace @sidequest/contracts && npm run build --workspace @sidequest/api",
     "dev:api": "npm run dev --workspace @sidequest/api",
-    "start:api": "npm run start --workspace @sidequest/api"
+    "start:api": "npm run start --workspace @sidequest/api",
+    "test": "npm run build --workspace @sidequest/contracts && npm run test --workspace @sidequest/api"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
