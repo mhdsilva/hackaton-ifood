@@ -4,13 +4,14 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-RUN npm ci
+RUN npm ci --workspace @sidequest/api --workspace @sidequest/contracts --include-workspace-root
 
 COPY tsconfig.base.json ./
 COPY apps/api apps/api
 COPY packages/contracts packages/contracts
-RUN npm run build && npm prune --omit=dev
+RUN npm run build:api && npm prune --omit=dev --workspace @sidequest/api --workspace @sidequest/contracts --include-workspace-root
 
 FROM node:22-alpine AS runtime
 

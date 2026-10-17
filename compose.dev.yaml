@@ -1,0 +1,25 @@
+name: sidequest-dev
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    init: true
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - .:/workspace
+      - dependencies:/workspace/node_modules
+      - web_dependencies:/workspace/apps/web/node_modules
+      - next_cache:/workspace/apps/web/.next
+      - contracts_dist:/workspace/packages/contracts/dist
+
+volumes:
+  dependencies:
+  web_dependencies:
+  next_cache:
+  contracts_dist:

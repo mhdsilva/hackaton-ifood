@@ -7,7 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace @sidequest/contracts && npm run build --workspace @sidequest/api",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "npm run build --workspace @sidequest/contracts && npm run build --workspace @sidequest/api",
+    "dev:web": "npm run dev --workspace @sidequest/web",
+    "build:web": "npm run build --workspace @sidequest/contracts && npm run build --workspace @sidequest/web",
+    "start:web": "npm run start --workspace @sidequest/web",
+    "lint:web": "npm run lint --workspace @sidequest/web",
+    "typecheck:web": "npm run build --workspace @sidequest/contracts && npm run typecheck --workspace @sidequest/web",
     "dev:api": "npm run dev --workspace @sidequest/api",
     "start:api": "npm run start --workspace @sidequest/api",
     "test": "npm run build --workspace @sidequest/contracts && npm run test --workspace @sidequest/api"

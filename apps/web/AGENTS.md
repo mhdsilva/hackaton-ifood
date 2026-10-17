@@ -4,9 +4,42 @@ Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávi
 
 ## Contexto e estado atual
 
-Na criação deste documento, `apps/web` contém apenas `.gitkeep` e estas diretrizes. A stack, as pastas e os comportamentos descritos abaixo são decisões para a implementação futura; o projeto Next.js ainda não foi inicializado.
+O setup implementado usa Next.js com App Router, React, TypeScript estrito, Tailwind CSS e shadcn/ui. A rota `/` é uma página provisória com variantes de um único `Button` compartilhado. O design final, a jornada da Party, mocks de interação, integração API/MCP e animações ainda serão implementados.
 
-O monorepo já possui npm workspaces, API em memória, contratos TypeScript e uma fixture compartilhada. O recorte atual vai de criar/entrar na Party até `READY_FOR_THEME`, passando pelo fechamento do grupo e questionário. Carrinhos, pedidos, entregas, jogo e retrospectiva estão fora deste checkpoint. Não há comandos de desenvolvimento, lint ou build do frontend configurados; o build atual da raiz contempla contratos e API.
+O monorepo possui npm workspaces, API em memória, contratos TypeScript e uma fixture compartilhada. O recorte de produto atual vai de criar/entrar na Party até `READY_FOR_THEME`, passando pelo fechamento do grupo e questionário. Carrinhos, pedidos, entregas, jogo e retrospectiva estão fora deste checkpoint. Os scripts do frontend já existem; o build da raiz contempla API e web, e `build:api` preserva o build exclusivo do backend.
+
+## Ambiente e comandos
+
+- Executar instalação, desenvolvimento e verificações no Docker Desktop com containers Linux. A imagem usa Node 24.22.0 Debian bookworm-slim, fixada por digest em `Dockerfile.dev`; usar o npm fornecido nessa imagem e o lockfile único da raiz.
+- Executar os comandos abaixo na raiz do repositório:
+
+```bash
+# Construir e iniciar; npm ci e o build dos contratos precedem o servidor.
+docker compose -f compose.dev.yaml up -d --build
+# Página: http://localhost:5173
+docker compose -f compose.dev.yaml logs -f web
+
+# Verificações com o serviço iniciado.
+docker compose -f compose.dev.yaml exec web npm run lint:web
+docker compose -f compose.dev.yaml exec web npm run typecheck:web
+
+# Parar o dev antes de construir: desenvolvimento e produção usam .next.
+docker compose -f compose.dev.yaml stop web
+docker compose -f compose.dev.yaml run --rm web npm run build:web
+docker compose -f compose.dev.yaml run --rm --service-ports web npm run start:web
+# Ctrl+C encerra o servidor de produção. Para voltar ao dev:
+docker compose -f compose.dev.yaml up -d web
+
+# Parar e remover containers, preservando os volumes.
+docker compose -f compose.dev.yaml down
+```
+
+- Dependências, saída dos contratos e `.next` ficam em volumes Docker. O código é compartilhado com o host. O dev usa Webpack e `WATCHPACK_POLLING=true` para atualização ao salvar no Windows.
+- O comando de início executa `npm ci` para sincronizar os volumes com o lockfile. Após mudar dependências, reconstruir/reiniciar o serviço. Para adicionar pacotes, usar npm dentro do container, com `--workspace @sidequest/web`, atualizando o lockfile da raiz.
+- Atalhos npm da raiz: `dev:web`, `lint:web`, `typecheck:web`, `build:web` e `start:web`. `typecheck:web` e `build:web` compilam os contratos antes do frontend.
+- `lib/contracts.ts` verifica a importação de `PartySnapshot` de `@sidequest/contracts`, sem dados ou chamadas à API. O frontend possui tsconfig próprio com resolução `bundler`, sem herdar a compilação NodeNext do backend.
+- `compose.dev.yaml` é independente do Compose de publicação da API. Nenhum serviço de API ou provedor MCP é necessário para conferir esta página.
+- Na validação inicial, `npm audit --omit=dev` não apontou vulnerabilidades. O audit completo apontou cinco alertas de severidade alta na cadeia de desenvolvimento `eslint-config-next → fast-glob → micromatch → braces`, sem correção compatível oferecida pelo npm. Reavaliar nas atualizações; não aplicar `npm audit fix --force` com downgrade do Next para resolver esses avisos.
 
 Consulte as fontes existentes antes de implementar:
 
@@ -74,7 +107,7 @@ lib/                  Acesso a dados, mocks e utilitários
 - Enviar o questionário pelo envelope `SubmitAnswersRequest`, com `questionnaireVersion`, `answers` e `completed`, sem fixar suas perguntas no cliente de API.
 - Consultar a Party a cada 1–2 segundos, interromper o polling ao desmontar e tratar `404` como Party indisponível. Não há WebSocket neste recorte.
 - Coordenar a origem do frontend com o CORS da API, que atualmente aceita `http://localhost:5173` por padrão.
-- Exibir apenas o estado da conexão MCP. O endpoint atual de conexão é um placeholder; o fluxo OAuth 2.1 planejado e os segredos pertencem ao backend, conforme `docs/ifood-mcp.md`.
+- Exibir apenas o estado da conexão MCP. O backend já possui OAuth por participante com PKCE e provedor de demonstração; o provedor real e o refresh continuam pendentes. Segredos pertencem ao backend, conforme `docs/ifood-mcp.md` e `docs/desenvolvimento.md`.
 
 ## Responsabilidades e padrão de trabalho
 
@@ -90,7 +123,7 @@ lib/                  Acesso a dados, mocks e utilitários
 
 ## Verificação
 
-- Após a implementação de funcionalidades, verificar tipos, lint e build com os comandos realmente configurados. Não registrar comandos inexistentes como disponíveis nem considerar o build atual da raiz uma validação do frontend.
+- Após a implementação de funcionalidades, verificar tipos, lint e build com os comandos configurados acima. O build da API sozinho não valida o frontend. Não executar o build de produção sobre o mesmo volume `.next` enquanto o servidor de desenvolvimento estiver rodando.
 - Conferir a jornada em viewport móvel e desktop, incluindo teclado, foco e estados dos componentes.
 - Verificar a reutilização dos componentes: uma alteração no estilo base deve refletir nos usos correspondentes, respeitando suas variantes.
 - Testar os comportamentos críticos conforme forem implementados: criação e entrada por código, sessão individual, fechamento exclusivo pelo anfitrião, envio do questionário e atualização coletiva até `READY_FOR_THEME`.
