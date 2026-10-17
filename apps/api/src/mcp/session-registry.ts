@@ -1,18 +1,32 @@
-export class McpSessionRegistry {
-  private readonly sessions = new Map<string, Map<string, string>>();
+export interface McpTokenSession {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+  refreshTokenExpiresAt?: string;
+  scopes?: string[];
+}
 
-  set(partyId: string, participantId: string, apiKey: string): void {
-    if (apiKey.trim().length === 0) {
-      throw new Error("API key is required");
+export class McpSessionRegistry {
+  private readonly sessions = new Map<string, Map<string, McpTokenSession>>();
+
+  set(partyId: string, participantId: string, session: McpTokenSession): void {
+    if (
+      session.accessToken.trim().length === 0 ||
+      session.refreshToken.trim().length === 0 ||
+      session.accessTokenExpiresAt.trim().length === 0
+    ) {
+      throw new Error("OAuth token set is incomplete");
     }
 
-    const partySessions = this.sessions.get(partyId) ?? new Map<string, string>();
-    partySessions.set(participantId, apiKey);
+    const partySessions =
+      this.sessions.get(partyId) ?? new Map<string, McpTokenSession>();
+    partySessions.set(participantId, structuredClone(session));
     this.sessions.set(partyId, partySessions);
   }
 
-  get(partyId: string, participantId: string): string | undefined {
-    return this.sessions.get(partyId)?.get(participantId);
+  get(partyId: string, participantId: string): McpTokenSession | undefined {
+    const session = this.sessions.get(partyId)?.get(participantId);
+    return session ? structuredClone(session) : undefined;
   }
 
   deleteParty(partyId: string): void {

@@ -39,3 +39,65 @@ test("documents participantToken as a value returned to the client", () => {
 
   assert.equal(tokenSchema.writeOnly, undefined);
 });
+
+test("documents starting participant OAuth authorization", () => {
+  const path = document.paths["/parties/{partyId}/mcp-connection/authorize"];
+  const operation = path?.post;
+
+  assert.deepEqual(operation?.security, [{ participantToken: [] }]);
+  assert.equal(operation?.requestBody, undefined);
+
+  const ajv = new Ajv2020({ strict: false });
+  addFormats(ajv);
+  ajv.addSchema(document, "openapi-oauth-authorize");
+  const validate = ajv.compile(
+    operation.responses["200"].content["application/json"].schema,
+  );
+
+  assert.equal(
+    validate({
+      authorizationUrl: "https://oauth.example/authorize?state=opaque",
+      status: "validating",
+      mode: "demo",
+    }),
+    true,
+    JSON.stringify(validate.errors),
+  );
+  assert.equal(validate({ status: "validating" }), false);
+  assert.equal(
+    validate({
+      authorizationUrl: "https://oauth.example/authorize?state=opaque",
+      status: "validating",
+      mode: "simulated",
+    }),
+    false,
+  );
+});
+
+test("documents the unauthenticated OAuth callback redirect", () => {
+  const operation =
+    document.paths["/parties/{partyId}/mcp-connection/callback"]?.get;
+
+  assert.deepEqual(operation?.security, []);
+  assert.deepEqual(
+    operation?.parameters.map((parameter: any) => [
+      parameter.name,
+      parameter.in,
+      parameter.required,
+    ]),
+    [
+      ["code", "query", true],
+      ["state", "query", true],
+    ],
+  );
+  assert.equal(operation?.responses["302"].headers.Location.required, true);
+  assert.equal(
+    operation?.responses["302"].headers.Location.schema.format,
+    "uri-reference",
+  );
+});
+
+test("does not expose the retired apiKey MCP placeholder", () => {
+  assert.equal(document.paths["/parties/{partyId}/mcp-connection"], undefined);
+  assert.equal(JSON.stringify(document).includes("apiKey"), false);
+});

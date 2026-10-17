@@ -93,51 +93,66 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
-  /parties/{partyId}/mcp-connection:
+  /parties/{partyId}/mcp-connection/authorize:
     parameters:
       - $ref: "#/components/parameters/PartyId"
     post:
-      operationId: registerMcpConnection
-      deprecated: true
+      operationId: authorizeMcpConnection
       security:
         - participantToken: []
       description: |
-        PLACEHOLDER deste recorte, mantido apenas para o ensaio atual.
-
-        O iFood MCP NÃO usa chave colada por participante: ele usa OAuth 2.1 com PKCE, com
-        `client_id` + `client_secret` do agente no backend e um par `access_token` +
-        `refresh_token` por participante. O contrato correto é:
-
-        - `POST /parties/{partyId}/mcp-connection/authorize` (Bearer) -> devolve `authorizationUrl`;
-        - `GET /parties/{partyId}/mcp-connection/callback?code&state` -> troca o code por tokens.
-
-        Ver docs/ifood-mcp.md. Substituir esta rota pelo fluxo OAuth.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [apiKey]
-              properties:
-                apiKey:
-                  type: string
-                  minLength: 1
-                  writeOnly: true
+        Inicia o OAuth 2.1 com PKCE para o participante identificado pelo Bearer token.
+        O backend mantém o state e o code_verifier vinculados à sessão do participante.
+        O campo `mode` indica se a conexão é real (`ifood`) ou apenas de demonstração (`demo`).
       responses:
         "200":
-          description: Chave armazenada e aguardando validação (placeholder)
+          description: URL de autorização criada para o participante
           content:
             application/json:
               schema:
                 type: object
-                required: [status]
+                additionalProperties: false
+                required: [authorizationUrl, status, mode]
                 properties:
+                  authorizationUrl:
+                    type: string
+                    format: uri
                   status: { const: validating }
-        "400": { $ref: "#/components/responses/ErrorResponse" }
+                  mode:
+                    type: string
+                    enum: [demo, ifood]
+                    description: Modo da conexão MCP; `demo` usa tokens sintéticos.
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/mcp-connection/callback:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    get:
+      operationId: completeMcpConnection
+      security: []
+      description: |
+        Recebe o callback do servidor OAuth, valida o state e troca o code pelos tokens
+        vinculados ao participante. Não exige Bearer porque é chamado pelo redirecionamento
+        do servidor de autorização.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: state
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "302":
+          description: Redireciona o navegador de volta à Party após concluir a conexão
+          headers:
+            Location:
+              required: true
+              description: Destino do frontend com o resultado da conexão OAuth.
+              schema: { type: string, format: uri-reference }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
 components:
   securitySchemes:
