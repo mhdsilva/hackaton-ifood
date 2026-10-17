@@ -19,6 +19,24 @@ paths:
                 required: [status]
                 properties:
                   status: { const: ok }
+  /questionnaire:
+    get:
+      operationId: getQuestionnaire
+      description: |
+        Definição do questionário atual, para o frontend renderizar o formulário
+        dinamicamente sem fixar campos no cliente. As perguntas ainda são provisórias.
+      parameters:
+        - name: version
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Definição do questionário
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestionnaireDefinition" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
   /parties:
     post:
       operationId: createParty
@@ -38,6 +56,29 @@ paths:
       description: Endpoint público de polling; consultar a cada 1–2 segundos.
       responses:
         "200": { $ref: "#/components/responses/PartyResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/session:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    get:
+      operationId: getParticipantSession
+      security:
+        - participantToken: []
+      description: |
+        Valida o Bearer do participante e devolve a identidade pública atual dele.
+        Útil para o frontend detectar uma sessão expirada (estado em memória) ao carregar.
+      responses:
+        "200":
+          description: Participante identificado pelo token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [participant]
+                properties:
+                  participant: { $ref: "#/components/schemas/Participant" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
   /parties/{partyId}/join:
     parameters:
@@ -196,6 +237,38 @@ components:
     McpConnectionStatus:
       type: string
       enum: [not_connected, validating, connected, error]
+    QuestionnaireQuestionOption:
+      type: object
+      required: [id, label]
+      properties:
+        id: { type: string }
+        label: { type: string }
+    QuestionnaireQuestion:
+      type: object
+      required: [id, type, label, required]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          enum: [text, address, single_choice, multi_choice, scale]
+        label: { type: string }
+        required: { type: boolean }
+        helpText: { type: string }
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/QuestionnaireQuestionOption" }
+        min: { type: number }
+        max: { type: number }
+    QuestionnaireDefinition:
+      type: object
+      required: [version, title, questions]
+      properties:
+        version: { type: string }
+        title: { type: string }
+        introduction: { type: string }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/QuestionnaireQuestion" }
     ParticipantIdentity:
       type: object
       additionalProperties: false

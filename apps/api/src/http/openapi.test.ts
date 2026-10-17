@@ -101,3 +101,33 @@ test("does not expose the retired apiKey MCP placeholder", () => {
   assert.equal(document.paths["/parties/{partyId}/mcp-connection"], undefined);
   assert.equal(JSON.stringify(document).includes("apiKey"), false);
 });
+
+test("documents the questionnaire definition for the frontend", () => {
+  const operation = document.paths["/questionnaire"]?.get;
+  assert.ok(operation);
+
+  const ajv = new Ajv2020({ strict: false });
+  addFormats(ajv);
+  ajv.addSchema(document, "openapi-questionnaire");
+  const validate = ajv.compile({
+    $ref: "openapi-questionnaire#/components/schemas/QuestionnaireDefinition",
+  });
+
+  assert.equal(
+    validate({
+      version: "v1",
+      title: "Nos conte o essencial",
+      questions: [
+        { id: "budget", type: "scale", label: "Quanto?", required: true, min: 1, max: 5 },
+      ],
+    }),
+    true,
+    JSON.stringify(validate.errors),
+  );
+  assert.equal(validate({ version: "v1", questions: [] }), false);
+});
+
+test("documents the participant session endpoint as Bearer-protected", () => {
+  const operation = document.paths["/parties/{partyId}/session"]?.get;
+  assert.deepEqual(operation?.security, [{ participantToken: [] }]);
+});

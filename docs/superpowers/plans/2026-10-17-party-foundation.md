@@ -356,7 +356,6 @@ git commit -m "feat: add private MCP session registry"
 - Create: `Dockerfile`
 - Create: `.dockerignore`
 - Create: `compose.yaml`
-- Create: `Caddyfile`
 - Create: `docs/rehearsal-party-foundation.md`
 - Modify: `docs/desenvolvimento.md`
 
@@ -370,7 +369,7 @@ Use a two-stage Node 22 Alpine build. The build stage runs `npm ci` and `npm run
 
 - [ ] **Step 2: Add HTTPS composition for Oracle**
 
-Define `compose.yaml` with one API replica and Caddy as the only public service. Bind Caddy to ports 80 and 443, proxy `{$API_HOST}` to `api:3333`, and pass `CORS_ORIGIN` to the API. Do not publish port 3333 from the API container.
+Define `compose.yaml` with one API replica that exposes `3333` and receives `CORS_ORIGIN`. The Oracle host already runs Coolify, whose Traefik terminates TLS and routes the domain to `api:3333`, so do not publish port 3333 and do not bundle a proxy in the composition.
 
 - [ ] **Step 3: Build the container**
 
@@ -380,14 +379,13 @@ Expected: image builds successfully and contains neither local reference file.
 
 - [ ] **Step 4: Deploy the slice to Oracle**
 
-On the Oracle host, point the chosen DNS name to the instance and run:
+On the Oracle host, point the chosen DNS name to the instance and create a Coolify Application with the Docker Compose build pack for this repository: compose location `/compose.yaml`, domain `https://<api-domain>` targeting the `api` service on port `3333`, and `CORS_ORIGIN=<frontend-origin>`. Deploy, then verify:
 
 ```bash
-API_HOST=<api-domain> CORS_ORIGIN=<frontend-origin> docker compose up -d --build
 curl https://<api-domain>/health
 ```
 
-Expected: Caddy provisions HTTPS and health returns `{ "status": "ok" }`. Keep the concrete domain in the host environment, outside Git.
+Expected: Coolify's Traefik provisions HTTPS and health returns `{ "status": "ok" }`. Keep the concrete domain in Coolify, outside Git.
 
 - [ ] **Step 5: Write the rehearsal checklist**
 
@@ -415,6 +413,6 @@ Expected: all tests pass and both workspaces compile.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add Dockerfile .dockerignore compose.yaml Caddyfile docs/rehearsal-party-foundation.md docs/desenvolvimento.md
+git add Dockerfile .dockerignore compose.yaml docs/rehearsal-party-foundation.md docs/desenvolvimento.md
 git commit -m "docs: prepare multi-device party rehearsal"
 ```

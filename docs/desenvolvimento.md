@@ -10,10 +10,10 @@ npm test
 npm run dev:api
 ```
 
-A API local usa `http://localhost:3333` e aceita por padrão o frontend em `http://localhost:5173`. Para outra origem:
+A API local usa `http://localhost:3333` e aceita por padrão o frontend em `http://localhost:5173`. `CORS_ORIGIN` aceita uma lista separada por vírgula, útil para testar de portas diferentes e de celulares na mesma rede:
 
 ```bash
-CORS_ORIGIN=https://party.exemplo.com npm run dev:api
+CORS_ORIGIN=http://localhost:5173,http://192.168.0.10:5173 npm run dev:api
 ```
 
 ## Fontes de verdade
@@ -25,13 +25,15 @@ CORS_ORIGIN=https://party.exemplo.com npm run dev:api
 - [decisão de sessões MCP](adr/0001-uma-sessao-mcp-por-participante.md);
 - [ensaio em três dispositivos](rehearsal-party-foundation.md).
 
-## Handoff para o Otávio
+## Handoff para o frontend
 
 Ao criar ou entrar, salvar `participantToken` em `sessionStorage`. Enviar o valor como `Authorization: Bearer <token>` somente nas rotas privadas. Nunca colocar o token na URL ou no estado compartilhado.
 
 Consultar `GET /parties/:id` a cada 1–2 segundos. Parar o polling ao desmontar a tela e tratar `404` como Party indisponível.
 
-O questionário deve produzir este envelope sem fixar suas perguntas no cliente de API:
+**Validar a sessão ao carregar:** `GET /parties/:id/session` (Bearer) devolve `{ participant }`. Como o estado é em memória, um restart da API invalida os tokens; use esta rota para tratar "sessão expirada, entrar de novo" antes de montar a tela.
+
+**Renderizar o formulário dinamicamente:** `GET /questionnaire` devolve a definição atual (`{ version, title, introduction?, questions[] }`). Cada questão tem `id`, `type` (`text`, `address`, `single_choice`, `multi_choice`, `scale`), `label`, `required` e, quando couber, `options`/`min`/`max`/`helpText`. A questão `address` não tem `options` — as opções vêm do iFood (`listAddresses`). As perguntas ainda são provisórias; a tela não deve fixar campos. Envie as respostas neste envelope, usando o `version` recebido:
 
 ```ts
 type SubmitAnswersRequest = {
@@ -40,6 +42,8 @@ type SubmitAnswersRequest = {
   completed: true
 }
 ```
+
+O backend valida as respostas contra a definição. Erros possíveis em `POST /parties/:id/answers`: `QUESTIONNAIRE_VERSION_UNKNOWN` (versão inexistente) e `INVALID_ANSWERS` (faltou obrigatório ou tipo inválido; o corpo traz `details.issues` com `{ questionId, reason }`).
 
 ## Conexão MCP (OAuth por participante)
 
@@ -68,32 +72,32 @@ O que falta para produção:
 
 Detalhes do modelo real em [`docs/ifood-mcp.md`](ifood-mcp.md).
 
-## Publicação na Oracle
+## Publicação na Oracle (Coolify/Traefik)
 
-No servidor, configure DNS para o IP da instância e execute:
+O servidor Oracle já roda o Coolify, que opera o Traefik nas portas 80 e 443. Não há proxy no `compose.yaml`: o Coolify gera as labels de roteamento e o certificado TLS.
 
-```bash
-API_HOST=api.exemplo.com \
-PUBLIC_API_URL=https://api.exemplo.com \
-CORS_ORIGIN=https://party.exemplo.com \
-docker compose up -d --build
-```
+Aponte o DNS do domínio para o IP da instância e, no Coolify, crie um recurso **Application** com build pack Docker Compose apontando para este repositório:
+
+- Docker Compose Location: `/compose.yaml`;
+- Domínio no serviço `api`: `https://api.exemplo.com`, porta interna `3333`;
+- Variáveis de ambiente:
+  - `PUBLIC_API_URL=https://api.exemplo.com`;
+  - `CORS_ORIGIN=https://party.exemplo.com`;
+  - `MCP_OAUTH_MODE=demo` (padrão).
 
 `PUBLIC_API_URL` é obrigatório no deploy: é a base do callback OAuth e precisa ser a URL HTTPS
 pública da API (não `localhost`), alcançável pelo navegador do participante. `MCP_OAUTH_MODE`
 tem padrão `demo`; qualquer outro valor recusa subir até o provedor real existir.
 
-Caddy publica somente as portas 80 e 443 e encaminha para a API dentro da rede do Compose. A porta 3333 não é publicada no host.
+A porta 3333 não é publicada no host. O proxy do Coolify alcança o contêiner `api` pela rede do recurso.
 
 Verifique:
 
 ```bash
 curl https://api.exemplo.com/health
-docker compose ps
-docker compose logs --tail=100 api caddy
 ```
 
-O domínio concreto e qualquer credencial ficam no ambiente do servidor, fora do Git.
+Esperado: `{"status":"ok"}`. Status, logs e o domínio concreto ficam no painel do Coolify, fora do Git.
 
 ## Decisões deste recorte
 
