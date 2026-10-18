@@ -57,6 +57,8 @@ export interface PartyInfo {
   hostParticipantId: string;
   membershipLocked: boolean;
   createdAt: string;
+  /** Tema comum, gravado quando o host revela o resultado. */
+  theme?: string;
 }
 
 export interface PartySnapshot {

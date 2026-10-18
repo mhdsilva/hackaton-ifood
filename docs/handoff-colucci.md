@@ -34,9 +34,11 @@ Estados: `OPEN` → `COLLECTING_ANSWERS` → `READY_FOR_THEME` → `THEME_REVEAL
 ### 1b. Revelar resultado (Etapa 8)
 
 - `POST /parties/:id/reveal` (Bearer; só o host, só a partir de `READY_FOR_THEME`) →
-  `party.status = THEME_REVEALED`. Use para o botão "Revelar resultado" e para trocar a tela de
-  resultado. Segundo `reveal` ou fora de `READY_FOR_THEME` retorna `409 NOT_READY_FOR_REVEAL`;
-  outro participante recebe `403 HOST_ONLY`.
+  `party.status = THEME_REVEALED` e `party.theme` (ex.: `italiano`). Use para o botão "Revelar
+  resultado" e para trocar a tela de resultado. Segundo `reveal` ou fora de `READY_FOR_THEME`
+  retorna `409 NOT_READY_FOR_REVEAL`; outro participante recebe `403 HOST_ONLY`.
+- Depois do reveal, leia `party.theme` do snapshot e envie como `theme` no corpo de
+  `POST /parties/:id/options`.
 
 ### 1c. Progresso do pedido (pós-revelação)
 

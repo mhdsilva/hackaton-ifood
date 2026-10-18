@@ -863,6 +863,7 @@ test("reveals the result over HTTP with host-only access", async () => {
   );
   assert.equal(revealed.statusCode, 200);
   assert.equal(revealed.json().party.status, "THEME_REVEALED");
+  assert.equal(revealed.json().party.theme, "italiano");
 
   const missing = await request(api, "POST", `/parties/${partyId}/reveal`, {});
   assert.equal(missing.statusCode, 401);

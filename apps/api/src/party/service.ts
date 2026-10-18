@@ -14,6 +14,7 @@ import type {
 import { ParticipantAccessStore, type ParticipantActor } from "./access.js";
 import { countAnswered, getQuestionnaire, validateAnswers } from "./questionnaire.js";
 import { PartyStore } from "./store.js";
+import { deriveTheme } from "./theme.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MIN_PARTICIPANTS = 2;
@@ -150,6 +151,13 @@ export class PartyService {
     }
 
     snapshot.party.status = "THEME_REVEALED";
+    const answers: Record<string, unknown> = {};
+    for (const participant of snapshot.participants) {
+      if (participant.questionnaireResponse) {
+        Object.assign(answers, participant.questionnaireResponse.answers);
+      }
+    }
+    snapshot.party.theme = deriveTheme(answers);
     return this.store.save(snapshot);
   }
 

@@ -262,6 +262,7 @@ test("the host reveals the result only from READY_FOR_THEME", () => {
 
   const revealed = service.revealTheme(partyId, host.participantToken);
   assert.equal(revealed.party.status, "THEME_REVEALED");
+  assert.equal(revealed.party.theme, "italiano");
 
   assert.throws(
     () => service.revealTheme(partyId, host.participantToken),
