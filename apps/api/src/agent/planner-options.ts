@@ -90,6 +90,7 @@ export async function resolveOptionsWithPlanner(
   const toolbox = plannerToolbox(caller, {
     maxOptions,
     initialCandidates: personalization?.recommendations ?? [],
+    ...(input.queries?.length ? { allowedQueries: input.queries } : {}),
     ...(maxSearchResults !== undefined ? { maxSearchResults } : {}),
   });
 
@@ -98,6 +99,7 @@ export async function resolveOptionsWithPlanner(
     toolbox.toolbox,
     buildPlannerMessages({
       theme: input.theme,
+      ...(input.queries?.length ? { queries: input.queries } : {}),
       budget: input.budget,
       restrictions: input.restrictions,
       addressId: address.addressId,

@@ -57,6 +57,19 @@ export function fixtureCaller(fixture: DiscoveryFixture): ToolCaller {
 }
 
 /**
+ * Termos da contingência: mantém as buscas do tema quando a fixture as conhece; senão usa as
+ * buscas capturadas, para a demonstração continuar funcionando com um tema livre.
+ */
+export function fixtureQueriesFor(
+  fixture: Pick<DiscoveryFixture, "searchOffers">,
+  queries?: string[],
+): string[] {
+  const available = new Set(Object.keys(fixture.searchOffers).map((query) => query.toLowerCase()));
+  const usable = (queries ?? []).filter((query) => available.has(query.trim().toLowerCase()));
+  return usable.length > 0 ? usable : Object.keys(fixture.searchOffers).slice(0, 3);
+}
+
+/**
  * Tenta o iFood real; se falhar por indisponibilidade, devolve opções da fixture marcadas como
  * `simulated`. Erros que exigem ação do participante (endereço) não são mascarados.
  */
@@ -75,7 +88,11 @@ export async function resolveOptionsWithFallback(
     }
     const data = typeof fixture === "function" ? await fixture() : fixture;
     const simulated = await resolveOptions(
-      { ...input, addressId: undefined },
+      {
+        ...input,
+        addressId: undefined,
+        queries: fixtureQueriesFor(data, input.queries),
+      },
       fixtureCaller(data),
       settings,
     );

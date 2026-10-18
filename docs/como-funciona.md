@@ -113,7 +113,7 @@ Criar Party → Entrar por código → Conectar iFood → Fechar grupo → Respo
 | 3 | Conectar iFood | cada pessoa | `POST /parties/:id/mcp-connection/authorize` → login → callback | `mcpConnectionStatus: connected` |
 | 4 | Fechar grupo | anfitrião | `POST /parties/:id/close` | `COLLECTING_ANSWERS` |
 | 5 | Responder | cada pessoa | `POST /parties/:id/answers` | quando todos respondem: `READY_FOR_THEME` |
-| 6 | Tema | anfitrião revela; agente escolhe | `POST /parties/:id/reveal` | tema comum e `themeReason`; orçamento e restrições continuam por pessoa |
+| 6 | Tema | anfitrião revela; agente escolhe | `POST /parties/:id/reveal` | tema livre, `themeQueries` e `themeReason`; orçamento e restrições continuam por pessoa |
 | 7 | Opções locais | cada pessoa | `POST /parties/:id/options` | até 3 restaurantes reais, priorizando o orçamento |
 | 8 | Carrinho | cada pessoa | `POST /parties/:id/cart` | carrinho no iFood com entrega e Pix |
 | 9 | Confirmar | cada pessoa | `POST /parties/:id/order` com `userConsent: true` | `orderId` |
@@ -123,10 +123,11 @@ As etapas 3 e 4 podem ocorrer em qualquer ordem. A conexão com o iFood só é e
 etapa 7.
 
 O tema é **único por Party** e não muda depois do reveal. O agente recebe as respostas de cada
-participante (sem nome, token ou endereço) e escolhe um tema do catálogo de `agent/themes.ts`
-(`italiano`, `japones`, `hamburguer`, `mexicano`, `brasileiro`, `arabe`, `saudavel`, `doce`). Resposta
-fora do catálogo, timeout ou falta de `OPENCODE_API_KEY` caem em `deriveTheme` — o reveal nunca falha
-por causa do modelo.
+participante (sem nome, token ou endereço), inventa um título livre (adequado ao horário) e
+escolhe os termos de busca que o pedido vai usar (`party.themeQueries`). Não existe catálogo de
+temas permitidos. Se o modelo falhar, devolver um plano incompleto, estourar o tempo ou não
+houver `OPENCODE_API_KEY`, o reveal cai em `deriveTheme` — o reveal nunca falha por causa do
+modelo. `agent/themes.ts` permanece só como fallback determinístico e de contingência.
 
 ---
 

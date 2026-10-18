@@ -504,7 +504,7 @@ test("demo checkout: cart, consent-gated order and tracking per participant", as
   const first = await request(api, "GET", `/parties/${partyId}/order/${orderId}`, undefined, token);
   assert.deepEqual(
     [first.json().statusCode, first.json().terminal, first.json().retryAfterSeconds],
-    ["CONFIRMED", false, 5],
+    ["CONFIRMED", false, 2],
   );
   now += 61_000;
   const last = await request(api, "GET", `/parties/${partyId}/order/${orderId}`, undefined, token);
@@ -945,6 +945,69 @@ test("the revealed result wins over the theme sent in the body", async () => {
   );
   assert.equal(options.statusCode, 200);
   assert.equal(options.json().theme, "italiano");
+});
+
+test("the order uses the queries chosen by the theme agent", async () => {
+  const sessions = new McpSessionRegistry();
+  const service = new PartyService(
+    new PartyStore(),
+    new ParticipantAccessStore(),
+    undefined,
+    async () => ({ theme: "Domingo de Massa", queries: ["massa", "pizza"] }),
+  );
+  let received: { theme: string; queries?: string[] } | undefined;
+  const api: TestApi = {
+    service,
+    sessions,
+    oauth: new McpOAuthFlow(new TestOAuthProvider(), sessions),
+    agent: {
+      resolveOptions: async (actor, input) => {
+        received = { theme: input.theme, ...(input.queries ? { queries: input.queries } : {}) };
+        return {
+          participantId: actor.participantId,
+          source: "simulated",
+          theme: input.theme,
+          options: [],
+          warnings: [],
+        };
+      },
+    },
+  };
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de domingo",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const partyId = host.party.party.id;
+  const guest = (
+    await request(api, "POST", `/parties/${partyId}/join`, {
+      participant: { id: "bruno", name: "Bruno" },
+    })
+  ).json();
+  api.service.setMcpConnectionStatusForParticipant(partyId, "bruno", "connected");
+  await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
+  for (const token of [host.participantToken, guest.participantToken]) {
+    await request(
+      api,
+      "POST",
+      `/parties/${partyId}/answers`,
+      { questionnaireVersion: "v1", answers: { address: "casa" }, completed: true },
+      token,
+    );
+  }
+  await request(api, "POST", `/parties/${partyId}/reveal`, {}, host.participantToken);
+
+  const options = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/options`,
+    { budget: 60 },
+    host.participantToken,
+  );
+
+  assert.equal(options.statusCode, 200);
+  assert.deepEqual(received, { theme: "Domingo de Massa", queries: ["massa", "pizza"] });
 });
 
 test("reflects the participant order stage in the public snapshot", async () => {

@@ -1,9 +1,7 @@
 // Cenário visual do Figma: nenhum catálogo, carrinho ou pagamento real é consultado.
 export function getMockRevealTheme() {
   return {
-    name: "Bocado Italiano",
-    introduction: "Bocado",
-    emphasis: "Italiano",
+    title: "Italiano",
     description: "Sabores diferentes, a mesma temática.",
     image: "/figma/theme-italian.png",
   };
@@ -17,7 +15,7 @@ export function getMockRevealedOrder() {
   ];
   const fees = 6;
   return {
-    theme: getMockRevealTheme().name,
+    theme: getMockRevealTheme().title,
     merchant: "Forno da Vila",
     rating: "4,8",
     items,

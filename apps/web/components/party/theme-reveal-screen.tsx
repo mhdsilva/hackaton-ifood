@@ -13,6 +13,9 @@ export function ThemeRevealScreen() {
   const { snapshot, isMock } = useParty();
   // No modo mock o cenário visual continua italiano; no real, o tema vem do agente.
   const theme = isMock ? getMockRevealTheme() : revealTheme(snapshot.party);
+  // Layout de duas linhas sem inventar texto: a primeira palavra fica normal, o resto em destaque.
+  const [firstWord, ...restWords] = theme.title.split(/\s+/);
+  const restOfTitle = restWords.join(" ");
 
   return (
     <PartyShell tone="celebration" brandTone="inverse" contentClassName="pb-3" footerClassName="pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={
@@ -20,7 +23,7 @@ export function ThemeRevealScreen() {
     }>
       <section aria-labelledby="theme-title" className="space-y-1">
         <p className="text-xs leading-4 font-bold">A TEMÁTICA DE VOCÊS É</p>
-        <h1 id="theme-title" className="font-preparation text-[80px] leading-none font-semibold"><span className="font-normal">{theme.introduction}</span><br />{theme.emphasis}</h1>
+        <h1 id="theme-title" className="font-preparation text-[80px] leading-none font-semibold"><span className="font-normal">{firstWord}</span>{restOfTitle && <><br />{restOfTitle}</>}</h1>
         <p className="text-sm leading-5">{theme.description}</p>
       </section>
       <div className="relative h-[245px] overflow-hidden rounded-tl-[64px] rounded-br-[64px]">

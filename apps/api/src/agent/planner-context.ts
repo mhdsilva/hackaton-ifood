@@ -13,6 +13,8 @@ import type { IfoodAddress, IfoodSearchItem } from "./types.js";
 
 export interface PlannerContext {
   theme: string;
+  /** Termos de busca definidos pelo agente do tema; obrigatórios quando existirem. */
+  queries?: string[];
   budget: number;
   restrictions?: string[];
   /** Endereço escolhido na Party, quando a conta tem mais de um. */
@@ -50,9 +52,17 @@ function userPrompt(context: PlannerContext, maxOptions: number): string {
 
   const lines = [
     `Tema escolhido pelo grupo: ${context.theme.trim() || "(sem tema definido)"}`,
+  ];
+  if (context.queries && context.queries.length > 0) {
+    lines.push(
+      `Buscas obrigatórias do tema: ${context.queries.join(", ")}.`,
+      "Comece por esses termos e não troque de assunto; se um deles não retornar nada, tente o próximo da lista.",
+    );
+  }
+  lines.push(
     `Orçamento de referência do participante: R$ ${context.budget.toFixed(2)} (inclui frete).`,
     `Opções desejadas: até ${maxOptions}.`,
-  ];
+  );
   if (itemRestrictions.length > 0) {
     lines.push(`Restrições alimentares (filtro do iFood): ${itemRestrictions.join(", ")}.`);
   }

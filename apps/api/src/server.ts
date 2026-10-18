@@ -12,6 +12,7 @@ import type {
 
 import { AgentError } from "./agent/pick-address.js";
 import { createLlmThemePlanner } from "./agent/theme-planner.js";
+import { themeQueries } from "./agent/themes.js";
 import {
   createDemoIntegration,
   createIfoodIntegration,
@@ -423,12 +424,17 @@ async function routeRequest(
     if (!options.agent) {
       throw new PartyError(501, "OPTIONS_UNAVAILABLE", "Local options are not configured");
     }
+    const party = service.get(partyId).party;
     const input = parseOptionsRequest(
       await readJson<Record<string, unknown>>(request),
-      service.get(partyId).party.theme,
+      party.theme,
     );
+    const queries =
+      party.themeQueries && party.themeQueries.length > 0
+        ? party.themeQueries
+        : themeQueries(party.theme ?? input.theme);
     const agent = options.agent;
-    const output = await runAgent(() => agent.resolveOptions(actor, input));
+    const output = await runAgent(() => agent.resolveOptions(actor, { ...input, queries }));
     service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
       orderStage: "options_ready",
     });

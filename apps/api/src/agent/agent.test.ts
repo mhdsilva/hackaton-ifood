@@ -96,6 +96,24 @@ test("resolves real captured options within budget, minimum order included", asy
   assert.equal(pizza.items[0].selectedOptions.length, 2);
 });
 
+test("uses the agent's queries instead of the theme table", async () => {
+  const base = fixtureCaller(fixture);
+  const queries: string[] = [];
+  const spy: ToolCaller = {
+    async callTool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+      if (name === "searchOffers") queries.push(String(args.query ?? ""));
+      return base.callTool<T>(name, args);
+    },
+  };
+
+  await resolveOptions(
+    { ...input, theme: "Domingo de Massa", queries: ["massa"] },
+    spy,
+  );
+
+  assert.deepEqual(queries, ["massa"]);
+});
+
 test("keeps options over the budget instead of returning nothing", async () => {
   const { options } = await resolveOptions({ ...input, budget: 30 }, fixtureCaller(fixture));
   assert.deepEqual(options.map((option) => option.merchant.name), [
@@ -115,11 +133,13 @@ test("orders options within the budget reference before the ones over it", async
   );
 });
 
-test("fails clearly when the theme has no results", async () => {
-  await assert.rejects(
-    resolveOptions({ ...input, theme: "inexistente", budget: 60 }, fixtureCaller(fixture)),
-    (error: unknown) => error instanceof AgentError && error.code === "NO_OPTIONS",
+test("falls back to broad queries when the theme has no results", async () => {
+  const output = await resolveOptions(
+    { ...input, theme: "inexistente", budget: 60 },
+    fixtureCaller(fixture),
   );
+  assert.ok(output.options.length > 0);
+  assert.match(output.warnings.join(" "), /ampliamos a busca/);
 });
 
 test("one participant failing does not affect the others", async () => {

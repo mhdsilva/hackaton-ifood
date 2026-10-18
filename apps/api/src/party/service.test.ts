@@ -361,7 +361,11 @@ test("the agent chooses the theme from every participant's answers", async () =>
   const received: Record<string, unknown>[][] = [];
   const service = createService(undefined, async (answersByParticipant) => {
     received.push(answersByParticipant);
-    return { theme: "mexicano", reason: "A maioria pediu algo picante." };
+    return {
+      theme: "Domingo de Massa",
+      queries: ["massa", "pizza"],
+      reason: "A maioria pediu algo quente.",
+    };
   });
   const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
   const guest = service.join(host.party.party.id, {
@@ -374,8 +378,9 @@ test("the agent chooses the theme from every participant's answers", async () =>
 
   const revealed = await service.revealTheme(partyId, host.participantToken);
 
-  assert.equal(revealed.party.theme, "mexicano");
-  assert.equal(revealed.party.themeReason, "A maioria pediu algo picante.");
+  assert.equal(revealed.party.theme, "Domingo de Massa");
+  assert.deepEqual(revealed.party.themeQueries, ["massa", "pizza"]);
+  assert.equal(revealed.party.themeReason, "A maioria pediu algo quente.");
   assert.equal(received.length, 1);
   assert.equal(received[0].length, 2, "uma entrada por participante, não o objeto mesclado");
 });
@@ -397,6 +402,7 @@ test("a failing agent falls back to the deterministic theme", async () => {
 
   assert.equal(revealed.party.status, "THEME_REVEALED");
   assert.equal(revealed.party.theme, "sabadou a distancia");
+  assert.equal(revealed.party.themeQueries, undefined);
   assert.equal(revealed.party.themeReason, undefined);
 });
 

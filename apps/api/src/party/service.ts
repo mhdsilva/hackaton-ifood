@@ -242,6 +242,9 @@ export class PartyService {
 
     snapshot.party.status = "THEME_REVEALED";
     snapshot.party.theme = plan?.theme ?? deriveTheme(mergedAnswers(snapshot), this.now());
+    if (plan?.queries.length) {
+      snapshot.party.themeQueries = plan.queries;
+    }
     if (plan?.reason) {
       snapshot.party.themeReason = plan.reason;
     }

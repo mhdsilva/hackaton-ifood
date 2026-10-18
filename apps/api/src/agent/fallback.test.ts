@@ -127,6 +127,17 @@ test("falls back to the fixture when the LLM and iFood both fail", async () => {
   assert.ok(output.options.length > 0);
 });
 
+test("simulated fallback still works with free-form theme queries missing from the fixture", async () => {
+  const output = await resolveOptionsPreferringPlanner(
+    { ...input, theme: "Noite Coreana", queries: ["kimchi", "bibimbap"] },
+    callerFor([], { failSearch: true }),
+    failingClient,
+  );
+
+  assert.equal(output.source, "simulated");
+  assert.ok(output.options.length > 0);
+});
+
 test("a planner that never converges degrades to the deterministic path", async () => {
   let clock = 0;
   const stuck: ChatClient = {

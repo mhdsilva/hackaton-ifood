@@ -30,6 +30,7 @@ import { validateConnection } from "../ifood/validate-connection.js";
 import type { McpSessionRegistry } from "../mcp/session-registry.js";
 import {
   fixtureCaller,
+  fixtureQueriesFor,
   loadDiscoveryFixture,
   resolveOptionsPreferringPlanner,
   resolveOptionsWithFallback,
@@ -370,9 +371,15 @@ export function createDemoIntegration(now: () => number = Date.now): PartyAgentI
       return { address, alreadyExists: false, simulated: true };
     },
     async resolveOptions(actor, input) {
+      const fixture = await loadDiscoveryFixture();
       const output = await resolveOptions(
-        { ...input, participantId: actor.participantId, addressId: undefined },
-        fixtureCaller(await loadDiscoveryFixture()),
+        {
+          ...input,
+          participantId: actor.participantId,
+          addressId: undefined,
+          queries: fixtureQueriesFor(fixture, input.queries),
+        },
+        fixtureCaller(fixture),
       );
       return { ...output, source: "simulated" };
     },

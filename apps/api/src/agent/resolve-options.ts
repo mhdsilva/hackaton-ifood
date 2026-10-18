@@ -63,6 +63,10 @@ async function resolve(
   const { itemRestrictions, ignored } = mapRestrictions(input.restrictions);
   if (ignored.length > 0) warnings.push(`Restrições sem filtro no iFood: ${ignored.join(", ")}`);
 
+  // O agente do tema escolhe os termos; o fallback determinístico cobre Parties antigas.
+  const queries =
+    input.queries && input.queries.length > 0 ? input.queries : themeQueries(input.theme);
+
   const search = async (queries: string[]): Promise<IfoodSearchItem[]> => {
     const searches = await Promise.allSettled(
       queries.map((query) =>
@@ -107,12 +111,12 @@ async function resolve(
   };
 
   const personalized = personalization?.recommendations ?? [];
-  const themeResults = await search(themeQueries(input.theme));
+  const themeResults = await search(queries);
   let options = await buildOptions([...personalized, ...themeResults]);
 
   if (options.length === 0) {
     const themeSearches = new Set(
-      themeQueries(input.theme).map((query) => query.normalize("NFD").toLowerCase()),
+      queries.map((query) => query.normalize("NFD").toLowerCase()),
     );
     const broadQueries = BROAD_FALLBACK_QUERIES.filter(
       (query) => !themeSearches.has(query.normalize("NFD").toLowerCase()),

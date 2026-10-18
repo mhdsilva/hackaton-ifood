@@ -137,6 +137,33 @@ test("resolveOptionsWithPlanner returns live options from the model proposal", a
   assert.equal(output.options[0].items[0].itemId, "i1");
 });
 
+test("the planner only searches the queries defined by the theme", async () => {
+  const items = [candidate("m1", "i1", 30, 5)];
+  const client = scripted([
+    assistant({ name: "searchOffers", args: JSON.stringify({ query: "hamburguer" }) }),
+    assistant({
+      name: "proposeOptions",
+      args: JSON.stringify({ items: [{ merchantId: "m1", itemId: "i1" }] }),
+    }),
+    assistant(null, "pronto"),
+  ]);
+
+  await assert.rejects(
+    resolveOptionsWithPlanner(
+      {
+        participantId: "p1",
+        theme: "Domingo de Massa",
+        queries: ["massa"],
+        budget: 60,
+        restrictions: [],
+      },
+      callerFor(items),
+      client,
+    ),
+    isNoOptions,
+  );
+});
+
 test("resolveOptionsWithPlanner fails when the model never proposes", async () => {
   const client = scripted([assistant(null, "não achei nada")]);
   await assert.rejects(

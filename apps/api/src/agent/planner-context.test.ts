@@ -23,6 +23,7 @@ const rawAddress = {
 test("messages carry the theme, budget, restrictions and safe address labels", () => {
   const messages = buildPlannerMessages({
     theme: "comida de vó",
+    queries: ["nhoque", "feijoada"],
     budget: 60,
     restrictions: ["vegetariano", "sem pimenta"],
     addresses: [rawAddress],
@@ -33,6 +34,7 @@ test("messages carry the theme, budget, restrictions and safe address labels", (
   assert.equal(messages[0].role, "system");
   assert.equal(messages[1].role, "user");
   assert.match(text, /comida de vó/);
+  assert.match(text, /Buscas obrigatórias do tema: nhoque, feijoada/);
   assert.match(text, /R\$ 60\.00/);
   assert.match(text, /VEGETARIAN/);
   assert.match(text, /sem pimenta/);

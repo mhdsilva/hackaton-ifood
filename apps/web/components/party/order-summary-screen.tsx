@@ -111,7 +111,7 @@ export function OrderSummaryScreen() {
       <PartyShell brandTone="light" contentClassName="min-h-full justify-center gap-6 pt-5 pb-10" footer={<Button size="party" className="w-full" disabled>Buscando opções...</Button>}>
         <section role="status" aria-live="polite" className="space-y-4 text-center">
           <p className="text-[11px] leading-[14px] font-bold text-primary">SEU PEDIDO PARA O TEMA</p>
-          <h1 className="font-preparation text-5xl leading-[1.2] font-bold">{themeCopy.introduction} {themeCopy.emphasis}</h1>
+          <h1 className="font-preparation text-5xl leading-[1.2] font-bold">{themeCopy.title}</h1>
           <span aria-hidden="true" className="mx-auto block size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <p className="text-sm leading-[1.35] text-muted-foreground">
             Procurando no iFood lojas que combinem com o tema, o seu orçamento e as suas restrições...
@@ -190,7 +190,7 @@ export function OrderSummaryScreen() {
     </>}>
       <section aria-labelledby="order-title" className="space-y-1">
         <p className="text-[11px] leading-[14px] font-bold text-primary">SEU PEDIDO PARA O TEMA</p>
-        <h1 id="order-title" className="font-preparation text-5xl leading-[1.2] font-bold">{themeCopy.introduction} {themeCopy.emphasis}</h1>
+        <h1 id="order-title" className="font-preparation text-5xl leading-[1.2] font-bold">{themeCopy.title}</h1>
         <p className="flex items-center gap-1 text-muted-foreground">
           {option.merchant.rating !== undefined && <span className="text-xs">★ {rating.format(option.merchant.rating)}</span>}
           <span className="text-[13px] leading-[1.35]">{option.merchant.name}</span>
