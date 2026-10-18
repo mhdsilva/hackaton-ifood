@@ -91,10 +91,16 @@ test("buildProposedOptions turns proposed items into ranked options", async () =
   );
 });
 
-test("buildProposedOptions drops everything that does not fit the budget", async () => {
-  const items = [candidate("m1", "i1", 30, 5)];
-  const options = await buildProposedOptions(items, callerFor(items), { budget: 10, address });
-  assert.deepEqual(options, []);
+test("buildProposedOptions keeps over-budget items, ordered after the ones within it", async () => {
+  const items = [candidate("m1", "i1", 30, 5), candidate("m2", "i2", 8)];
+  const options = await buildProposedOptions(items, callerFor(items), { budget: 30, address });
+  assert.deepEqual(
+    options.map((option) => [option.merchant.id, option.total]),
+    [
+      ["m2", 8],
+      ["m1", 35],
+    ],
+  );
 });
 
 test("buildProposedOptions never returns more than maxOptions", async () => {

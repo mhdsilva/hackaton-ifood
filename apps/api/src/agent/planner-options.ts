@@ -1,10 +1,10 @@
 /**
  * Converte a proposta do planner em opções reais.
  *
- * O modelo só aponta IDs que viu; aqui o executor refaz `getItem` + `buildOption`, reaplica o
- * orçamento e ranqueia — a mesma aritmética do pipeline determinístico. ID inexistente ou item
- * fora do orçamento simplesmente não vira opção, então a falha do agente degrada para a lista
- * vazia (e o chamador decide o fallback), nunca para um dado inventado.
+ * O modelo só aponta IDs que viu; aqui o executor refaz `getItem` + `buildOption` e ranqueia — a
+ * mesma aritmética do pipeline determinístico, com o orçamento como referência para a ordem.
+ * ID inexistente simplesmente não vira opção, então a falha do agente degrada para a lista vazia
+ * (e o chamador decide o fallback), nunca para um dado inventado.
  *
  * Ver docs/superpowers/specs/2026-10-17-agente-llm-ifood-mcp.md (invariante "intenção × fato").
  */
@@ -34,8 +34,8 @@ export interface PlannerOptionsSettings extends PlannerSettings {
 }
 
 /**
- * Detalha e monta as opções para os itens propostos. Não lança por item ruim: quem não couber no
- * orçamento fica de fora. Pode devolver lista vazia — aí o chamador usa o determinístico.
+ * Detalha e monta as opções para os itens propostos. Não lança por item ruim; o orçamento só
+ * define a ordem. Pode devolver lista vazia — aí o chamador usa o determinístico.
  */
 export async function buildProposedOptions(
   candidates: IfoodSearchItem[],
@@ -51,7 +51,7 @@ export async function buildProposedOptions(
         itemId: candidate.itemId,
         userLocation: input.address.coordinates,
       });
-      return buildOption(candidate, detail, input.budget);
+      return buildOption(candidate, detail);
     }),
   );
 
@@ -63,13 +63,13 @@ export async function buildProposedOptions(
     if (!current || option.total < current.total) bestByMerchant.set(option.merchant.id, option);
   }
 
-  return rankOptions([...bestByMerchant.values()]).slice(0, maxOptions);
+  return rankOptions([...bestByMerchant.values()], input.budget).slice(0, maxOptions);
 }
 
 /**
  * Caminho do planner para um participante: endereço → mensagens → loop de tool-calling →
  * proposta revalidada em `LocalOption[]`. Lança `AgentError` quando não há proposta ou quando
- * nada cabe no orçamento — o chamador (integração) decide cair no determinístico.
+ * nenhum item virou opção — o chamador (integração) decide cair no determinístico.
  *
  * O `ChatClient` vem por injeção: sem `OPENCODE_API_KEY` não existe cliente e este caminho nem é
  * escolhido (o determinístico continua sendo o padrão).
@@ -124,7 +124,7 @@ export async function resolveOptionsWithPlanner(
     maxOptions,
   });
   if (options.length === 0) {
-    throw new AgentError("NO_OPTIONS", "Nenhum item proposto pelo agente cabe no orçamento", {
+    throw new AgentError("NO_OPTIONS", "Nenhum item proposto pelo agente virou opção", {
       theme: input.theme,
       proposed: proposal.length,
     });

@@ -34,7 +34,8 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 /**
  * Opções reais do tema para um participante, usando apenas a sessão MCP dele:
- * endereço → busca por tema → detalhe dos itens → combinação dentro do orçamento.
+ * endereço → busca por tema → detalhe dos itens → combinação. O orçamento é referência:
+ * opções acima dele continuam na lista, só aparecem depois das que caem no valor.
  */
 export function resolveOptions(
   input: ResolveOptionsInput,
@@ -73,7 +74,6 @@ async function resolve(
           pageSize: 10,
           refinements: {
             onlyOpen: true,
-            maxItemPrice: input.budget,
             ...(itemRestrictions.length > 0 ? { itemRestrictions } : {}),
           },
         }),
@@ -92,7 +92,7 @@ async function resolve(
           itemId: candidate.itemId,
           userLocation: address.coordinates,
         });
-        return buildOption(candidate, detail, input.budget);
+        return buildOption(candidate, detail);
       }),
     );
 
@@ -103,11 +103,11 @@ async function resolve(
       const current = bestByMerchant.get(option.merchant.id);
       if (!current || option.total < current.total) bestByMerchant.set(option.merchant.id, option);
     }
-    return rankOptions([...bestByMerchant.values()]).slice(0, maxOptions);
+    return rankOptions([...bestByMerchant.values()], input.budget).slice(0, maxOptions);
   };
 
-  const themeResults = await search(themeQueries(input.theme));
   const personalized = personalization?.recommendations ?? [];
+  const themeResults = await search(themeQueries(input.theme));
   let options = await buildOptions([...personalized, ...themeResults]);
 
   if (options.length === 0) {
@@ -129,7 +129,7 @@ async function resolve(
   if (options.length === 0) {
     throw new AgentError(
       "NO_OPTIONS",
-      "Nenhum pedido disponível cabe no orçamento agora",
+      "Nenhum pedido disponível agora",
       { theme: input.theme, budget: input.budget },
     );
   }

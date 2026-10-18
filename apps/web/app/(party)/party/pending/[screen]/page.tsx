@@ -40,6 +40,7 @@ export default async function PendingPage({ params }: { params: Promise<{ screen
         <p className="text-xs font-bold text-primary">TELA PENDENTE</p>
         <h1 className="text-3xl leading-tight font-bold">{destination.name}</h1>
         <p className="text-sm leading-5 text-secondary-foreground">Este é o próximo destino do fluxo. A tela ainda será implementada.</p>
+        {screen === "delivery" && <Button asChild variant="secondary" size="party" className="w-full"><Link href="/party/retrospective">Ver retrospectiva simulada</Link></Button>}
       </div>
     </PartyShell>
   );

@@ -34,7 +34,7 @@ das respostas — **não há pergunta de tema**. Quem escolhe é o **agente**, o
 **todos** os participantes (ex.: maioria pedindo comfort food → italiano). Sem LLM ou se ele falhar,
 vale a regra determinística (energia "quente e confortável" → italiano; sem sinal claro, a vibe do
 dia). A partir do tema, o **agente** busca, para cada pessoa, restaurantes reais perto do endereço
-dela, dentro do orçamento dela. Cada um confirma o **próprio pedido**. A experiência é compartilhada;
+dela, priorizando o orçamento dela. Cada um confirma o **próprio pedido**. A experiência é compartilhada;
 conta, endereço, carrinho e pagamento continuam individuais.
 
 ### Em detalhe
@@ -114,7 +114,7 @@ Criar Party → Entrar por código → Conectar iFood → Fechar grupo → Respo
 | 4 | Fechar grupo | anfitrião | `POST /parties/:id/close` | `COLLECTING_ANSWERS` |
 | 5 | Responder | cada pessoa | `POST /parties/:id/answers` | quando todos respondem: `READY_FOR_THEME` |
 | 6 | Tema | anfitrião revela; agente escolhe | `POST /parties/:id/reveal` | tema comum e `themeReason`; orçamento e restrições continuam por pessoa |
-| 7 | Opções locais | cada pessoa | `POST /parties/:id/options` | até 3 restaurantes reais, dentro do orçamento |
+| 7 | Opções locais | cada pessoa | `POST /parties/:id/options` | até 3 restaurantes reais, priorizando o orçamento |
 | 8 | Carrinho | cada pessoa | `POST /parties/:id/cart` | carrinho no iFood com entrega e Pix |
 | 9 | Confirmar | cada pessoa | `POST /parties/:id/order` com `userConsent: true` | `orderId` |
 | 10 | Acompanhar | cada pessoa | `GET /parties/:id/order/:orderId` | status e cadência de consulta |
@@ -345,7 +345,9 @@ reais, as duas sessões coexistiram no mesmo processo sem vazamento.
 
 Dado `tema + orçamento + restrições`, o agente descobre o endereço da pessoa, busca restaurantes
 **abertos** do tema perto dela, detalha os pratos, escolhe as opções obrigatórias mais baratas e
-devolve até **3 restaurantes** cujo total, **com frete**, cabe no orçamento.
+devolve até **3 restaurantes**. O total, **com frete**, é comparado com o orçamento só para
+ordenar: as opções dentro do valor (com folga de 10%) vêm primeiro, e as acima dele entram depois
+em vez de sumirem — a lista nunca fica vazia só porque a pessoa escolheu um valor curto.
 
 ```text
 listAddresses → escolher endereço → searchOffers (1 por termo do tema)
@@ -374,7 +376,8 @@ O `theme` do corpo é **opcional** (fallback): em geral o valor vem de `party.th
 3. **Restrições** (`restrictions.ts`): `vegetariano` → `VEGETARIAN`, `sem glúten` →
    `GLUTEN_FREE` etc. Restrições sem equivalente voltam em `warnings`.
 4. **Busca**: um `searchOffers` por termo, em paralelo, com `resultKind: ITEM`,
-   `merchantType: RESTAURANT` (evita mercados), `onlyOpen: true` e `maxItemPrice` = orçamento.
+   `merchantType: RESTAURANT` (evita mercados) e `onlyOpen: true`. O orçamento **não** filtra a
+   busca: é referência, então nada some por ser um pouco mais caro.
 5. **Candidatos** (`selectCandidates`): só lojas abertas, sem itens repetidos, até 2 itens por
    loja, das lojas mais bem avaliadas.
 6. **Detalhe** (`getItem`): traz os `optionGroups`. Grupos com `minSelections ≥ 1` são escolhas
@@ -382,9 +385,11 @@ O `theme` do corpo é **opcional** (fallback): em geral o valor vem de `party.th
 7. **Montagem** (`build-option.ts`):
    - preço unitário = preço promocional + opções obrigatórias mais baratas;
    - abaixo do **pedido mínimo** da loja, sobe a quantidade (até 3);
-   - total = subtotal + frete promocional; acima do orçamento, a opção é descartada.
-8. **Ordenação**: melhor nota, depois entrega mais rápida, depois menor total; uma opção por loja,
-   até 3.
+   - total = subtotal + frete promocional. O orçamento é só referência: nenhuma opção é
+     descartada por preço.
+8. **Ordenação** (`rankOptions`): primeiro as opções dentro do orçamento com folga de 10% (R$50
+   conta até R$55); depois melhor nota, entrega mais rápida e menor total; uma opção por loja,
+   até 3. É assim que a lista nunca fica vazia só porque o valor ficou curto.
 
 Saída (`ResolveOptionsOutput`, em `src/agent/types.ts`):
 
@@ -701,9 +706,9 @@ O refresh token dá acesso à conta por ~30 dias: o `.env` fica só na máquina 
 ## 14. Limitações conhecidas
 
 - **Total estimado × total real:** o agente estima pelo preço da busca e não conhece a taxa de
-  serviço nem os benefícios aplicados no carrinho. O orçamento é verificado sobre a estimativa; o
-  valor final aparece em `/cart`. O formato das respostas do carrinho foi confirmado com um
-  carrinho real (`fixtures/ifood-cart-italiano.json`).
+  serviço nem os benefícios aplicados no carrinho. O orçamento é só uma referência sobre a
+  estimativa (opções acima dele aparecem, rebaixadas); o valor final aparece em `/cart`. O formato
+  das respostas do carrinho foi confirmado com um carrinho real (`fixtures/ifood-cart-italiano.json`).
 - **Pedido real com Pix não pago (17/10/2026):** `submitOrder` devolveu o `orderId` e o
   `trackOrder` ficou em `PIX_CREATED`, com o Pix "copia e cola" dentro do texto do status. O
   backend separa esse código em `pixCode` e mostra "Aguardando o pagamento via Pix". Ainda não

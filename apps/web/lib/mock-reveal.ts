@@ -1,9 +1,9 @@
 // Cenário visual do Figma: nenhum catálogo, carrinho ou pagamento real é consultado.
 export function getMockRevealTheme() {
   return {
-    name: "Noite Italiana",
-    introduction: "Noite",
-    emphasis: "Italiana",
+    name: "Bocado Italiano",
+    introduction: "Bocado",
+    emphasis: "Italiano",
     description: "Sabores diferentes, a mesma temática.",
     image: "/figma/theme-italian.png",
   };

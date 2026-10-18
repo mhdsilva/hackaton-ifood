@@ -3,28 +3,29 @@ import type { PartyInfo } from "@sidequest/contracts";
 /**
  * Texto e arte da tela de revelação a partir do tema real da Party.
  *
- * A única arte de tema disponível hoje é a italiana (pizza). Até chegarem as demais, todo
- * tema usa esta imagem — o texto continua sendo o tema escolhido pelo agente. Trocar por
- * uma arte por tema é só preencher `THEME_IMAGE` em `THEME_COPY`.
+ * O **tema** (italiano, japonês, ...) vem do agente em `party.theme`; aqui só formatamos o
+ * nome para exibição. O prefixo é genérico de propósito: não amarra a experiência a
+ * "noite"/"sábado", então funciona de dia ou de noite. A única arte disponível hoje é a
+ * italiana (pizza); trocar é preencher `THEME_IMAGE` em `THEME_COPY`.
  */
 const PLACEHOLDER_IMAGE = "/figma/theme-italian.png";
 
 interface ThemeCopy {
-  /** Primeira linha, em peso normal (ex.: "Noite"). */
+  /** Primeira linha, em peso normal (ex.: "Bocado"). */
   introduction: string;
-  /** Segunda linha, em destaque (ex.: "Italiana"). */
+  /** Segunda linha, em destaque (ex.: "Italiano"). */
   emphasis: string;
 }
 
 const THEME_COPY: Record<string, ThemeCopy> = {
-  italiano: { introduction: "Noite", emphasis: "Italiana" },
-  japones: { introduction: "Noite", emphasis: "Japonesa" },
-  hamburguer: { introduction: "Noite", emphasis: "Burger" },
-  mexicano: { introduction: "Noite", emphasis: "Mexicana" },
-  brasileiro: { introduction: "Noite", emphasis: "Brasileira" },
-  arabe: { introduction: "Noite", emphasis: "Árabe" },
-  saudavel: { introduction: "Noite", emphasis: "Saudável" },
-  doce: { introduction: "Noite", emphasis: "Doce" },
+  italiano: { introduction: "Bocado", emphasis: "Italiano" },
+  japones: { introduction: "Bocado", emphasis: "Japonês" },
+  hamburguer: { introduction: "Bocado", emphasis: "Burger" },
+  mexicano: { introduction: "Bocado", emphasis: "Mexicano" },
+  brasileiro: { introduction: "Bocado", emphasis: "Brasileiro" },
+  arabe: { introduction: "Bocado", emphasis: "Árabe" },
+  saudavel: { introduction: "Bocado", emphasis: "Saudável" },
+  doce: { introduction: "Bocado", emphasis: "Doce" },
 };
 
 const VIBE_COPY: ThemeCopy = { introduction: "Party", emphasis: "à Distância" };

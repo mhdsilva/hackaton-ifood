@@ -188,10 +188,10 @@ Roda com **token manual** da minha conta até A9 existir, então não espera o m
 | --- | --- | --- | --- | --- | --- |
 | B1 ◐ | Capturar e **sanitizar** respostas reais (endereços só com cidade e bairro; sem rua, CEP, `addressId`, e-mail, telefone) | `fixtures/ifood-addresses.json`, `fixtures/ifood-discovery-results.json` | A6 ou token manual | P | já existem `fixtures/ifood-discovery-italiano.json` e `ifood-cart-italiano.json`, sanitizados; faltam os dois arquivos nomeados (endereços e discovery genérico) |
 | B2 ✅ | Escolher endereço: um salvo, usar; vários, exigir `addressId` vindo da Party (não inferir em silêncio) | `agent/pick-address.ts` | C | P | testes para 0, 1 e N endereços |
-| B3 ✅ | Buscar itens do tema: `searchOffers` com `onlyOpen`, `itemRestrictions`, `maxItemPrice` | `agent/resolve-options.ts` (não há `search-theme.ts` separado) | B1, C | M | devolve itens abertos para `italiano` |
+| B3 ✅ | Buscar itens do tema: `searchOffers` com `onlyOpen`, `itemRestrictions` (orçamento é referência, não filtro) | `agent/resolve-options.ts` (não há `search-theme.ts` separado) | B1, C | M | devolve itens abertos para `italiano` |
 | B4 ✅ | Mapear restrições da Party (`vegetarian`, etc.) para `itemRestrictions` do iFood | `agent/restrictions.ts` | C | P | tabela de mapeamento testada |
 | B5 ✅ | Agrupar por estabelecimento e detalhar com `getMerchant` e `getItem` | `agent/resolve-options.ts` (consolidado, sem `merchant-detail.ts`) | B3 | M | cada opção traz `optionGroups` e prazo |
-| B6 ✅ | Montar combinação dentro do orçamento, incluindo frete e pedido mínimo | `agent/build-option.ts` | B5 | M | testes: orçamento justo, estourado, abaixo do mínimo |
+| B6 ✅ | Montar combinação com frete e pedido mínimo; orçamento como referência de ordenação | `agent/build-option.ts` | B5 | M | testes: orçamento justo, estourado (opção mantida e rebaixada), abaixo do mínimo |
 | B7 ✅ | `resolveOptions(input)` compondo B2 a B6, com paralelismo e limite de tempo | `agent/resolve-options.ts` | B2, B4, B6 | M | retorna `ResolveOptionsOutput` com `source: "live"` |
 | B8 ✅ | Falha isolada: erro de um participante não derruba os outros; nova tentativa individual | `agent/resolve-options.ts` | B7 | P | `resolveOptionsForParty` isola a falha de cada participante |
 | B9 ✅ | Contingência: usar fixture quando o MCP falhar, com `source: "simulated"` | `agent/fallback.ts`, `fixtures/options-italiano.json` | B7 | P | desligar a rede devolve opções simuladas |
@@ -199,7 +199,7 @@ Roda com **token manual** da minha conta até A9 existir, então não espera o m
 | B11 ✅ | (opcional) LLM só para ranquear ou descrever opções, nunca para escolher IDs | absorvido pelo planner (`agent/planner*.ts`, [ADR 0003](adr/0003-planner-llm-sobre-ifood-mcp.md)); não há `rank.ts` | B7 | M | com e sem `OPENCODE_API_KEY` o resultado é válido |
 
 Pronto quando o marco fecha: para dois participantes com endereços diferentes e o mesmo tema, a
-API devolve opções reais e distintas, dentro do orçamento de cada um, em poucos segundos.
+API devolve opções reais e distintas, priorizando o orçamento de cada um, em poucos segundos.
 
 **Riscos:** catálogo vazio fora de horário ou cidade; itens com opções obrigatórias; latência de
 várias chamadas por participante.

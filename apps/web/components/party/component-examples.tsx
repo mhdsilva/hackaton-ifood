@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipDigit } from "@/components/party/flip-digit";
 import { OrderDetailCard } from "@/components/party/order-detail-card";
+import { RetrospectiveStats } from "@/components/party/retrospective-stats";
+import { getMockRetrospective } from "@/lib/mock-retrospective";
 import { AddressOption } from "@/components/party/address-option";
 import Link from "next/link";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
@@ -29,6 +31,7 @@ export function PartyComponentExamples() {
   const [desires, setDesires] = useState<DesireId[]>([]);
   const [progressStep, setProgressStep] = useState(1);
   const [flip, setFlip] = useState({ value: 3, previous: 3 });
+  const retrospective = getMockRetrospective(snapshot);
 
   return (
     <section aria-labelledby="party-components-title" className="rounded-xl border bg-card p-6 sm:p-8">
@@ -71,6 +74,11 @@ export function PartyComponentExamples() {
           <Link href="/party/unboxing" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar as duas chacoalhadas da sacola</Link>
           <Link href="/party/order" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar o resumo do pedido simulado</Link>
           <Link href="/party/confirmed" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar a confirmação simulada do pedido</Link>
+          <Link href="/party/retrospective" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Retrospectiva · Party concluída</Link>
+          <Link href="/party/retrospective?preview=waiting" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Retrospectiva · aguardando entregas</Link>
+          <Link href="/party/retrospective?preview=no-distance" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Retrospectiva · distância indisponível</Link>
+          <Link href="/party/retrospective?preview=empty" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Retrospectiva · sem resumo</Link>
+          {retrospective.summary && <RetrospectiveStats summary={retrospective.summary} />}
           <OrderDetailCard icon="/figma/order-motorbike.svg" title="Entrega hoje" detail="Hoje, 35 - 45 min" />
         </div>
         <div className="space-y-4 text-center">
