@@ -136,14 +136,16 @@ por causa do modelo.
 
 O anfitrião cria a sala e recebe um **código curto** para compartilhar (ou um link do frontend que
 carrega esse código). Quem entra com o código recebe um **token de participante**, que prova "eu
-sou a Ana desta Party" em todas as ações privadas.
+sou a Ana desta Party" em todas as ações privadas. O front **não pergunta o nome**: até a conexão
+com o iFood, o participante aparece como "Anfitrião" ou "Convidado N"; quando o OAuth termina, o
+`getUser` preenche `participant.name` com o `fullName` da conta.
 
 ### Em detalhe
 
 **Criação — `POST /parties`**
 
 ```json
-{ "name": "Jantar de sexta", "host": { "id": "ana", "name": "Ana" } }
+{ "name": "Jantar de sexta", "host": { "id": "ana" } }
 ```
 
 O backend (`PartyService.create`, em `src/party/service.ts`):
@@ -162,9 +164,11 @@ O backend (`PartyService.create`, em `src/party/service.ts`):
 **Entrada — `POST /parties/:code/join`**
 
 ```json
-{ "participant": { "id": "bruno", "name": "Bruno" } }
+{ "participant": { "id": "bruno" } }
 ```
 
+- `name` é opcional: o servidor usa "Convidado 1", "Convidado 2"… e o `getUser` do iFood
+  substitui pelo `fullName` na validação do OAuth.
 - Recusa quando o resultado já está pronto (`READY_FOR_THEME`) ou revelado (`THEME_REVEALED`) —
   `PARTY_CLOSED` —, quando a Party está cheia — máximo de **4** — (`PARTY_FULL`) ou se o `id` já
   existir. Durante `COLLECTING_ANSWERS` ainda dá para entrar: quem chega atrasado responde como

@@ -580,23 +580,22 @@ function EntryGate({
   onEntered: (session: StoredSession, party: PartySnapshot) => void;
 }) {
   const inviteCode = useSyncExternalStore(subscribeNoop, readInviteCode, () => null);
-  const [name, setName] = useState("");
   const [partyName, setPartyName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!name.trim() || busy) return;
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
       const participantId = randomParticipantId();
       const result = inviteCode
-        ? await liveApi.joinParty(inviteCode, { participant: { id: participantId, name: name.trim() } })
+        ? await liveApi.joinParty(inviteCode, { participant: { id: participantId } })
         : await liveApi.createParty({
             name: partyName.trim() || "Party sem nome",
-            host: { id: participantId, name: name.trim() },
+            host: { id: participantId },
           });
       onEntered({ partyId: result.party.party.id, participantId, token: result.participantToken }, result.party);
     } catch (cause) {
@@ -619,14 +618,7 @@ function EntryGate({
             onChange={(event) => setPartyName(event.target.value)}
           />
         )}
-        <Input
-          aria-label="Seu nome"
-          placeholder="Seu nome"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-        />
-        <Button type="submit" size="party" className="w-full" disabled={busy || !name.trim()}>
+        <Button type="submit" size="party" className="w-full" disabled={busy}>
           {busy ? "Entrando..." : inviteCode ? "Entrar" : "Criar Party"}
         </Button>
       </form>

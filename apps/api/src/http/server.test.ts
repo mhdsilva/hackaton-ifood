@@ -367,6 +367,31 @@ test("completes OAuth on the single callback, finding the Party from state", asy
   assert.equal(api.sessions.get(host.party.party.id, "ana")?.accessToken, "private-access-token");
 });
 
+test("names the participant from the iFood profile after OAuth", async () => {
+  const api: TestApi = {
+    ...createApi(),
+    agent: {
+      validateConnection: async () => ({ status: "connected", name: "Ana Souza" }),
+      resolveOptions: async () => {
+        throw new Error("unused");
+      },
+    },
+  };
+  const { host, state } = await createHostAndAuthorize(api);
+
+  const callback = await request(
+    api,
+    "GET",
+    `/mcp-connection/callback?code=approved&state=${encodeURIComponent(state)}`,
+  );
+  assert.equal(callback.statusCode, 302);
+
+  const party = (await request(api, "GET", `/parties/${host.party.party.id}`)).json();
+  const ana = party.participants.find((participant: any) => participant.id === "ana");
+  assert.equal(ana.name, "Ana Souza");
+  assert.equal(ana.mcpConnectionStatus, "connected");
+});
+
 test("serves the callback on the path registered in the iFood agent", async () => {
   const api = createApi();
   const { state } = await createHostAndAuthorize(api);
@@ -392,7 +417,7 @@ test("marks the connection as error when the iFood read check fails", async () =
   const api: TestApi = {
     ...createApi(),
     agent: {
-      validateConnection: async () => "error",
+      validateConnection: async () => ({ status: "error" }),
       resolveOptions: async () => {
         throw new Error("unused");
       },

@@ -645,10 +645,15 @@ components:
     ParticipantIdentity:
       type: object
       additionalProperties: false
-      required: [id, name]
+      required: [id]
       properties:
         id: { type: string, minLength: 1 }
-        name: { type: string, minLength: 1 }
+        name:
+          type: string
+          minLength: 1
+          description: |
+            Opcional. O front não pergunta o nome: usa "Anfitrião"/"Convidado N" até o `getUser`
+            do iFood, chamado quando a conexão MCP é validada, trazer o `fullName`.
     CreatePartyRequest:
       type: object
       additionalProperties: false

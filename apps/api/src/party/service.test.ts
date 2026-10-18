@@ -132,6 +132,36 @@ test("nobody joins after the result is ready or revealed", async () => {
   );
 });
 
+test("uses provisional names until the iFood profile fills them", () => {
+  const service = createService();
+  const host = service.create({ name: "Party", host: { id: "ana" } });
+  const partyId = host.party.party.id;
+  const first = service.join(partyId, { participant: { id: "bruno" } });
+  const second = service.join(partyId, { participant: { id: "caio" } });
+
+  assert.equal(host.party.participants[0].name, "Anfitrião");
+  assert.equal(first.party.participants.find((p) => p.id === "bruno")?.name, "Convidado 1");
+  assert.equal(second.party.participants.find((p) => p.id === "caio")?.name, "Convidado 2");
+
+  const blank = service.setMcpConnectionStatusForParticipant(
+    partyId,
+    "bruno",
+    "connected",
+    "   ",
+  );
+  assert.equal(blank.participants.find((p) => p.id === "bruno")?.name, "Convidado 1");
+
+  const connected = service.setMcpConnectionStatusForParticipant(
+    partyId,
+    "bruno",
+    "connected",
+    "  Bruno Lima ",
+  );
+  const bruno = connected.participants.find((p) => p.id === "bruno");
+  assert.equal(bruno?.name, "Bruno Lima");
+  assert.equal(bruno?.mcpConnectionStatus, "connected");
+});
+
 test("answers are isolated by token and the final answer advances the Party", () => {
   const service = createService();
   const host = service.create({

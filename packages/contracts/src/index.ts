@@ -128,7 +128,11 @@ export interface PartyRetrospectiveResponse {
 
 export interface ParticipantIdentity {
   id: string;
-  name: string;
+  /**
+   * Opcional: o servidor usa um rótulo provisório ("Anfitrião"/"Convidado N") e o substitui
+   * pelo nome do `getUser` do iFood quando a conexão MCP é validada. O front não pergunta nome.
+   */
+  name?: string;
 }
 
 export interface CreatePartyRequest {

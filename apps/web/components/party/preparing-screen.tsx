@@ -8,13 +8,15 @@ import { PreparationParticipants } from "@/components/party/preparation-particip
 import { PreparationIllustration } from "@/components/party/preparation-illustration";
 import { PreparationTitle } from "@/components/party/preparation-title";
 import { SegmentedProgress } from "@/components/party/segmented-progress";
+import { useParty } from "@/components/party/party-provider";
 import { useSplashComplete } from "@/components/party/splash-intro";
-import { getMockPreparationGroup, getMockPreparationStages, MOCK_PREPARATION_STAGE_MS } from "@/lib/mock-preparation";
+import { getMockPreparationStages, MOCK_PREPARATION_STAGE_MS } from "@/lib/mock-preparation";
 
 const preparationTitles = getMockPreparationStages().map((stage) => stage.title);
 
 export function PreparingScreen() {
-  const [group] = useState(getMockPreparationGroup);
+  const { snapshot } = useParty();
+  const participants = snapshot.participants;
   const [stageIndex, setStageIndex] = useState(0);
   const stages = getMockPreparationStages();
   const splashComplete = useSplashComplete();
@@ -35,20 +37,20 @@ export function PreparingScreen() {
     <div className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)]">
       <BrandBackdrop />
       <div className="relative"><PartyHeader /></div>
-      <main id="main-content" aria-label="Preparação simulada da Party" className="relative mx-auto flex w-full max-w-md flex-1 flex-col gap-8 px-5 pt-5 pb-[max(40px,env(safe-area-inset-bottom))]">
+      <main id="main-content" aria-label="Preparação da Party" className="relative mx-auto flex w-full max-w-md flex-1 flex-col gap-8 px-5 pt-5 pb-[max(40px,env(safe-area-inset-bottom))]">
         <section aria-live="polite" aria-atomic="true" className="space-y-1">
           <p className="text-[11px] leading-normal font-bold text-primary">AS ESCOLHAS SE ENCONTRAM</p>
           <PreparationTitle titles={preparationTitles} current={stageIndex} />
         </section>
         <div className="flex min-h-[306px] flex-1 items-center justify-center py-6">
-          <PreparationIllustration stage={stage} participants={group.participants} hostId={group.hostId} />
+          <PreparationIllustration stage={stage} participants={participants} hostId={snapshot.party.hostParticipantId} />
         </div>
         <section aria-label="Progresso da preparação" className="space-y-4 text-preparation-caption">
           <div className="space-y-[10px]">
             <p className="text-[13px] leading-normal font-bold">Preparando a party · {stageIndex + 1} de {stages.length}</p>
-            <SegmentedProgress current={stageIndex + 1} total={stages.length} label="Preparação simulada" duration={MOCK_PREPARATION_STAGE_MS} running={splashComplete} />
+            <SegmentedProgress current={stageIndex + 1} total={stages.length} label="Preparação da Party" duration={MOCK_PREPARATION_STAGE_MS} running={splashComplete} />
           </div>
-          <PreparationParticipants participants={group.participants} hostId={group.hostId} />
+          <PreparationParticipants participants={participants} hostId={snapshot.party.hostParticipantId} />
         </section>
       </main>
     </div>
