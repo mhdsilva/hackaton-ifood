@@ -218,6 +218,15 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
       try {
         await liveApi.getSession(session.partyId, session.token);
         const party = await liveApi.getParty(session.partyId, session.token);
+        // Um link de convite de OUTRA Party vence a sessão guardada. Sem isto, quem já
+        // testou antes abre o link novo e continua no lobby antigo — o host nunca vê a
+        // pessoa entrar. Um reload simples (mesmo código) continua idempotente.
+        const inviteCode = readInviteCode();
+        if (inviteCode && party.party.code.toUpperCase() !== inviteCode.toUpperCase()) {
+          saveStoredSession(null);
+          if (alive) setSession(null);
+          return;
+        }
         if (alive) setSnapshot(party);
       } catch {
         saveStoredSession(null);

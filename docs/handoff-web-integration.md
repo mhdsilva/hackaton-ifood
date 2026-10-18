@@ -84,6 +84,13 @@ quando o anfitrião aperta "Iniciar party", os convidados saem do lobby sem cliq
 revela o tema, todos entram na preparação juntos. O polling continua sendo a única fonte de
 verdade — abas em segundo plano podem atrasar a transição até o navegador liberar os timers.
 
+## Sessão antiga × link novo
+
+A sessão em `sessionStorage` é restaurada ao abrir o app. Se a URL trouxer `?code=...` de uma
+Party diferente da sessão guardada, a sessão antiga é descartada e a pessoa entra na Party do
+link. Sem isso, quem já tinha testado antes abria o convite novo e continuava no lobby da Party
+antiga — o anfitrião nunca via a pessoa entrar.
+
 
 ## O que ainda fica fora (sem desenho do Júlio)
 
