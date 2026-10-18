@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { IfoodConfig } from "./config.js";
 import { IfoodOAuthError, classifyTokenError } from "./oauth-errors.js";
 import type {
@@ -70,6 +72,22 @@ export class IfoodMcpOAuthProvider implements McpOAuthProvider {
     const credentials = Buffer.from(
       `${encodeURIComponent(this.config.clientId)}:${encodeURIComponent(this.config.clientSecret)}`,
     ).toString("base64");
+
+    // DIAGNÓSTICO TEMPORÁRIO (remover depois de achar o problema do OAUTH_EXCHANGE_FAILED):
+    // só sai se IFOOD_OAUTH_DEBUG=1 — por padrão este log nem roda. Nunca o secret em texto
+    // puro, nem pedaço dele: só tamanho e um hash (unidirecional, sem salt — ok aqui porque a
+    // entrada tem alta entropia; serve só para comparação exata com o valor configurado).
+    if (process.env.IFOOD_OAUTH_DEBUG === "1") {
+      const secret = this.config.clientSecret;
+      console.warn("iFood token request credentials (diagnóstico)", {
+        clientId: this.config.clientId,
+        clientIdLength: this.config.clientId.length,
+        secretLength: secret.length,
+        secretSha256: createHash("sha256").update(secret).digest("hex"),
+        tokenUrl: this.config.tokenUrl,
+        redirectUri: this.config.redirectUri,
+      });
+    }
 
     let response: Response;
     try {
