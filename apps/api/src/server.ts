@@ -11,6 +11,7 @@ import type {
 } from "@sidequest/contracts";
 
 import { AgentError } from "./agent/pick-address.js";
+import { createLlmThemePlanner } from "./agent/theme-planner.js";
 import {
   createDemoIntegration,
   createIfoodIntegration,
@@ -580,7 +581,7 @@ async function routeRequest(
       sendJson(
         response,
         200,
-        service.revealTheme(partyId, bearerToken(request)),
+        await service.revealTheme(partyId, bearerToken(request)),
         allowedOrigin,
       );
       return;
@@ -674,14 +675,22 @@ if (isEntrypoint) {
   const frontendUrl = process.env.FRONTEND_URL ?? allowedOrigins[0] ?? "http://localhost:5173";
   const publicApiUrl = process.env.PUBLIC_API_URL ?? `http://localhost:${port}`;
   const oauthMode = resolveMcpOAuthMode(process.env.MCP_OAUTH_MODE);
-  const service = new PartyService(new PartyStore(), new ParticipantAccessStore());
-  const sessions = new McpSessionRegistry();
   const env = { ...process.env, PUBLIC_API_URL: publicApiUrl };
+  const llmConfig = loadOpenCodeConfig(env);
+  const themePlanner = llmConfig
+    ? createLlmThemePlanner(new OpenCodeClient({ config: llmConfig }))
+    : undefined;
+  const service = new PartyService(
+    new PartyStore(),
+    new ParticipantAccessStore(),
+    undefined,
+    themePlanner,
+  );
+  const sessions = new McpSessionRegistry();
   const provider: McpOAuthProvider =
     oauthMode === "ifood" ? createIfoodProvider(env) : new DemoMcpOAuthProvider(publicApiUrl);
   const oauth = new McpOAuthFlow(provider, sessions);
   const ifoodConfig = oauthMode === "ifood" ? loadIfoodConfig(env) : undefined;
-  const llmConfig = oauthMode === "ifood" ? loadOpenCodeConfig(env) : undefined;
   const agent = ifoodConfig
     ? createIfoodIntegration({
         sessions,
@@ -711,8 +720,8 @@ if (isEntrypoint) {
     } else {
       console.log(
         llmConfig
-          ? `Planner LLM ligado (modelo ${llmConfig.model}).`
-          : "Planner LLM desligado (sem OPENCODE_API_KEY): usando o pipeline determinístico.",
+          ? `Planner LLM ligado (modelo ${llmConfig.model}): opções e tema da Party.`
+          : "Planner LLM desligado (sem OPENCODE_API_KEY): opções e tema seguem o pipeline determinístico.",
       );
     }
   });
