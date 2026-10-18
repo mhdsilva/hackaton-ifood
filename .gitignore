@@ -15,5 +15,8 @@ index-v2.html
 # Isolated implementation worktrees
 .worktrees/
 
+# Cloudflare Workers local state (wrangler)
+.wrangler/
+
 # Credenciais do agente iFood MCP: nunca versionar.
 docs/SECRET
