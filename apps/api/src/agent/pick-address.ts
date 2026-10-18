@@ -9,6 +9,7 @@ export class AgentError extends Error {
       | "ADDRESS_CREATION_FAILED"
       | "NO_OPTIONS"
       | "MCP_NOT_CONNECTED"
+      | "PERSONALIZATION_REQUIRED"
       | "NOT_FOUND"
       | "TIMEOUT",
     message: string,
@@ -29,6 +30,7 @@ export const ACTIONABLE_AGENT_CODES = new Set<AgentError["code"]>([
   "ADDRESS_SELECTION_REQUIRED",
   "ADDRESS_NOT_FOUND",
   "MCP_NOT_CONNECTED",
+  "PERSONALIZATION_REQUIRED",
 ]);
 
 export function isActionableAgentError(error: unknown): boolean {

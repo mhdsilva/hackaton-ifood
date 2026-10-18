@@ -91,10 +91,16 @@ test("buildProposedOptions turns proposed items into ranked options", async () =
   );
 });
 
-test("buildProposedOptions drops everything that does not fit the budget", async () => {
-  const items = [candidate("m1", "i1", 30, 5)];
-  const options = await buildProposedOptions(items, callerFor(items), { budget: 10, address });
-  assert.deepEqual(options, []);
+test("buildProposedOptions keeps over-budget items, ordered after the ones within it", async () => {
+  const items = [candidate("m1", "i1", 30, 5), candidate("m2", "i2", 8)];
+  const options = await buildProposedOptions(items, callerFor(items), { budget: 30, address });
+  assert.deepEqual(
+    options.map((option) => [option.merchant.id, option.total]),
+    [
+      ["m2", 8],
+      ["m1", 35],
+    ],
+  );
 });
 
 test("buildProposedOptions never returns more than maxOptions", async () => {
@@ -129,6 +135,33 @@ test("resolveOptionsWithPlanner returns live options from the model proposal", a
   assert.equal(output.theme, "italiano");
   assert.equal(output.options.length, 1);
   assert.equal(output.options[0].items[0].itemId, "i1");
+});
+
+test("the planner only searches the queries defined by the theme", async () => {
+  const items = [candidate("m1", "i1", 30, 5)];
+  const client = scripted([
+    assistant({ name: "searchOffers", args: JSON.stringify({ query: "hamburguer" }) }),
+    assistant({
+      name: "proposeOptions",
+      args: JSON.stringify({ items: [{ merchantId: "m1", itemId: "i1" }] }),
+    }),
+    assistant(null, "pronto"),
+  ]);
+
+  await assert.rejects(
+    resolveOptionsWithPlanner(
+      {
+        participantId: "p1",
+        theme: "Domingo de Massa",
+        queries: ["massa"],
+        budget: 60,
+        restrictions: [],
+      },
+      callerFor(items),
+      client,
+    ),
+    isNoOptions,
+  );
 });
 
 test("resolveOptionsWithPlanner fails when the model never proposes", async () => {

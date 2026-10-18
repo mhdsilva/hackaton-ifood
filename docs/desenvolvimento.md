@@ -108,6 +108,13 @@ definidos; sem essa config, recusa subir de propósito. O `MCP_OAUTH_MODE` aceit
 — qualquer outro valor recusa subir. O `IfoodMcpClient` renova o `access_token` com o
 `refresh_token` antes de expirar.
 
+O modo de checkout é independente da conexão MCP. Para uma apresentação com dados reais, use
+`MCP_OAUTH_MODE=ifood` e `CHECKOUT_MODE=simulated`: perfil, recomendações e buscas continuam usando
+o MCP real; carrinho, confirmação e rastreio são simulados localmente, sem chamar as tools de
+carrinho nem `submitOrder` no iFood. O rastreio avança em 12 segundos até liberar a retrospectiva.
+`CHECKOUT_MODE=ifood` mantém o envio real, que exige consentimento explícito do participante. O
+padrão é `ifood` quando o MCP está em modo real.
+
 O que ainda falta para produção:
 
 - cadastrar a redirect pública HTTPS (`PUBLIC_API_URL/mcp-connection/callback`) no agente do iFood
@@ -130,6 +137,7 @@ Aponte o DNS do domínio para o IP da instância e, no Coolify, crie um recurso 
   - `PUBLIC_API_URL=https://api.exemplo.com`;
   - `CORS_ORIGIN=https://party.exemplo.com`;
   - `MCP_OAUTH_MODE=demo` (padrão) ou `ifood` (conexão real);
+  - `CHECKOUT_MODE=simulated` para a apresentação sem envio ou cobrança; `ifood` para checkout real;
   - em `ifood`: `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET` e, se a redirect não for derivada de
     `PUBLIC_API_URL`, `IFOOD_REDIRECT_URI`.
 

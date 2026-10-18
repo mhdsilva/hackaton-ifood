@@ -20,11 +20,22 @@ function answers(value: string): SubmitAnswersRequest {
   };
 }
 
+/** Conecta todos os convidados: a Party só fecha depois que eles entram com o iFood. */
+function connectGuests(service: PartyService, partyId: string): void {
+  const snapshot = service.get(partyId);
+  for (const participant of snapshot.participants) {
+    if (participant.id !== snapshot.party.hostParticipantId) {
+      service.setMcpConnectionStatusForParticipant(partyId, participant.id, "connected");
+    }
+  }
+}
+
 test("v2 cannot mark a participant ready without one or two cravings", () => {
   const service = createService();
   const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
   const partyId = host.party.party.id;
   service.join(partyId, { participant: { id: "bruno", name: "Bruno" } });
+  connectGuests(service, partyId);
   service.closeMembership(partyId, host.participantToken);
   const base = { address: "casa", budget: "ate-50", energy: "leve-refrescante", "order-style": "refeicao-completa" };
   service.submitAnswers(partyId, host.participantToken, { questionnaireVersion: "v2", answers: base, completed: false });
@@ -94,6 +105,7 @@ test("only the host closes membership and late joiners still enter during answer
     (error: unknown) => error instanceof PartyError && error.code === "HOST_ONLY",
   );
 
+  connectGuests(service, host.party.party.id);
   const closed = service.closeMembership(host.party.party.id, host.participantToken);
   assert.equal(closed.party.status, "COLLECTING_ANSWERS");
   assert.equal(closed.party.membershipLocked, true);
@@ -106,6 +118,38 @@ test("only the host closes membership and late joiners still enter during answer
   assert.equal(late.party.participants.length, 3);
 });
 
+test("the host cannot start until every guest connected the iFood", () => {
+  const service = createService();
+  const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
+  const partyId = host.party.party.id;
+  service.join(partyId, { participant: { id: "bruno", name: "Bruno" } });
+  service.join(partyId, { participant: { id: "caio", name: "Caio" } });
+
+  // Ninguém conectou: o host não inicia e a Party continua OPEN.
+  assert.throws(
+    () => service.closeMembership(partyId, host.participantToken),
+    (error: unknown) => {
+      if (!(error instanceof PartyError) || error.code !== "GUESTS_NOT_CONNECTED") return false;
+      const pending = error.details?.pendingParticipantIds;
+      return Array.isArray(pending) && pending.length === 2;
+    },
+  );
+  assert.equal(service.get(partyId).party.status, "OPEN");
+
+  // Só um convidado conectado ainda não libera.
+  service.setMcpConnectionStatusForParticipant(partyId, "bruno", "connected");
+  assert.throws(
+    () => service.closeMembership(partyId, host.participantToken),
+    (error: unknown) => error instanceof PartyError && error.code === "GUESTS_NOT_CONNECTED",
+  );
+
+  // Com todos conectados, o host inicia normalmente.
+  service.setMcpConnectionStatusForParticipant(partyId, "caio", "connected");
+  const closed = service.closeMembership(partyId, host.participantToken);
+  assert.equal(closed.party.status, "COLLECTING_ANSWERS");
+  assert.equal(closed.party.membershipLocked, true);
+});
+
 test("nobody joins after the result is ready or revealed", async () => {
   const service = createService();
   const host = service.create({
@@ -116,6 +160,7 @@ test("nobody joins after the result is ready or revealed", async () => {
     participant: { id: "bruno", name: "Bruno" },
   });
   const partyId = host.party.party.id;
+  connectGuests(service, partyId);
   service.closeMembership(partyId, host.participantToken);
   service.submitAnswers(partyId, host.participantToken, answers("massa"));
   service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
@@ -175,6 +220,7 @@ test("answers are isolated by token and the final answer advances the Party", ()
     name: "Outra Party",
     host: { id: "intruso", name: "Intruso" },
   });
+  connectGuests(service, host.party.party.id);
   service.closeMembership(host.party.party.id, host.participantToken);
 
   assert.throws(
@@ -217,6 +263,7 @@ test("rejects unknown versions and invalid answers", () => {
     host: { id: "ana", name: "Ana" },
   });
   service.join(host.party.party.id, { participant: { id: "bruno", name: "Bruno" } });
+  connectGuests(service, host.party.party.id);
   service.closeMembership(host.party.party.id, host.participantToken);
   const partyId = host.party.party.id;
 
@@ -272,6 +319,7 @@ test("accepts a draft without advancing and tracks progress", () => {
   const guest = service.join(host.party.party.id, {
     participant: { id: "bruno", name: "Bruno" },
   });
+  connectGuests(service, host.party.party.id);
   service.closeMembership(host.party.party.id, host.participantToken);
   const partyId = host.party.party.id;
 
@@ -329,6 +377,7 @@ test("the host reveals the result only from READY_FOR_THEME", async () => {
     participant: { id: "bruno", name: "Bruno" },
   });
   const partyId = host.party.party.id;
+  connectGuests(service, partyId);
   service.closeMembership(partyId, host.participantToken);
 
   await assert.rejects(
@@ -361,21 +410,27 @@ test("the agent chooses the theme from every participant's answers", async () =>
   const received: Record<string, unknown>[][] = [];
   const service = createService(undefined, async (answersByParticipant) => {
     received.push(answersByParticipant);
-    return { theme: "mexicano", reason: "A maioria pediu algo picante." };
+    return {
+      theme: "Domingo de Massa",
+      queries: ["massa", "pizza"],
+      reason: "A maioria pediu algo quente.",
+    };
   });
   const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
   const guest = service.join(host.party.party.id, {
     participant: { id: "bruno", name: "Bruno" },
   });
   const partyId = host.party.party.id;
+  connectGuests(service, partyId);
   service.closeMembership(partyId, host.participantToken);
   service.submitAnswers(partyId, host.participantToken, answers("massa"));
   service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
 
   const revealed = await service.revealTheme(partyId, host.participantToken);
 
-  assert.equal(revealed.party.theme, "mexicano");
-  assert.equal(revealed.party.themeReason, "A maioria pediu algo picante.");
+  assert.equal(revealed.party.theme, "Domingo de Massa");
+  assert.deepEqual(revealed.party.themeQueries, ["massa", "pizza"]);
+  assert.equal(revealed.party.themeReason, "A maioria pediu algo quente.");
   assert.equal(received.length, 1);
   assert.equal(received[0].length, 2, "uma entrada por participante, não o objeto mesclado");
 });
@@ -389,6 +444,7 @@ test("a failing agent falls back to the deterministic theme", async () => {
     participant: { id: "bruno", name: "Bruno" },
   });
   const partyId = host.party.party.id;
+  connectGuests(service, partyId);
   service.closeMembership(partyId, host.participantToken);
   service.submitAnswers(partyId, host.participantToken, answers("massa"));
   service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
@@ -397,6 +453,7 @@ test("a failing agent falls back to the deterministic theme", async () => {
 
   assert.equal(revealed.party.status, "THEME_REVEALED");
   assert.equal(revealed.party.theme, "sabadou a distancia");
+  assert.equal(revealed.party.themeQueries, undefined);
   assert.equal(revealed.party.themeReason, undefined);
 });
 

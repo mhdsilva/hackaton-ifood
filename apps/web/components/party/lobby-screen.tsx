@@ -8,6 +8,7 @@ import { useParty } from "@/components/party/party-provider";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
 import { PartyShell } from "@/components/party/party-shell";
 import { canStartMockParty } from "@/lib/mock-party";
+import { canStartLiveParty, pendingGuestsWithoutMcp } from "@/lib/party-flow";
 import { buildPartyInviteUrl } from "@/lib/party-invitation";
 
 const MCP_STATUS_LABEL: Record<string, string> = {
@@ -28,7 +29,22 @@ export function LobbyScreen() {
   const me = snapshot.participants.find((participant) => participant.id === currentParticipantId);
   const mcpStatus = me?.mcpConnectionStatus ?? "not_connected";
   const hasStarted = snapshot.party.status === "COLLECTING_ANSWERS";
-  const canContinue = isHost && (hasStarted || canStartMockParty(snapshot, currentParticipantId));
+  // No modo real o host só inicia quando todos os convidados conectaram o iFood;
+  // a prévia mockada não simula conexão, então mantém a regra antiga.
+  const pendingGuests = isMock ? [] : pendingGuestsWithoutMcp(snapshot);
+  const canStart = isMock
+    ? canStartMockParty(snapshot, currentParticipantId)
+    : canStartLiveParty(snapshot, currentParticipantId);
+  const canContinue = isHost && (hasStarted || canStart);
+  const waitMessage = (() => {
+    if (pendingGuests.length === 0) {
+      return "Aguarde pelo menos duas pessoas. Somente o host pode iniciar.";
+    }
+    const names = pendingGuests.map((participant) => participant.name).join(", ");
+    return pendingGuests.length === 1
+      ? `Aguardando ${names} conectar o iFood para começar.`
+      : `Aguardando ${names} conectarem o iFood para começar.`;
+  })();
 
   useEffect(() => {
     if (!copied) return;
@@ -60,7 +76,7 @@ export function LobbyScreen() {
         if (!hasStarted) startParty();
         router.push("/party/address");
       }}>{isHost ? (hasStarted ? "Continuar party" : "Iniciar party") : `Aguardando ${host?.name ?? "o anfitrião"}...`}</Button>
-      {isHost && !canContinue && <p className="text-sm text-muted-foreground">Aguarde pelo menos duas pessoas. Somente o host pode iniciar.</p>}
+      {isHost && !canContinue && <p className="text-sm text-muted-foreground">{waitMessage}</p>}
     </>}>
       <section aria-labelledby="party-title" className="relative isolate overflow-hidden rounded-2xl bg-secondary p-6 text-foreground">
         <Image src="/figma/banner-logo.svg" alt="" width={286} height={155} className="pointer-events-none absolute top-7 left-[101px] -z-10 max-w-none opacity-50" />

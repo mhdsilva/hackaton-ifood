@@ -57,8 +57,10 @@ export interface PartyInfo {
   hostParticipantId: string;
   membershipLocked: boolean;
   createdAt: string;
-  /** Tema comum, gravado quando o host revela o resultado. */
+  /** Tema livre escolhido pelo agente, gravado quando o host revela o resultado. */
   theme?: string;
+  /** Termos de busca escolhidos pelo agente junto com o tema. */
+  themeQueries?: string[];
   /** Por que o agente escolheu esse tema (uma frase), quando a revelação usou LLM. */
   themeReason?: string;
 }
@@ -268,6 +270,8 @@ export interface LocalOption {
 export interface ResolveOptionsInput {
   participantId: string;
   theme: string;
+  /** Termos definidos pelo agente do tema; quando presentes, guiam todas as buscas. */
+  queries?: string[];
   /** Orçamento total do participante, incluindo frete (BRL). */
   budget: number;
   restrictions: string[];

@@ -9,16 +9,21 @@
 import type { ChatMessage } from "../llm/client.js";
 import { mapRestrictions } from "./restrictions.js";
 import { sanitizeAddress } from "./sanitize.js";
-import type { IfoodAddress } from "./types.js";
+import type { IfoodAddress, IfoodSearchItem } from "./types.js";
 
 export interface PlannerContext {
   theme: string;
+  /** Termos de busca definidos pelo agente do tema; obrigatórios quando existirem. */
+  queries?: string[];
   budget: number;
   restrictions?: string[];
   /** Endereço escolhido na Party, quando a conta tem mais de um. */
   addressId?: string;
   addresses: IfoodAddress[];
   maxOptions?: number;
+  /** Perfil já sanitizado pelo executor; nunca contém identificadores pessoais. */
+  profile?: unknown;
+  recommendations?: IfoodSearchItem[];
 }
 
 const DEFAULT_MAX_OPTIONS = 3;
@@ -34,7 +39,8 @@ function systemPrompt(maxOptions: number): string {
     "  mínimo é o executor; você nunca inventa IDs, preços ou valores.",
     "- Só proponha itens que apareceram de fato nas respostas das tools. IDs inventados são",
     "  descartados.",
-    "- Respeite o orçamento (inclui frete) e as restrições alimentares.",
+    "- O orçamento é uma referência: prefira o que cabe nele, mas não deixe de propor por estar um",
+    "  pouco acima, e nunca ignore as restrições alimentares.",
     "- Quando tiver a proposta, chame proposeOptions com os itens escolhidos.",
     "- Responda em português do Brasil, em poucas frases.",
   ].join("\n");
@@ -46,9 +52,17 @@ function userPrompt(context: PlannerContext, maxOptions: number): string {
 
   const lines = [
     `Tema escolhido pelo grupo: ${context.theme.trim() || "(sem tema definido)"}`,
-    `Orçamento do participante: R$ ${context.budget.toFixed(2)} (inclui frete).`,
-    `Opções desejadas: até ${maxOptions}.`,
   ];
+  if (context.queries && context.queries.length > 0) {
+    lines.push(
+      `Buscas obrigatórias do tema: ${context.queries.join(", ")}.`,
+      "Comece por esses termos e não troque de assunto; se um deles não retornar nada, tente o próximo da lista.",
+    );
+  }
+  lines.push(
+    `Orçamento de referência do participante: R$ ${context.budget.toFixed(2)} (inclui frete).`,
+    `Opções desejadas: até ${maxOptions}.`,
+  );
   if (itemRestrictions.length > 0) {
     lines.push(`Restrições alimentares (filtro do iFood): ${itemRestrictions.join(", ")}.`);
   }
@@ -59,6 +73,22 @@ function userPrompt(context: PlannerContext, maxOptions: number): string {
   }
   if (context.addressId) {
     lines.push(`Endereço escolhido: ${context.addressId}.`);
+  }
+  if (context.profile !== undefined) {
+    let profile = JSON.stringify(context.profile) ?? "null";
+    if (profile.length > 2_000) profile = `${profile.slice(0, 2_000)}…`;
+    lines.push(`Perfil e preferências do participante (considere na escolha): ${profile}`);
+  }
+  if (context.recommendations?.length) {
+    const items = context.recommendations.slice(0, 20).map((item) => ({
+      itemId: item.itemId,
+      itemName: item.itemName,
+      merchantId: item.merchant.merchantId,
+      merchantName: item.merchant.merchantName,
+      price: item.promotionalUnitPrice ?? item.unitPrice,
+      isOpen: item.merchant.isOpen,
+    }));
+    lines.push(`Recomendações pessoais do iFood (priorize as que combinarem com o tema): ${JSON.stringify(items)}`);
   }
   lines.push(
     addresses.length === 0

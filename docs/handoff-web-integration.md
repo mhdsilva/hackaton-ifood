@@ -24,13 +24,14 @@ Troquei o `MockPartyProvider` por um novo `LivePartyProvider`
 - **Revelar resultado**: chama `POST /parties/:id/reveal` antes de navegar pra
   `/party/preparing` (a tela de animação do Otávio). A preparação usa os participantes reais e
   uma bola em órbita por pessoa. Depois dela, `/party/countdown` → `/party/reveal` mostram
-  `party.theme` e `party.themeReason`; o título usa um prefixo genérico (“Bocado Italiano”,
-  “Bocado Japonês”), sem “noite”/horário — o tema em si vem do agente. Como só existe a arte
+  `party.theme` e `party.themeReason`. O tema é **livre**: o agente inventa o título (adequado
+  ao horário, sem “noite” fixo) e também escolhe os termos de busca em `party.themeQueries`; o
+  front exibe o título como veio, sem prefixo nem mapa de categorias. Como só existe a arte
   italiana, todos os temas usam `theme-italian.png` por enquanto. O pedido em `/party/order`
   chama `POST /parties/:id/options` com o token do participante, e a API resolve via agente/MCP
-  usando o tema da Party + orçamento, restrições e endereço das respostas dele. A tela tem
-  carregamento, erro com “Conectar iFood”/“Tentar de novo” e até três opções (“Gerar outra
-  opção” alterna); sem loja que caiba, não cai para um menu fictício. O checkout segue em
+  usando o tema e as buscas da Party + orçamento, restrições e endereço das respostas dele. A
+  tela tem carregamento, erro com “Conectar iFood”/“Tentar de novo” e até três opções (“Gerar
+  outra opção” alterna); sem loja que caiba, não cai para um menu fictício. O checkout segue em
   `/party/pending/checkout`; o modo mock continua com o cenário de `lib/mock-reveal.ts`.
 - **Orçamento “Outro valor”**: o front valida a faixa de `budget.customInput` da API (1–999)
   antes de continuar. Fora dela, o envio falhava com `INVALID_ANSWERS`/`custom_value_required`;

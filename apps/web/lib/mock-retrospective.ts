@@ -26,6 +26,5 @@ export function getMockRetrospective(snapshot: PartySnapshot, preview: Retrospec
 
 export function retrospectiveThemeLabel(theme?: string): string {
   if (!theme) return "Uma temática em comum";
-  const copy = revealTheme({ theme });
-  return `${copy.introduction} ${copy.emphasis}`;
+  return revealTheme({ theme }).title;
 }

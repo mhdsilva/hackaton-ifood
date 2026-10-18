@@ -12,6 +12,7 @@ import type {
 
 import { AgentError } from "./agent/pick-address.js";
 import { createLlmThemePlanner } from "./agent/theme-planner.js";
+import { themeQueries } from "./agent/themes.js";
 import {
   createDemoIntegration,
   createIfoodIntegration,
@@ -49,6 +50,7 @@ const AGENT_ERROR_STATUS: Record<AgentError["code"], number> = {
   ADDRESS_NOT_FOUND: 409,
   ADDRESS_CREATION_FAILED: 502,
   MCP_NOT_CONNECTED: 409,
+  PERSONALIZATION_REQUIRED: 502,
   NOT_FOUND: 404,
   NO_OPTIONS: 422,
   TIMEOUT: 504,
@@ -422,12 +424,17 @@ async function routeRequest(
     if (!options.agent) {
       throw new PartyError(501, "OPTIONS_UNAVAILABLE", "Local options are not configured");
     }
+    const party = service.get(partyId).party;
     const input = parseOptionsRequest(
       await readJson<Record<string, unknown>>(request),
-      service.get(partyId).party.theme,
+      party.theme,
     );
+    const queries =
+      party.themeQueries && party.themeQueries.length > 0
+        ? party.themeQueries
+        : themeQueries(party.theme ?? input.theme);
     const agent = options.agent;
-    const output = await runAgent(() => agent.resolveOptions(actor, input));
+    const output = await runAgent(() => agent.resolveOptions(actor, { ...input, queries }));
     service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
       orderStage: "options_ready",
     });
@@ -671,6 +678,12 @@ export function resolveMcpOAuthMode(
   throw new Error(`MCP_OAUTH_MODE inválido: ${raw}`);
 }
 
+export function resolveCheckoutMode(raw: string | undefined): "ifood" | "simulated" {
+  const value = (raw ?? "ifood").trim().toLowerCase();
+  if (value === "ifood" || value === "simulated") return value;
+  throw new Error(`CHECKOUT_MODE inválido: ${raw}`);
+}
+
 if (isEntrypoint) {
   const port = Number(process.env.PORT ?? 3333);
   const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
@@ -680,6 +693,7 @@ if (isEntrypoint) {
   const frontendUrl = process.env.FRONTEND_URL ?? allowedOrigins[0] ?? "http://localhost:5173";
   const publicApiUrl = process.env.PUBLIC_API_URL ?? `http://localhost:${port}`;
   const oauthMode = resolveMcpOAuthMode(process.env.MCP_OAUTH_MODE);
+  const checkoutMode = resolveCheckoutMode(process.env.CHECKOUT_MODE);
   const env = { ...process.env, PUBLIC_API_URL: publicApiUrl };
   const llmConfig = loadOpenCodeConfig(env);
   const themePlanner = llmConfig
@@ -701,6 +715,7 @@ if (isEntrypoint) {
         sessions,
         provider,
         mcpUrl: ifoodConfig.mcpUrl,
+        checkoutMode,
         ...(llmConfig ? { llm: { client: new OpenCodeClient({ config: llmConfig }) } } : {}),
       })
     : createDemoIntegration();

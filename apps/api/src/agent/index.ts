@@ -25,5 +25,5 @@ export type { PartyOptionResolver, PartyOptionsResult, ResolveOptionsSettings } 
 export { resolveOptionsForPartyWithNegotiation } from "./negotiate.js";
 export type { NegotiationOutcome, NegotiationSettings } from "./negotiate.js";
 export { mapRestrictions } from "./restrictions.js";
-export { VIBE_QUERIES, knownThemes, themeQueries } from "./themes.js";
+export { BROAD_FALLBACK_QUERIES, VIBE_QUERIES, knownThemes, themeQueries } from "./themes.js";
 export type * from "./types.js";

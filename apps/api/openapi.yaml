@@ -199,7 +199,11 @@ paths:
       operationId: closePartyMembership
       security:
         - participantToken: []
-      description: Fecha o grupo com 2–4 participantes; somente o anfitrião pode executar.
+      description: |
+        Fecha o grupo com 2–4 participantes; somente o anfitrião pode executar.
+        O anfitrião não inicia enquanto algum convidado não tiver conectado a conta
+        do iFood: nesse caso a API responde `409 GUESTS_NOT_CONNECTED` com os
+        participantes pendentes em `error.details`.
       responses:
         "200": { $ref: "#/components/responses/PartyResponse" }
         "401": { $ref: "#/components/responses/ErrorResponse" }
@@ -724,7 +728,15 @@ components:
             createdAt: { type: string, format: date-time }
             theme:
               type: string
-              description: Tema comum, gravado quando o host revela o resultado (POST /parties/{partyId}/reveal).
+              description: |
+                Tema livre escolhido pelo agente, gravado quando o host revela o resultado
+                (POST /parties/{partyId}/reveal). Também é o título exibido na Party.
+            themeQueries:
+              type: array
+              items: { type: string }
+              description: |
+                Termos de busca escolhidos pelo agente junto com o tema. O pedido usa
+                obrigatoriamente esses termos.
             themeReason:
               type: string
               description: |

@@ -6,7 +6,7 @@
  * quando o anfitrião inicia, revela o tema etc., os outros navegadores ficavam parados
  * no lobby. Esta função diz para onde cada pessoa deve ir agora.
  */
-import type { PartySnapshot } from "@sidequest/contracts";
+import type { Participant, PartySnapshot } from "@sidequest/contracts";
 
 /** Telas do questionário, na ordem em que o fluxo as percorre. */
 export const QUESTION_PATHS = [
@@ -24,6 +24,33 @@ const PREPARING_PATH = "/party/preparing";
 
 function isQuestionPath(pathname: string): boolean {
   return (QUESTION_PATHS as readonly string[]).includes(pathname);
+}
+
+/**
+ * Convidados que ainda não conectaram a conta do iFood. A Party não começa antes disso
+ * (o backend recusa `POST /parties/:id/close` com `409 GUESTS_NOT_CONNECTED`).
+ */
+export function pendingGuestsWithoutMcp(snapshot: PartySnapshot): Participant[] {
+  return snapshot.participants.filter(
+    (participant) =>
+      participant.id !== snapshot.party.hostParticipantId &&
+      participant.mcpConnectionStatus !== "connected",
+  );
+}
+
+/**
+ * O anfitrião só pode iniciar (`close`) com 2–4 pessoas e todos os convidados conectados.
+ * Espelha a trava do backend para o botão não ficar habilitado à toa.
+ */
+export function canStartLiveParty(snapshot: PartySnapshot, participantId: string): boolean {
+  return (
+    snapshot.party.status === "OPEN" &&
+    !snapshot.party.membershipLocked &&
+    snapshot.party.hostParticipantId === participantId &&
+    snapshot.participants.length >= 2 &&
+    snapshot.participants.length <= 4 &&
+    pendingGuestsWithoutMcp(snapshot).length === 0
+  );
 }
 
 /**

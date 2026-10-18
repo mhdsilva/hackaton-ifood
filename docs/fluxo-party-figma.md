@@ -1,415 +1,136 @@
-# Fluxo da Party no Figma — 8 etapas
+# Fluxo da Party — referência do Figma e lacunas
 
-> Documentação de referência do fluxo desenhado no Figma ("Ifood Party"), extraído do PDF
-> `Ifood Party.pdf`. O objetivo deste documento é fixar **o que a tela pede** para que a API
-> evolua na mesma linha. Os textos e a ordem das perguntas ainda são decisão do Júlio; a
-> estrutura das telas, não.
+> Atualizado em 17/10/2026 após leitura do export `Ifood Party (1).pdf` (38 páginas). Este
+> documento descreve o fluxo desenhado e compara o que ele pede com o frontend, os contratos e a
+> API existentes. Os estados visuais de loading e os textos podem mudar; as lacunas técnicas abaixo
+> são um retrato do repositório nesta data.
 
-## Coordenação entre sessões (leia antes de editar)
+## Resumo do fluxo
 
-Este documento é **insumo**, não implementação. Ele nasceu numa sessão que só documenta o fluxo.
-
-| Sessão | Papel | Pode editar |
-| --- | --- | --- |
-| "Pedidos iFood sandbox: auth party e chaves" (sessão da API) | implementa o fluxo na API, passo a passo | `apps/api/**`, `packages/contracts/**`, `apps/api/openapi.yaml`, `README.md`, `docs/marcos.md` |
-| Sessão do Maeda | provider/iFood e agente | `apps/api/src/ifood/**`, `apps/api/src/agent/**`, `fixtures/ifood-*.json` |
-| Esta documentação | só `docs/fluxo-party-figma.md` | nada de código |
-
-Regra: **nenhuma outra sessão edita `apps/api`, `packages/contracts` ou `openapi.yaml`.** O que
-este documento aponta como lacuna é executado pela sessão da API (ou pelo Maeda, na área dele),
-respeitando a fronteira de [`coordenacao-maeda.md`](coordenacao-maeda.md).
-
-A sessão da API já tinha lido apenas *prints* do Figma (endereço e restrições); este documento
-traz as **8 etapas completas com os textos e opções exatos**, que é o que faltava para seguir
-etapa por etapa sem adivinhar.
-
-> **Alinhado em 17/10/2026.** A sessão da API confirmou a fronteira e assumiu a implementação; as
-> decisões de forma estão na seção 8.1. O conteúdo das perguntas (rótulos, ordem, faixas) segue
-> com o Júlio.
-
-Fontes relacionadas:
-
-- [`superpowers/specs/2026-10-17-party-foundation-design.md`](superpowers/specs/2026-10-17-party-foundation-design.md) — recorte atual, que termina em `READY_FOR_THEME`.
-- [`apps/api/src/party/questionnaire.ts`](../apps/api/src/party/questionnaire.ts) — definição provisória do questionário (`v1`, 2 perguntas).
-- [`packages/contracts/src/index.ts`](../packages/contracts/src/index.ts) — tipos compartilhados do questionário.
-- [`apps/api/openapi.yaml`](../apps/api/openapi.yaml) — contrato HTTP.
-- [`como-funciona.md`](como-funciona.md) — visão ponta a ponta.
-
-## 1. O que o fluxo desenha
+O export vai além do questionário: começa no lobby, coleta preferências individuais, revela um tema
+para o grupo, recomenda opções locais e termina na revisão individual do pedido.
 
 ```text
-Party (lobby)
-→ anfitrião inicia a party
-→ Etapa 1 de 8: endereço
-→ Etapa 2 de 8: restrições
-→ Etapa 3 de 8: orçamento
-→ Etapa 4 de 8: energia / clima
-→ Etapa 5 de 8: formato do pedido
-→ Etapa 6 de 8: desejos (até dois)
-→ Etapa 7 de 8: exclusões
-→ Etapa 8 de 8: tudo pronto, aguardar os outros
-→ host "Revelar resultado"
+Lobby e convite
+→ conexão da conta iFood (pré-requisito implícito)
+→ questionário individual, 8 etapas
+→ todos concluem; anfitrião revela o tema comum
+→ espera / contagem regressiva / tema revelado
+→ cada participante descobre uma opção local para si
+→ revisa itens, preço e estimativa; pode editar a própria escolha
+→ continua para conferência final e pagamento no iFood
 ```
 
-A promessa textual do produto, repetida no lobby, é: *"Cada um no seu canto. Todo mundo na mesma
-vibe. Vocês respondem juntos e descobrem uma temática. Cada pessoa recebe opções locais, adaptadas
-ao próprio endereço."* Ou seja, o questionário é o **insumo da sugestão de tema**, e o endereço é
-o insumo das **opções locais**.
+Cada participante pede de um endereço e recebe uma opção própria, mas o tema é compartilhado. A
+experiência precisa deixar claros dois níveis de estado: a progressão coletiva da Party e o pedido
+privado de cada pessoa.
 
-## 2. Lobby da Party
+## O que aparece no export
 
-Três telas de lobby, antes do questionário.
-
-| Tela | Conteúdo | Significado |
+| Parte | Telas e conteúdo | Escopo |
 | --- | --- | --- |
-| Convidado | Título "Sabadou à distância", "Júlio chamou você pra uma party", lista de participantes (Júlio = Host, Lucas = você) e "Aguardando Júlio começar…" | Participante entrou (`OPEN`), aguardando o host. |
-| Anfitrião | "Envie para seus amigos participarem!" + "Copiar link", lista de participantes (Júlio = você, Host) e botão **"Iniciar party"** | Host fecha o grupo. |
-| Endereço novo | "Cadastrar endereço novo" | Sobe um endereço que não estava salvo no iFood. |
+| Lobby | Abertura, nome da Party, convite/link, participantes e identificação do anfitrião | Coletivo |
+| Endereço | Endereços salvos e ação para adicionar outro | Individual; dado da conta iFood |
+| Restrições | Vegetarianismo, veganismo, lactose, glúten, alergia a amendoim e “Outro” | Individual; permite várias escolhas e texto livre |
+| Orçamento | Até R$ 25, R$ 50, R$ 75 ou outro valor; inclui estimativa de taxas | Individual |
+| Energia | Leve/refrescante, quente/confortável, crocante/descontraída, intensa/marcante ou surpresa | Individual; também pode informar o tema |
+| Formato | Refeição completa, experimentar várias coisas, lanche, sobremesa/bebida ou surpresa | Individual |
+| Desejos | Até dois entre crocante, cremoso, fresco, bem temperado, picante, agridoce ou surpresa | Individual |
+| Exclusões | Fritura, comida crua, muito picante, bebida, sobremesa ou “Outro” | Individual; permite várias escolhas e texto livre |
+| Prontidão | Participantes prontos/aguardando; anfitrião revela quando todos responderam | Coletivo |
+| Revelação | Espera, contagem 3–2–1, tema comum (exemplo: Noite Italiana) | Coletivo |
+| Descoberta | Ação “Descobrir meu pedido” e recomendação local | Individual, ligada ao tema comum |
+| Revisão | Resumo de itens e valores, remover item, desfazer, trocar item e recalcular total | Individual; a escolha de outra pessoa não muda |
+| Continuação | “Continuar no iFood” para conferência final e pagamento | Handoff individual para iFood |
 
-Observações para a API:
+O PDF traz variantes de telas de endereço, orçamento e lobby, além de estados de espera e revisão.
+Os endereços e nomes exibidos são conteúdo de exemplo do protótipo, não dados para copiar para a
+aplicação.
 
-- "Iniciar party" é o gatilho do host que hoje chamamos `POST /parties/:id/close`
-  (`OPEN → COLLECTING_ANSWERS`).
-- O lobby já mostra a lista de participantes e o papel de host: o `PartySnapshot` atual cobre isso
-  (`participants[].name`, `party.hostParticipantId`).
-- O fluxo do Figma **não mostra a tela de conexão OAuth do iFood**, embora a Etapa 1 leia
-  "Seus endereços salvos". Isso pressupõe a conta conectada. Ver decisão pendente na seção 8.
+## Comparação com o que existe
 
-## 3. As 8 etapas, tela a tela
+### Frontend
 
-Cada etapa tem: título, texto de apoio, tipo de seleção e as opções exatas do Figma.
+O frontend atual é uma prévia navegável com dados simulados. Há lobby, endereço, restrições e
+orçamento. O questionário ainda não chama a API e o botão após orçamento leva a uma tela placeholder.
+As etapas de energia, formato, desejos, exclusões, prontidão, revelação, resultados e pedido ainda
+não estão implementadas. A conexão OAuth também não tem interface neste fluxo.
 
-### Etapa 1 de 8 — Endereço
+Essa separação está registrada em [`apps/web/AGENTS.md`](../apps/web/AGENTS.md): manter mock até
+alinhamento para integrar. Portanto, as rotas e telas abaixo são trabalho do frontend; o protótipo
+atual ainda não demonstra o fluxo ponta a ponta.
 
-- **Pergunta:** "Onde você vai curtir a party hoje?"
-- **Apoio:** "Usaremos a região para encontrar opções da mesma temática perto de você, mesmo longe
-  dos amigos."
-- **Seleção:** um endereço, entre os salvos + "Adicionar novo endereço".
-- **Opções (exemplo do Figma):** `Casa — Rua das Figueiras, 120 · ap. 42 — Vila Aurora · São Paulo, SP`,
-  `Trabalho — Av. Horizonte, 850 · sala 12 — Bela Vista · São Paulo, SP`.
-- **Individual.** As opções **vêm do iFood**, não da definição do questionário.
+### API e contratos
 
-### Etapa 2 de 8 — Restrições
-
-- **Pergunta:** "Antes, você possui alguma restrição?"
-- **Apoio:** "Restrições vêm antes das preferências. A restrição é individual, e não do grupo."
-- **Seleção:** múltipla. `Vegetarianismo`, `Veganismo`, `Sem lactose`, `Sem glúten`,
-  `Alergia a amendoim`, `Outro`.
-- **Variante "Outro":** campo "Conte outras restrições ou alergias" com placeholder "Digite aqui…".
-- **Individual.**
-
-### Etapa 3 de 8 — Orçamento
-
-- **Pergunta:** "Até quanto você pretende gastar?"
-- **Apoio:** "Esse valor é individual e inclui uma estimativa das taxas. O orçamento é individual, e
-  não do grupo." + "Vamos buscar opções que caibam no seu bolso. Você revisa o total antes de
-  realizar o pedido."
-- **Seleção:** única. `Até R$25`, `Até R$50`, `Até R$75`, `Outro valor`.
-- **Variante "Outro valor":** "Selecione sua faixa de valor" com entrada "Até R$ 50,00".
-- **Individual.** Precisa virar um **número** para `/options` (`budget`).
-
-### Etapa 4 de 8 — Energia / clima
-
-- **Pergunta:** "Qual energia combina mais com você hoje?"
-- **Apoio:** "Vamos usar o clima escolhido para encontrar opções que combinem com o momento."
-- **Seleção:** única. `Leve e refrescante`, `Quente e confortável`, `Crocante e descontraída`,
-  `Intensa e marcante`, `Tanto faz, me surpreenda!`
-- **Individual**, mas é sinal para o tema comum.
-
-### Etapa 5 de 8 — Formato do pedido
-
-- **Pergunta:** "Como você quer curtir seu pedido?"
-- **Apoio:** "Isso ajuda a definir o tipo e a variedade de itens para o pedido." + "Vamos buscar
-  opções que se encaixam com o orçamento, e podem haver variações."
-- **Seleção:** única. `Uma refeição completa`, `Várias coisas para experimentar`,
-  `Um lanche sem complicação`, `Uma sobremesa ou bebida especial`, `Tanto faz, me surpreenda!`
-- **Individual.**
-
-### Etapa 6 de 8 — Desejos
-
-- **Pergunta:** "Escolha até dois desejos para hoje."
-- **Apoio:** "Vamos priorizar opções que tenham os sabores e texturas escolhidos."
-- **Seleção:** múltipla, **pelo menos um e no máximo dois**, conforme alinhamento com Otávio. `Crocante`, `Cremoso`, `Fresco`, `Bem temperado`,
-  `Picante`, `Agridoce`, `Tanto faz, me surpreenda!`
-- **Individual.**
-
-### Etapa 7 de 8 — Exclusões
-
-- **Pergunta:** "Tem alguma coisa que você definitivamente não quer hoje?"
-- **Apoio:** "Marque tudo o que devemos deixar de fora das recomendações."
-- **Seleção:** múltipla. `Fritura`, `Comida crua`, `Muito picante`, `Bebida`, `Sobremesa`, `Outro`.
-- **Variante "Outro":** "Conte o que você não deseja hoje" com placeholder "Digite aqui…".
-- **Individual.**
-
-### Etapa 8 de 8 — Tudo pronto
-
-- **Título:** "Tudo pronto! Aguarde os outros participantes…"
-- **Lista de participantes** com status por pessoa: `Pronto` ou `Aguardando…`.
-- **Botão do host:** **"Revelar resultado"** (aparece quando todos ficam `Pronto`).
-- **Compartilhado.** É o ponto onde o grupo converge — hoje `READY_FOR_THEME`.
-
-## 4. O que já existe na API
-
-O recorte atual cobre o lobby e a entrada, e só as duas primeiras perguntas do Figma.
-
-| Peça | Onde | Cobre |
+| Necessidade do Figma | Situação atual | Lacuna/ação |
 | --- | --- | --- |
-| Criar Party | `POST /parties` | Lobby, código, `OPEN`, token do host |
-| Entrar | `POST /parties/:id/join` | Convidado no lobby |
-| Fechar grupo | `POST /parties/:id/close` | "Iniciar party" (`OPEN → COLLECTING_ANSWERS`) |
-| Definição do questionário | `GET /questionnaire` | `v1`: `address` + `restrictions` |
-| Responder | `POST /parties/:id/answers` | Submissão única com `completed: true` |
-| Estado pronto | `PartyStatus` | `READY_FOR_THEME` |
-
-A definição `v1` (`apps/api/src/party/questionnaire.ts`) já tem:
-
-- `address` (`type: address`, obrigatória) — Etapa 1;
-- `restrictions` (`multi_choice`) com `vegetariano`, `sem-lactose`, `sem-gluten`, `sem-acucar`,
-  `outro` — Etapa 2, mas com **rótulos e opções diferentes** do Figma (falta `Veganismo` e
-  `Alergia a amendoim`; sobra `Sem açúcar`).
-
-O tipo `QuestionnaireQuestion` (`packages/contracts/src/index.ts`) suporta `text`, `address`,
-`single_choice`, `multi_choice` e `scale`, com `options`, `min` e `max`.
-
-## 5. Lacunas entre o Figma e a API
-
-### 5.1 Faltam etapas 3 a 8
-
-Nada no contrato cobre orçamento, energia, formato, desejos, exclusões nem o estado "tudo pronto".
-
-### 5.2 Falta limite de seleção (`maxSelections`)
-
-A Etapa 6 é "até dois". Hoje `multi_choice` valida apenas que cada item existe; não limita a
-quantidade. `validateAnswers` precisa de um teto por pergunta.
-
-### 5.3 Falta o "Outro" com texto livre
-
-Etapas 2 e 7 têm uma opção `Outro` que abre um campo de texto. O contrato não prevê um campo
-companheiro por pergunta, e `validateAnswers` só conhece o id da opção — o texto do "Outro" fica
-órfão.
-
-### 5.4 Orçamento não é opção pura
-
-A Etapa 3 tem valores fixos **e** "Outro valor" digitado. O agente precisa de um `number`; a
-definição atual não expressa "opção com valor próprio" nem entrada monetária.
-
-### 5.5 Progresso: 8 telas, uma submissão
-
-O Figma mostra "Etapa X de 8" com "Continuar" a cada passo, mas `POST /answers` exige
-`completed: true` de uma vez. Não há como o servidor saber em que etapa cada pessoa está, nem
-salvar respostas parciais — o que impede a tela de retomar e o host de ver progresso real.
-
-### 5.6 Endereço vem do iFood, não do questionário
-
-`address` é validada hoje como uma string. No Figma a Etapa 1 lista os endereços salvos da conta;
-a definição estática do questionário não pode fornecer essas opções. Elas saem de
-`listAddresses` (iFood) — que o fluxo OAuth já usa, mas nenhuma rota expõe para a tela.
-
-### 5.7 "Revelar resultado" não existe como estado
-
-Etapa 8 termina em `READY_FOR_THEME`, mas o Figma tem um passo explícito do host depois que todos
-ficam `Pronto`. Falta um estado/ação de revelação (o tema ainda será decidido pelo Júlio).
-
-### 5.8 Onde a conexão OAuth aparece
-
-O Figma não tem tela de conexão. A Etapa 1 pressupõe conta conectada. É preciso decidir se a
-conexão é automática no `join` ou se continua uma etapa explícita do fluxo atual.
-
-## 6. Proposta de evolução do contrato
-
-Sem fixar conteúdo (isso é do Júlio), o **formato** precisa acomodar o fluxo do Figma.
-
-### 6.1 `QuestionnaireQuestion` ganha campos de configuração
-
-```ts
-export interface QuestionnaireQuestion {
-  id: string;
-  type: QuestionnaireQuestionType;
-  label: string;
-  required: boolean;
-  helpText?: string;
-  options?: QuestionnaireQuestionOption[];
-  min?: number;
-  max?: number;
-
-  // novos, para o fluxo do Figma:
-  maxSelections?: number;              // Etapa 6: até 2
-  allowOther?: boolean;               // Etapas 2 e 7: opção "Outro" abre texto
-  otherOptionId?: string;             // padrão "outro"
-  otherInput?: {                      // rótulo e placeholder do campo de texto
-    label: string;
-    placeholder: string;
-  };
-  customInput?: {                     // Etapa 3: "Outro valor"
-    label: string;
-    placeholder: string;
-    min: number;
-    max: number;
-  };
-}
-```
-
-`QuestionnaireQuestionOption` ganha `value?: number` (Etapa 3: `ate-25 → 25`).
-
-A validação (`validateAnswers`) passa a:
-
-- recusar `multi_choice` acima de `maxSelections`;
-- exigir o texto companheiro quando a opção `otherOptionId` for escolhida e `allowOther` for `true`;
-- aceitar a entrada custom da Etapa 3 e normalizá-la para número.
-
-Convenção de chaves das respostas (mantém `answers` como mapa plano):
-
-- `answers["<questionId>__other"]` — texto livre do "Outro" (Etapas 2 e 7);
-- `answers["<questionId>__value"]` — valor digitado no "Outro valor" (Etapa 3).
-
-### 6.2 Respostas por etapa (progresso parcial)
-
-Duas opções, ambas compatíveis com o estado atual do frontend:
-
-1. **Submissão final única** (mínimo esforço): a tela acumula as 7 respostas e envia uma vez na
-   Etapa 8 com `completed: true`. Nenhuma mudança de contrato; o servidor não conhece progresso.
-2. **Submissão incremental** (fiel ao "Etapa X de 8"): `POST /answers` aceita envios parciais,
-   com `completed: false` enquanto a pessoa não termina. O servidor devolve quantas etapas cada
-   participante concluiu, e o host vê progresso real na Etapa 8.
-
-Para o Figma, a opção 2 é a que corresponde à tela. **Decidido: opção 2** (ver 8.1). Sugere
-`completed: boolean` (hoje é `const: true`) e um `answeredCount` derivado no `Participant`.
-
-### 6.3 Rascunho do questionário `v2` (só a forma)
-
-```json
-{
-  "version": "v2",
-  "title": "Antes de montar a party",
-  "questions": [
-    { "id": "address", "type": "address", "required": true,
-      "label": "Onde você vai curtir a party hoje?" },
-
-    { "id": "restrictions", "type": "multi_choice", "required": false,
-      "label": "Antes, você possui alguma restrição?",
-      "allowOther": true, "otherOptionId": "outro",
-      "otherInput": { "label": "Conte outras restrições ou alergias", "placeholder": "Digite aqui…" },
-      "options": ["vegetarianismo", "veganismo", "sem-lactose", "sem-gluten", "alergia-amendoim", "outro"] },
-
-    { "id": "budget", "type": "single_choice", "required": true,
-      "label": "Até quanto você pretende gastar?",
-      "customInput": { "label": "Selecione sua faixa de valor", "placeholder": "Até R$ 50,00", "min": 1, "max": 999 },
-      "options": ["ate-25", "ate-50", "ate-75", "outro"] },
-
-    { "id": "energy", "type": "single_choice", "required": true,
-      "label": "Qual energia combina mais com você hoje?",
-      "options": ["leve-refrescante", "quente-confortavel", "crocante-descontraida", "intensa-marcante", "surpreenda"] },
-
-    { "id": "order-style", "type": "single_choice", "required": true,
-      "label": "Como você quer curtir seu pedido?",
-      "options": ["refeicao-completa", "varias-experimentar", "lanche-simples", "sobremesa-bebida", "surpreenda"] },
-
-    { "id": "cravings", "type": "multi_choice", "required": true, "maxSelections": 2,
-      "label": "Escolha até dois desejos para hoje.",
-      "options": ["crocante", "cremoso", "fresco", "bem-temperado", "picante", "agridoce", "surpreenda"] },
-
-    { "id": "exclusions", "type": "multi_choice", "required": false,
-      "label": "Tem alguma coisa que você definitivamente não quer hoje?",
-      "allowOther": true, "otherOptionId": "outro",
-      "otherInput": { "label": "Conte o que você não deseja hoje", "placeholder": "Digite aqui…" },
-      "options": ["fritura", "comida-crua", "muito-picante", "bebida", "sobremesa", "outro"] }
-  ]
-}
-```
-
-Os ids e rótulos acima são **proposta de forma**, não decisão de produto. O Júlio define o
-conteúdo; a API define o formato.
-
-### 6.4 Como as respostas alimentam o agente
-
-O `/options` de hoje recebe `theme + budget + restrictions + addressId`. O Figma produz:
-
-| Resposta | Vira | Consumidor |
-| --- | --- | --- |
-| `address` | `addressId` | `pick-address.ts` / `listAddresses` |
-| `budget` | `budget` (número BRL) | `resolve-options.ts` |
-| `restrictions` | entrada de `restrictions.ts` (códigos do iFood) | `resolve-options.ts` |
-| `energy`, `order-style`, `cravings`, `exclusions` | sinal para **sugerir o tema** e ranquear itens | Marco T (Júlio + Matheus) |
-
-Ou seja, o Figma confirma que o "menu" que falta (`theme`) é **derivado** das Etapas 4 a 7, e que
-essas respostas não são só decoração.
-
-## 7. Estados propostos da Party
-
-```text
-OPEN
-→ POST /parties/:id/close          (host "Iniciar party")
-COLLECTING_ANSWERS
-→ todos enviam respostas completas (Etapa 8, todos "Pronto")
-READY_FOR_THEME
-→ POST /parties/:id/reveal         (host "Revelar resultado")   ← novo
-THEME_REVEALED
-→ (tema escolhido — a definir pelo Júlio)
-```
-
-`THEME_REVEALED` é só um nome de trabalho; o que importa é que o Figma tem uma ação explícita do
-host depois de `READY_FOR_THEME`, e o snapshot precisa refletir isso para a tela de revelação. A
-decisão de estado e rota está em [`adr/0002-revelacao-do-resultado-da-party.md`](adr/0002-revelacao-do-resultado-da-party.md).
-
-## 8. Decisões
-
-### 8.1 Acordadas com a sessão da API (17/10/2026)
-
-Decididas pela sessão que implementa (`apps/api/**`, `packages/contracts/**`, `openapi.yaml`).
-
-| Tema | Decisão |
-| --- | --- |
-| Teto de seleção | `multi_choice` respeita `maxSelections` no `validateAnswers` (Etapa 6 = 2). |
-| "Outro" com texto | `allowOther` + `otherOptionId` + `otherInput`; o texto vai em `answers["<questionId>__other"]` (string plana), exigido não vazio quando a opção `otherOptionId` está marcada. |
-| Opção com valor | `QuestionnaireQuestionOption` ganha `value?: number` (`ate-25 → 25`); o "Outro valor" digitado vai em `answers["<questionId>__value"]`. Assim `/options` lê o número direto, sem tabela paralela. |
-| Progresso | **Submissão incremental.** `SubmitAnswersRequest.completed` deixa de ser `const: true` e vira `boolean`; o servidor guarda respostas parciais e expõe um derivado no `Participant` (ex.: `answeredCount`). Vira `READY_FOR_THEME` só quando **todos** enviam `completed: true`. |
-| Endereço (Etapa 1) | Resposta continua sendo o `addressId`. `GET /parties/:id/addresses` lista endereços sanitizados. Para novo: `POST /parties/:id/addresses/resolve` busca candidatos sem salvar; após a pessoa escolher e confirmar, `POST /parties/:id/addresses` persiste o candidato. Nenhuma rota expõe coordenadas. |
-| Revelar resultado | Ação do host + estado, `THEME_REVEALED` como nome de trabalho, host-only a partir de `READY_FOR_THEME`. O *o quê* é revelado é decisão do Júlio; a transição e o snapshot ficam garantidos. |
-| Conexão OAuth | Mantida como **etapa explícita** (rota `.../mcp-connection/authorize`); não automática no `join`. O front encaixa o botão antes/junto da Etapa 1. |
-
-Ação de contrato do Maeda: expor `listAddresses` sanitizado. Depois a sessão da API liga a rota.
-
-**Status:** itens 1–4 (teto, "Outro", valor, progresso) implementados no worktree
-`feature/frontend-reference`, commit `17b92fb` — *feat(api): support incremental questionnaire and
-question config* (`npm test` 87/87 e build limpo). Detalhes da implementação:
-
-- `Participant.answeredCount` ficou **opcional** no contrato, para não quebrar os mocks de
-  `apps/web/lib/mock-party.ts`; o servidor sempre envia. Torná-lo obrigatório exige ajustar os mocks.
-- Erros novos de `validateAnswers`: `too_many_selections`, `other_required`, `custom_value_required`.
-
-Item 6 (`THEME_REVEALED`) implementado no commit `87c8766` — *feat(api): reveal the party result
-from READY_FOR_THEME* (estado + `POST /parties/:id/reveal`, `403 HOST_ONLY` / `409
-NOT_READY_FOR_REVEAL`), conforme o [ADR 0002](adr/0002-revelacao-do-resultado-da-party.md).
-
-Pendentes: item 5 (drift OpenAPI ↔ `.env.example`). Item 3 (`GET /parties/:id/addresses`) e item 4
-(mover `ResolveOptions*` para `packages/contracts`) estão implementados. Item 7 (OAuth como etapa
-explícita) já está decidido e implementado na rota `.../authorize`.
-
-**Forma do questionário e derivação do tema ✅ (17/10/2026):** a definição `v2` da seção 6.3 está em
-`apps/api/src/party/questionnaire.ts` (a `v1` continua registrada para compatibilidade), e
-`party/theme.ts` deixou de ser stub: o tema sai das respostas em três níveis — **explícito → sinais
-das Etapas 4–7 (tabela provisória) → vibe do dia** (`sabadou`/`sextou à distância`). A vibe tem busca
-própria e ampla (`agent/themes.ts`, `VIBE_QUERIES`), para não virar busca literal e cair em
-`NO_OPTIONS`. O tema é o **resultado**, lido pela API: `POST /options` usa `party.theme` quando existe
-(o `theme` do corpo vira opcional / só fallback), e a negociação de grupo (`agent/negotiate.ts`) reusa
-o mesmo resolvedor e tenta a vibe como último recurso.
-
-### 8.2 Pendentes
-
-| Decisão | Quem decide | Bloqueia |
-| --- | --- | --- |
-| Conteúdo final das 7 perguntas e ordem | Júlio | ◐ forma `v2` pronta; faltam conteúdo/rótulos |
-| `Veganismo` e `Alergia a amendoim` no lugar de `Sem açúcar` | Júlio | ◐ `Veganismo` e `Vegetarianismo` já mapeiam para o item do iFood; **`Alergia a amendoim` não tem equivalente no enum** e cai em `ignored` — precisa decisão (exclusão dura ou aviso), não é só mapear |
-| Faixas de orçamento fechadas vs. valor livre | Júlio | Etapa 3 (`v2` traz as duas: faixas + "Outro valor") |
-| Regra que transforma respostas em tema | Júlio + sessão da API | ◐ provisória implementada (`party/theme.ts`); trocar a tabela sinais → tema não mexe em interface |
-
-## 9. Próximos passos sugeridos
-
-1. Júlio fecha conteúdo e rótulos das 7 perguntas; a definição `v2` segue a forma da seção 6.3.
-2. Matheus estende `QuestionnaireQuestion` (`maxSelections`, `allowOther`, `otherInput`,
-   `customInput`) e `validateAnswers`, com testes para o teto de 2 e o texto do "Outro".
-3. Decidir progresso parcial; se sim, `SubmitAnswersRequest.completed` deixa de ser `const: true`.
-4. Expor os endereços salvos da conta (`listAddresses`) para a Etapa 1, com a mesma sanitização de
-   alias/bairro já usada em `ADDRESS_SELECTION_REQUIRED`.
-5. Adicionar a ação `reveal` do host e o estado correspondente ao `PartySnapshot`.
-6. Só depois ligar essas respostas ao agente de opções e à regra de tema.
+| Criar Party, entrar, fechar o grupo e consultar participantes | Rotas `/parties`, `/join`, `/close` e `GET /parties/:id` existem | Frontend precisa trocar o mock por chamadas reais e tratar erros/estados |
+| Conectar a conta individualmente | OAuth por participante, com modo `demo` e `ifood`, está implementado | Frontend precisa iniciar autorização, voltar do callback e exibir status. Endereço requer conta conectada |
+| Questionário com oito etapas, opções e campos “Outro” | `GET /questionnaire` é dinâmico; contrato aceita `maxSelections`, `allowOther`, `otherInput` e `customInput`; `POST /answers` salva respostas incrementais | Definição servida ainda é provisória e o frontend não consome o contrato. Alinhar rótulos/opções ao Figma com Júlio |
+| Selecionar endereço salvo/adicionar endereço | Integração MCP sabe listar/criar endereço; não há rota HTTP pública de endereço no OpenAPI | Criar rota(s) autenticada(s) para expor endereços do participante e, se o escopo incluir cadastro no app, criar endereço com confirmação. Tratar zero/múltiplos endereços |
+| Esperar todos e revelar tema | `READY_FOR_THEME`, prontidão coletiva e `POST /reveal` existem | Tema atual é `italiano` fixo para demo. Falta o frontend exibir prontidão, espera/contagem e resultado; Júlio define geração/votação |
+| Recomendar opções por participante | `POST /options` usa tema, orçamento, restrições e endereço; retorna `live` ou `simulated` | Frontend ainda não chama a rota. Mapear todas as respostas (energia, formato, desejos e exclusões) para a entrada do agente conforme a regra de recomendação for definida |
+| Mostrar pedido de cada pessoa sem afetar os demais | `PartySnapshot` informa estágio do pedido, mas não oferece um resumo seguro de opção/carrinho/valor para a Party | Se o Figma deve mostrar resumo dos pedidos dos amigos, adicionar uma projeção pública mínima (ex.: estabelecimento, resumo dos itens, total/estimativa e status), sem endereço completo, token ou identificador interno |
+| Remover/trocar item, desfazer e atualizar valores | `POST /cart` prepara um carrinho para uma `LocalOption`; não há operações de alterar/remover/trocar item | Escolher entre editar a seleção local antes de preparar o carrinho ou acrescentar operações de atualização. Para troca real no iFood, validar disponibilidade/preço e reconstruir/recalcular o carrinho |
+| Ir ao iFood para conferência e pagamento | `POST /order` submete o pedido com consentimento explícito; tracking pode devolver código Pix | A semântica difere do botão do Figma, que promete handoff para conferência/pagamento. Confirmar com organização/MCP se há checkout/deep link oficial. Se não houver, ajustar texto e consentimento antes de usar `submitOrder` |
+
+Rotas e detalhes estão em [`apps/api/openapi.yaml`](../apps/api/openapi.yaml) e
+[`docs/desenvolvimento.md`](desenvolvimento.md). A lista de ferramentas do provedor está em
+[`docs/ifood-mcp.md`](ifood-mcp.md) e [`docs/ifood-user-mcp-tools.md`](ifood-user-mcp-tools.md).
+
+## Pontos a resolver antes de integrar
+
+### 1. Endereços e autorização
+
+O design começa pedindo um endereço salvo, mas não mostra conexão de conta. Definir onde a pessoa
+conecta o iFood (antes do endereço é o ponto mais coerente), como volta do OAuth e o que vê se negar
+ou se a conta não tiver endereço. O fluxo de adicionar endereço precisa de confirmação da pessoa;
+não usar os endereços ilustrativos do Figma como fixture de produção.
+
+### 2. Editar antes de criar o carrinho
+
+Hoje `/cart` já conversa com o MCP e prepara um carrinho; `/order` efetivamente envia o pedido. Para
+reduzir dependências no primeiro corte, a implementação pode manter a edição da opção em estado
+local e chamar `/cart` só depois de a pessoa confirmar a revisão. Isso só funciona se o backend
+conseguir materializar a opção editada e recalcular preços. Se a opção enviada ao carrinho tiver de
+ser exatamente a retornada por `/options`, será necessário um contrato para alterações e nova
+validação de preço/disponibilidade.
+
+### 3. Resumo coletivo e privacidade
+
+O Figma diferencia o pedido próprio dos pedidos dos outros. A tela não deve precisar ler tokens,
+endereços ou respostas individuais dos outros participantes para mostrar um panorama. O snapshot
+atual não contém item, restaurante, valor ou previsão compartilháveis; adicionar só os campos
+necessários e definir se são estimativas ou valores confirmados pelo carrinho.
+
+### 4. O que significa “Continuar no iFood”
+
+Esse é o principal descompasso de produto/API. `submitOrder` envia o pedido ao iFood mediante
+consentimento; o Figma descreve uma navegação para a pessoa conferir e pagar no iFood. Não tratar
+esses comportamentos como equivalentes. Confirmar o recurso disponível no MCP e então alinhar botão,
+texto, consentimento e contrato. O backend atual também suporta modo simulado; a interface deve
+indicar quando a recomendação ou pedido for simulado.
+
+## Sequência sugerida para implementar
+
+1. Manter o fluxo visual atual e implementar as telas que faltam do questionário a partir da
+definição dinâmica, incluindo progresso, validação e persistência incremental.
+2. Fechar a fronteira de OAuth e endereços: tela/retorno da autorização e endpoints de listagem e
+cadastro necessários para servir o design.
+3. Implementar prontidão, revelação do tema e transição de espera; o tema continua sujeito à decisão
+de Júlio.
+4. Integrar descoberta individual e estado de carregamento/erro, mostrando `source: simulated`.
+5. Definir a projeção coletiva dos pedidos e o comportamento de edição antes de integrar `/cart`.
+6. Alinhar o CTA final com o comportamento oficial de checkout e só então ligar a submissão real.
+
+O objetivo desta ordem é deixar o fluxo demonstrável por incrementos e explicitar os pontos que
+precisam de contrato ou decisão antes de depender deles; não é uma decisão de escopo final.
+
+## Referências
+
+- Export do Figma: `Ifood Party (1).pdf`, 38 páginas.
+- [OpenAPI](../apps/api/openapi.yaml)
+- [Desenvolvimento e integração](desenvolvimento.md)
+- [Autenticação iFood MCP](ifood-mcp.md)
+- [Ferramentas do iFood User MCP](ifood-user-mcp-tools.md)
+- [Orientações do frontend](../apps/web/AGENTS.md)

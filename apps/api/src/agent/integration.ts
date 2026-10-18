@@ -17,6 +17,7 @@ import type {
 
 import type { ChatClient } from "../llm/client.js";
 import {
+  CheckoutError,
   prepareCart,
   submitOrder,
   trackOrder,
@@ -29,6 +30,7 @@ import { validateConnection } from "../ifood/validate-connection.js";
 import type { McpSessionRegistry } from "../mcp/session-registry.js";
 import {
   fixtureCaller,
+  fixtureQueriesFor,
   loadDiscoveryFixture,
   resolveOptionsPreferringPlanner,
   resolveOptionsWithFallback,
@@ -39,6 +41,7 @@ import type { PlannerOptionsSettings } from "./planner-options.js";
 import { resolveOptions } from "./resolve-options.js";
 import { sanitizeAddress } from "./sanitize.js";
 import { participantAddressDetails, toParticipantAddress } from "./participant-address.js";
+import { loadPersonalization } from "./personalization.js";
 import type {
   IfoodCoordinates,
   IfoodAddress,
@@ -74,7 +77,13 @@ export interface PartyAgentIntegration {
   prepareCart?(
     actor: ParticipantRef,
     input: { option: LocalOption; addressId?: string },
-  ): Promise<CartSummary & { simulated: boolean; participantCoordinates?: IfoodCoordinates }>;
+  ): Promise<
+    CartSummary & {
+      simulated: boolean;
+      checkoutSimulated?: boolean;
+      participantCoordinates?: IfoodCoordinates;
+    }
+  >;
   submitOrder?(
     actor: ParticipantRef,
     input: { cartId: string; userConsent: boolean },
@@ -88,9 +97,16 @@ export function createIfoodIntegration(deps: {
   provider: McpOAuthProvider;
   mcpUrl?: string;
   fetchImpl?: typeof globalThis.fetch;
+  /** Mantém o MCP real até o carrinho e simula submissão/rastreio para apresentações. */
+  checkoutMode?: "ifood" | "simulated";
   /** Planner LLM opcional: sem ele, a integração fica no caminho determinístico. */
   llm?: { client: ChatClient; settings?: PlannerOptionsSettings };
 }): PartyAgentIntegration {
+  const checkoutMode = deps.checkoutMode ?? "ifood";
+  const demoCarts = new Map<string, string>();
+  const demoOrders = new Map<string, { owner: string; createdAt: number }>();
+  const ownerKey = (actor: ParticipantRef) => `${actor.partyId}\u0000${actor.participantId}`;
+
   const clientFor = (actor: ParticipantRef): IfoodMcpClient => {
     const session = deps.sessions.get(actor.partyId, actor.participantId);
     if (!session) {
@@ -125,26 +141,65 @@ export function createIfoodIntegration(deps: {
     async createParticipantAddress(actor, input) {
       return persistParticipantAddress(clientFor(actor), input);
     },
-    resolveOptions(actor, input) {
+    async resolveOptions(actor, input) {
       const fullInput = { ...input, participantId: actor.participantId };
       const caller = clientFor(actor);
+      // Personalization enriches discovery when available; it must not block real MCP searches.
+      const personalization = await loadPersonalization(fullInput, caller);
       return deps.llm
-        ? resolveOptionsPreferringPlanner(fullInput, caller, deps.llm.client, deps.llm.settings ?? {})
-        : resolveOptionsWithFallback(fullInput, caller);
+        ? resolveOptionsPreferringPlanner(
+            fullInput,
+            caller,
+            deps.llm.client,
+            deps.llm.settings ?? {},
+            personalization,
+          )
+        : resolveOptionsWithFallback(fullInput, caller, undefined, {}, personalization);
     },
     async prepareCart(actor, input) {
+      if (checkoutMode === "simulated") {
+        const cartId = `demo-${randomUUID()}`;
+        demoCarts.set(cartId, ownerKey(actor));
+        return {
+          cartId,
+          merchantId: input.option.merchant.id,
+          deliveryMethodId: input.option.deliveryMethodId,
+          paymentMethod: "SIMULATED",
+          total: input.option.total,
+          simulated: true,
+          checkoutSimulated: true,
+        };
+      }
+
       const client = clientFor(actor);
       const address = await resolveAddress(client, input.addressId);
+      const cart = await prepareCart(client, { option: input.option, addressId: address.addressId });
       return {
-        ...(await prepareCart(client, { option: input.option, addressId: address.addressId })),
+        ...cart,
         simulated: false,
         ...(address.coordinates ? { participantCoordinates: address.coordinates } : {}),
       };
     },
     async submitOrder(actor, input) {
+      if (checkoutMode === "simulated") {
+        assertConsent(input.userConsent);
+        if (demoCarts.get(input.cartId) !== ownerKey(actor)) {
+          throw new AgentError("NOT_FOUND", "Carrinho não encontrado para este participante");
+        }
+        const orderId = `demo-${randomUUID()}`;
+        demoOrders.set(orderId, { owner: ownerKey(actor), createdAt: Date.now() });
+        return { orderId, simulated: true };
+      }
       return { ...(await submitOrder(clientFor(actor), input)), simulated: false };
     },
     async trackOrder(actor, orderId) {
+      if (checkoutMode === "simulated") {
+        const order = demoOrders.get(orderId);
+        if (!order || order.owner !== ownerKey(actor)) {
+          throw new AgentError("NOT_FOUND", "Pedido de demonstração não encontrado");
+        }
+        return { ...simulatedTracking(orderId, order.createdAt), simulated: true };
+      }
       return { ...(await trackOrder(clientFor(actor), orderId)), simulated: false };
     },
   };
@@ -234,12 +289,35 @@ async function persistParticipantAddress(
 
 const DEMO_TIMELINE: Array<{ afterSeconds: number; code: string; description: string }> = [
   { afterSeconds: 0, code: "CONFIRMED", description: "Pedido confirmado pelo restaurante" },
-  { afterSeconds: 20, code: "PREPARING", description: "O restaurante está preparando o pedido" },
-  { afterSeconds: 40, code: "DISPATCHED", description: "Pedido saiu para entrega" },
-  { afterSeconds: 60, code: "CONCLUDED", description: "Pedido entregue" },
+  { afterSeconds: 4, code: "PREPARING", description: "O restaurante está preparando o pedido" },
+  { afterSeconds: 8, code: "DISPATCHED", description: "Pedido saiu para entrega" },
+  { afterSeconds: 12, code: "CONCLUDED", description: "Pedido entregue" },
 ];
 
-/** Modo `demo`: opções capturadas e um pedido simulado que avança sozinho em ~1 minuto. */
+function assertConsent(userConsent: boolean): void {
+  if (!userConsent) {
+    throw new CheckoutError("CONSENT_REQUIRED", "Confirme para continuar a demonstração");
+  }
+}
+
+function simulatedTracking(
+  orderId: string,
+  createdAt: number,
+  now: () => number = Date.now,
+): OrderTracking {
+  const elapsed = (now() - createdAt) / 1000;
+  const step = [...DEMO_TIMELINE].reverse().find((entry) => elapsed >= entry.afterSeconds)!;
+  const terminal = step.code === "CONCLUDED";
+  return {
+    orderId,
+    statusCode: step.code,
+    description: step.description,
+    ...(terminal ? {} : { retryAfterSeconds: 2 }),
+    terminal,
+  };
+}
+
+/** Modo `demo`: opções capturadas e um pedido simulado que avança sozinho em 12 segundos. */
 export function createDemoIntegration(now: () => number = Date.now): PartyAgentIntegration {
   const carts = new Map<string, { owner: string; option: LocalOption }>();
   const orders = new Map<string, { owner: string; createdAt: number }>();
@@ -294,9 +372,15 @@ export function createDemoIntegration(now: () => number = Date.now): PartyAgentI
       return { address, alreadyExists: false, simulated: true };
     },
     async resolveOptions(actor, input) {
+      const fixture = await loadDiscoveryFixture();
       const output = await resolveOptions(
-        { ...input, participantId: actor.participantId, addressId: undefined },
-        fixtureCaller(await loadDiscoveryFixture()),
+        {
+          ...input,
+          participantId: actor.participantId,
+          addressId: undefined,
+          queries: fixtureQueriesFor(fixture, input.queries),
+        },
+        fixtureCaller(fixture),
       );
       return { ...output, source: "simulated" };
     },
@@ -331,15 +415,8 @@ export function createDemoIntegration(now: () => number = Date.now): PartyAgentI
       if (!order || order.owner !== ownerKey(actor)) {
         throw new AgentError("NOT_FOUND", "Pedido não encontrado para este participante");
       }
-      const elapsed = (now() - order.createdAt) / 1000;
-      const step = [...DEMO_TIMELINE].reverse().find((entry) => elapsed >= entry.afterSeconds)!;
-      const terminal = step.code === "CONCLUDED";
       return {
-        orderId,
-        statusCode: step.code,
-        description: step.description,
-        ...(terminal ? {} : { retryAfterSeconds: 5 }),
-        terminal,
+        ...simulatedTracking(orderId, order.createdAt, now),
         simulated: true,
       };
     },

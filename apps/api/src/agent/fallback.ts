@@ -11,6 +11,7 @@ import type {
   ResolveOptionsOutput,
   ToolCaller,
 } from "./types.js";
+import type { Personalization } from "./personalization.js";
 
 export interface DiscoveryFixture {
   searchOffers: Record<string, { results: IfoodSearchItem[] }>;
@@ -56,6 +57,19 @@ export function fixtureCaller(fixture: DiscoveryFixture): ToolCaller {
 }
 
 /**
+ * Termos da contingência: mantém as buscas do tema quando a fixture as conhece; senão usa as
+ * buscas capturadas, para a demonstração continuar funcionando com um tema livre.
+ */
+export function fixtureQueriesFor(
+  fixture: Pick<DiscoveryFixture, "searchOffers">,
+  queries?: string[],
+): string[] {
+  const available = new Set(Object.keys(fixture.searchOffers).map((query) => query.toLowerCase()));
+  const usable = (queries ?? []).filter((query) => available.has(query.trim().toLowerCase()));
+  return usable.length > 0 ? usable : Object.keys(fixture.searchOffers).slice(0, 3);
+}
+
+/**
  * Tenta o iFood real; se falhar por indisponibilidade, devolve opções da fixture marcadas como
  * `simulated`. Erros que exigem ação do participante (endereço) não são mascarados.
  */
@@ -64,16 +78,21 @@ export async function resolveOptionsWithFallback(
   caller: ToolCaller,
   fixture: DiscoveryFixture | (() => Promise<DiscoveryFixture>) = loadDiscoveryFixture,
   settings: ResolveOptionsSettings = {},
+  personalization?: Personalization,
 ): Promise<ResolveOptionsOutput> {
   try {
-    return await resolveOptions(input, caller, settings);
+    return await resolveOptions(input, caller, settings, personalization);
   } catch (error) {
     if (isActionableAgentError(error)) {
       throw error;
     }
     const data = typeof fixture === "function" ? await fixture() : fixture;
     const simulated = await resolveOptions(
-      { ...input, addressId: undefined },
+      {
+        ...input,
+        addressId: undefined,
+        queries: fixtureQueriesFor(data, input.queries),
+      },
       fixtureCaller(data),
       settings,
     );
@@ -98,14 +117,15 @@ export async function resolveOptionsPreferringPlanner(
   caller: ToolCaller,
   client: ChatClient,
   settings: PlannerOptionsSettings = {},
+  personalization?: Personalization,
 ): Promise<ResolveOptionsOutput> {
   try {
     return await withTimeout(
-      resolveOptionsWithPlanner(input, caller, client, settings),
+      resolveOptionsWithPlanner(input, caller, client, settings, personalization),
       settings.timeoutMs ?? PLANNER_TIMEOUT_MS,
     );
   } catch (error) {
     if (isActionableAgentError(error)) throw error;
-    return resolveOptionsWithFallback(input, caller);
+    return resolveOptionsWithFallback(input, caller, undefined, {}, personalization);
   }
 }

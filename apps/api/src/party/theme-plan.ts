@@ -11,8 +11,10 @@
 export type Answers = Record<string, unknown>;
 
 export interface ThemePlan {
-  /** Tema canônico, usável na busca (`agent/themes.ts`). */
+  /** Título livre escolhido pelo agente; também é o texto exibido na revelação. */
   theme: string;
+  /** Termos de busca definidos pelo agente junto com o tema; usados obrigatoriamente no pedido. */
+  queries: string[];
   /** Frase curta em pt-BR explicando a escolha; vira `party.themeReason`. */
   reason?: string;
 }

@@ -146,10 +146,16 @@ export async function runPlanner(
 
 export interface IfoodToolboxSettings {
   maxSearchResults?: number;
+  /** Quando definido, o planner só pode buscar com estes termos. */
+  allowedQueries?: string[];
 }
 
 /** Observa os itens que o MCP devolveu, para a whitelist de IDs do planner. */
-type ItemRecorder = (items: IfoodSearchItem[]) => void;
+type ItemRecorder = (items: IfoodSearchItem[], query?: string) => void;
+
+function normalizeQuery(query: string): string {
+  return query.trim().toLowerCase();
+}
 
 /** O executor resolve o endereço; o modelo nunca precisa (nem vê) as coordenadas. */
 async function resolveCoordinates(caller: ToolCaller, addressId: unknown): Promise<IfoodCoordinates> {
@@ -171,7 +177,8 @@ function baseIfoodTools(
   settings: IfoodToolboxSettings = {},
   record?: ItemRecorder,
 ): ToolBox {
-  return {
+  const allowed = new Set((settings.allowedQueries ?? []).map(normalizeQuery).filter(Boolean));
+  const tools: ToolBox = {
     listAddresses: {
       description:
         "Lista os endereços salvos da conta do participante, com um rótulo seguro (bairro e cidade).",
@@ -227,6 +234,11 @@ function baseIfoodTools(
       async run(args) {
         const query = String(args.query ?? "").trim();
         if (!query) throw new Error("query é obrigatória");
+        if (allowed.size > 0 && !allowed.has(normalizeQuery(query))) {
+          throw new Error(
+            `Busca fora do tema. Use as buscas obrigatórias: ${[...allowed].join(", ")}.`,
+          );
+        }
         const userLocation = await resolveCoordinates(caller, args.addressId);
         const payload = await caller.callTool<{ results?: IfoodSearchItem[] }>("searchOffers", {
           query,
@@ -240,7 +252,7 @@ function baseIfoodTools(
           },
         });
         const results = payload.results ?? [];
-        record?.(results);
+        record?.(results, query);
         return { results };
       },
     },
@@ -266,6 +278,10 @@ function baseIfoodTools(
       },
     },
   };
+
+  // Sem buscas próprias quando o tema já definiu os termos: nada de recomendações aleatórias.
+  if (allowed.size > 0) delete tools.getRecommendations;
+  return tools;
 }
 
 /**
@@ -279,6 +295,8 @@ export function ifoodToolbox(caller: ToolCaller, settings: IfoodToolboxSettings 
 export interface PlannerToolboxSettings extends IfoodToolboxSettings {
   /** Teto de itens aceitos em `proposeOptions`. */
   maxOptions?: number;
+  /** Recomendações personalizadas pré-carregadas para esta execução. */
+  initialCandidates?: IfoodSearchItem[];
 }
 
 export interface PlannerToolbox {
@@ -304,14 +322,18 @@ export function plannerToolbox(
 ): PlannerToolbox {
   const seen = new Map<string, IfoodSearchItem>();
   let accepted: IfoodSearchItem[] | undefined;
+  const allowed = new Set((settings.allowedQueries ?? []).map(normalizeQuery).filter(Boolean));
 
-  const record: ItemRecorder = (items) => {
+  const record: ItemRecorder = (items, query) => {
+    // Buscas fora do tema não entram na whitelist; recomendações iniciais (sem query) entram.
+    if (allowed.size > 0 && query && !allowed.has(normalizeQuery(query))) return;
     for (const item of items) {
       if (!item || !item.merchant || !item.itemId) continue;
       const key = itemKey(item.merchant.merchantId, item.itemId);
       if (key && !seen.has(key)) seen.set(key, item);
     }
   };
+  record(settings.initialCandidates ?? []);
 
   const toolbox: ToolBox = {
     ...baseIfoodTools(caller, settings, record),
@@ -325,6 +347,8 @@ export function plannerToolbox(
         : {}),
     }),
   };
+  // Substitutos livres contrariam as buscas obrigatórias do tema.
+  if (allowed.size > 0) delete toolbox.proposeSubstitutes;
   toolbox.proposeOptions = {
     description:
       "Finaliza a busca propondo as opções escolhidas. Só aceita itens que apareceram nas respostas das tools.",

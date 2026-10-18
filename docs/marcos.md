@@ -188,10 +188,10 @@ Roda com **token manual** da minha conta até A9 existir, então não espera o m
 | --- | --- | --- | --- | --- | --- |
 | B1 ◐ | Capturar e **sanitizar** respostas reais (endereços só com cidade e bairro; sem rua, CEP, `addressId`, e-mail, telefone) | `fixtures/ifood-addresses.json`, `fixtures/ifood-discovery-results.json` | A6 ou token manual | P | já existem `fixtures/ifood-discovery-italiano.json` e `ifood-cart-italiano.json`, sanitizados; faltam os dois arquivos nomeados (endereços e discovery genérico) |
 | B2 ✅ | Escolher endereço: um salvo, usar; vários, exigir `addressId` vindo da Party (não inferir em silêncio) | `agent/pick-address.ts` | C | P | testes para 0, 1 e N endereços |
-| B3 ✅ | Buscar itens do tema: `searchOffers` com `onlyOpen`, `itemRestrictions`, `maxItemPrice` | `agent/resolve-options.ts` (não há `search-theme.ts` separado) | B1, C | M | devolve itens abertos para `italiano` |
+| B3 ✅ | Buscar itens do tema: `searchOffers` com `onlyOpen`, `itemRestrictions` (orçamento é referência, não filtro) | `agent/resolve-options.ts` (não há `search-theme.ts` separado) | B1, C | M | devolve itens abertos para `italiano` |
 | B4 ✅ | Mapear restrições da Party (`vegetarian`, etc.) para `itemRestrictions` do iFood | `agent/restrictions.ts` | C | P | tabela de mapeamento testada |
 | B5 ✅ | Agrupar por estabelecimento e detalhar com `getMerchant` e `getItem` | `agent/resolve-options.ts` (consolidado, sem `merchant-detail.ts`) | B3 | M | cada opção traz `optionGroups` e prazo |
-| B6 ✅ | Montar combinação dentro do orçamento, incluindo frete e pedido mínimo | `agent/build-option.ts` | B5 | M | testes: orçamento justo, estourado, abaixo do mínimo |
+| B6 ✅ | Montar combinação com frete e pedido mínimo; orçamento como referência de ordenação | `agent/build-option.ts` | B5 | M | testes: orçamento justo, estourado (opção mantida e rebaixada), abaixo do mínimo |
 | B7 ✅ | `resolveOptions(input)` compondo B2 a B6, com paralelismo e limite de tempo | `agent/resolve-options.ts` | B2, B4, B6 | M | retorna `ResolveOptionsOutput` com `source: "live"` |
 | B8 ✅ | Falha isolada: erro de um participante não derruba os outros; nova tentativa individual | `agent/resolve-options.ts` | B7 | P | `resolveOptionsForParty` isola a falha de cada participante |
 | B9 ✅ | Contingência: usar fixture quando o MCP falhar, com `source: "simulated"` | `agent/fallback.ts`, `fixtures/options-italiano.json` | B7 | P | desligar a rede devolve opções simuladas |
@@ -199,7 +199,7 @@ Roda com **token manual** da minha conta até A9 existir, então não espera o m
 | B11 ✅ | (opcional) LLM só para ranquear ou descrever opções, nunca para escolher IDs | absorvido pelo planner (`agent/planner*.ts`, [ADR 0003](adr/0003-planner-llm-sobre-ifood-mcp.md)); não há `rank.ts` | B7 | M | com e sem `OPENCODE_API_KEY` o resultado é válido |
 
 Pronto quando o marco fecha: para dois participantes com endereços diferentes e o mesmo tema, a
-API devolve opções reais e distintas, dentro do orçamento de cada um, em poucos segundos.
+API devolve opções reais e distintas, priorizando o orçamento de cada um, em poucos segundos.
 
 **Riscos:** catálogo vazio fora de horário ou cidade; itens com opções obrigatórias; latência de
 várias chamadas por participante.
@@ -215,7 +215,7 @@ Só começa com A, B e T prontos. Cada task usa o token do **próprio** particip
 | D3 | Vouchers opcionais: `listVouchers`, `setVoucher` | `ifood/checkout.ts` | D2 | P | cupom aplicado quando existir |
 | D4 ✅ | `submitOrder` **só** com `userConsent: true` do próprio participante | `ifood/checkout.ts` | D2 | M | teste recusa sem consentimento |
 | D5 ✅ | `trackOrder` com a cadência de `agentHints.retryMessage` e parada em `pollingStop` | `ifood/checkout.ts` | D4 | M | estado resumido sem dados pessoais |
-| D6 | Expor retrospectiva factual agregada, sem feedback | `GET /parties/:id/retrospective` | D5, T | libera tema, participantes, unidades, estabelecimentos e maior distância aproximada entre endereços depois de todos os pedidos `CONCLUDED` |
+| D6 ✅ | Expor retrospectiva factual agregada, sem feedback | `GET /parties/:id/retrospective` | D5, T | feito — libera tema, participantes, unidades, estabelecimentos e maior distância aproximada entre endereços depois de todos os pedidos `CONCLUDED` |
 | D7 | Decidir o modo da demo: pedido real com Pix não pago, só carrinho ou simulado | `docs/marcos.md` | grupo | P | decisão registrada |
 
 > D1, D2, D4 e D5 foram consolidados em **`ifood/checkout.ts`** (não há `cart.ts`, `cart-checkout.ts`,
@@ -228,8 +228,8 @@ Só começa com A, B e T prontos. Cada task usa o token do **próprio** particip
 
 | ID | Task | Arquivos | Depende | Tam. | Pronto quando |
 | --- | --- | --- | --- | --- | --- |
-| E1 | Cadastrar a redirect URL pública da Oracle no agente | portal iFood | domínio HTTPS | P | login completa fora de `localhost` |
-| E2 | Regenerar o Client Secret e atualizar os ambientes | portal, `.env` | E1 | P | secret antigo não funciona mais |
+| E1 ✅ | Cadastrar a redirect URL pública da Oracle no agente | portal iFood | domínio HTTPS | P | feito (18/10) — `https://api-ifood.kairootech.com.br/mcp-connection/callback` cadastrada e logando de verdade em produção |
+| E2 ✅ | Regenerar o Client Secret e atualizar os ambientes | portal, `.env` | E1 | P | feito (18/10) — secret novo gerado e confirmado funcionando na Coolify (`OAUTH_EXCHANGE_FAILED` resolvido) |
 | E3 | Ensaio com três contas ou duas reais e uma simulada | — | A, B, D | M | fluxo roda duas vezes seguidas |
 | E4 | Checklist: sem tokens em logs, fixtures ou erros; `.env`, `docs/SECRET` e `opencode.json` fora do git | — | E3 | P | `git grep` não acha segredo |
 
@@ -288,12 +288,24 @@ Saída: dois dispositivos conectam contas diferentes e `getUser` devolve o dono 
 | A8 | segunda conta autenticada | Maeda |
 | Etapa 4 com dados reais | tema, orçamento e restrições por participante | Júlio |
 
+## Fora do radar anterior (chegou depois de 17/10)
+
+Não estava neste documento; registrando pra não sumir:
+
+- **Endereço real do participante**: `GET/POST /parties/:id/addresses` e
+  `POST /parties/:id/addresses/resolve` já existem no backend (commit "add participant address
+  flow"). O front (`/party/address`) ainda usa a lista mock — é a próxima integração óbvia.
+- **Planner LLM**: absorveu o B11 por inteiro (`agent/planner.ts`, `negotiate.ts`, `sanitize.ts`,
+  `llm/client.ts`). Com `OPENCODE_API_KEY` configurado usa o modelo para montar/negociar as
+  opções; sem a chave, cai no determinístico. `OPENCODE_BASE_URL` aponta pro endpoint
+  `/inference/go` da própria opencode (Zen/Go), não um servidor nosso.
+
 ## Decisões pendentes
 
 | Decisão | Quem decide | Bloqueia |
 | --- | --- | --- |
-| Quantas contas de teste o portal permite | Maeda | A8 |
-| Domínio HTTPS e redirect URL pública | Matheus, Maeda | A9, E1 |
+| Quantas contas de teste o portal permite | Maeda | A8 (3ª conta) |
 | Perguntas, tema e votação | Júlio | T, B com dados reais |
-| Demo com pedido real, carrinho ou simulado | grupo | D, E |
+| Demo com pedido real, carrinho ou simulado | grupo | D7, E3 |
 | ~~Aprovar `ResolveOptions*` em `contracts`~~ ✅ feito (tipos já em `packages/contracts`) | Matheus | — |
+| ~~Domínio HTTPS e redirect URL pública~~ ✅ feito (E1) | Matheus, Maeda | — |

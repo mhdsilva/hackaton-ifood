@@ -18,6 +18,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -32,12 +33,17 @@ import type {
   LocalOption,
 } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { describeError, liveApi, LiveApiError } from "@/lib/api-client";
+import {
+  describeError,
+  liveApi,
+  LiveApiError,
+  type CartResponse,
+  type OrderTrackingResponse,
+} from "@/lib/api-client";
 import { fromParticipantAddress, pickDefaultAddress, selectedPartyAddress, type PartyAddress } from "@/lib/addresses";
 import { buildQuestionnaireAnswers, budgetFromAnswers } from "@/lib/live-answers";
 import { getMockAddresses } from "@/lib/mock-party";
-import { partyFlowTarget } from "@/lib/party-flow";
+import { canStartLiveParty, partyFlowTarget } from "@/lib/party-flow";
 import {
   getMockBudgetOptions,
   getMockDesireOptions,
@@ -86,14 +92,18 @@ function randomParticipantId(): string {
   return `p-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function canStartLiveParty(snapshot: PartySnapshot, participantId: string): boolean {
-  return (
-    snapshot.party.status === "OPEN" &&
-    !snapshot.party.membershipLocked &&
-    snapshot.party.hostParticipantId === participantId &&
-    snapshot.participants.length >= 2 &&
-    snapshot.participants.length <= 4
-  );
+const WEEKDAY_PARTY_NAME = [
+  "Domingou à distância",
+  "Segundou à distância",
+  "Terçou à distância",
+  "Quartou à distância",
+  "Quintou à distância",
+  "Sextou à distância",
+  "Sabadou à distância",
+] as const;
+
+function partyNameForToday(): string {
+  return WEEKDAY_PARTY_NAME[new Date().getDay()];
 }
 
 function questionOptions(
@@ -158,7 +168,12 @@ export interface LivePartyValue {
    * Busca no iFood (via agente/MCP) opções reais para o participante atual, com o tema da
    * Party, o orçamento, as restrições e o endereço das respostas dele.
    */
-  resolveOrderOptions: () => Promise<LocalOption[]>;
+  resolveOrderOptions: (forceRefresh?: boolean) => Promise<LocalOption[]>;
+  cart: CartResponse | null;
+  prepareOrderCart: (option: LocalOption) => Promise<CartResponse>;
+  submitPartyOrder: (cartId: string) => Promise<{ orderId: string; simulated: boolean }>;
+  trackPartyOrder: (orderId: string) => Promise<OrderTrackingResponse>;
+  loadRetrospective: () => ReturnType<typeof liveApi.getRetrospective>;
 }
 
 const LivePartyContext = createContext<LivePartyValue | null>(null);
@@ -182,6 +197,8 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(() => loadStoredSession() !== null);
   const [connectingMcp, setConnectingMcp] = useState(false);
+  const [cart, setCart] = useState<CartResponse | null>(null);
+  const orderOptionsRequests = useRef(new Map<string, Promise<LocalOption[]>>());
 
   const [addresses, setAddresses] = useState<PartyAddress[]>(getMockAddresses);
   const [addressesLive, setAddressesLive] = useState(false);
@@ -365,7 +382,7 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     }
   }, [session]);
 
-  const resolveOrderOptions = useCallback(async (): Promise<LocalOption[]> => {
+  const resolveOrderOptions = useCallback(async (forceRefresh = false): Promise<LocalOption[]> => {
     if (!session || !snapshot) throw new Error("Sessão da Party indisponível.");
     const me = snapshot.participants.find((participant) => participant.id === session.participantId);
     const answers = me?.questionnaireResponse?.answers ?? {};
@@ -383,19 +400,71 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     const addressId = addressesLive
       ? chosenAddress?.id ?? selectedAddressId ?? undefined
       : undefined;
-    const result = await liveApi.getOptions(session.partyId, session.token, {
+    const cacheKey = JSON.stringify({
+      partyId: session.partyId,
+      participantId: session.participantId,
+      theme: snapshot.party.theme ?? null,
       budget,
       restrictions,
-      maxOptions: 3,
-      ...(addressId ? { addressId } : {}),
+      addressId: addressId ?? null,
     });
-    if (result.options.length === 0) {
-      throw new Error(
-        "Nenhuma loja atendeu ao tema e ao orçamento agora. Ajuste o valor ou tente de novo.",
-      );
+    if (forceRefresh) orderOptionsRequests.current.delete(cacheKey);
+    let request = orderOptionsRequests.current.get(cacheKey);
+    if (!request) {
+      request = liveApi
+        .getOptions(session.partyId, session.token, {
+          budget,
+          restrictions,
+          maxOptions: 3,
+          ...(addressId ? { addressId } : {}),
+        })
+        .then((result) => {
+          if (result.options.length === 0) {
+            throw new Error(
+              "Nenhuma loja atendeu ao tema e ao orçamento agora. Ajuste o valor ou tente de novo.",
+            );
+          }
+          return result.options;
+        });
+      orderOptionsRequests.current.set(cacheKey, request);
     }
-    return result.options;
+    // Preserve failures too: the order screen can display the prefetch result immediately,
+    // and an explicit retry invalidates this entry.
+    return request;
   }, [session, snapshot, questionnaire, addresses, addressesLive, selectedAddressId]);
+
+  const prepareOrderCart = useCallback(async (option: LocalOption): Promise<CartResponse> => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    const result = await liveApi.createCart(session.partyId, session.token, {
+      option,
+      ...(selectedAddressId ? { addressId: selectedAddressId } : {}),
+    });
+    setCart(result);
+    setSnapshot(await liveApi.getParty(session.partyId, session.token));
+    return result;
+  }, [session, selectedAddressId]);
+
+  const submitPartyOrder = useCallback(async (cartId: string) => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    const result = await liveApi.submitOrder(session.partyId, session.token, {
+      cartId,
+      userConsent: true,
+    });
+    setSnapshot(await liveApi.getParty(session.partyId, session.token));
+    return result;
+  }, [session]);
+
+  const trackPartyOrder = useCallback(async (orderId: string) => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    const result = await liveApi.trackOrder(session.partyId, session.token, orderId);
+    setSnapshot(await liveApi.getParty(session.partyId, session.token));
+    return result;
+  }, [session]);
+
+  const loadRetrospective = useCallback(async () => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    return liveApi.getRetrospective(session.partyId, session.token);
+  }, [session]);
 
   const findAddressCandidates = useCallback(
     async (address: string): Promise<AddressResolutionResponse> => {
@@ -602,6 +671,11 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
         connectMcp,
         connectingMcp,
         resolveOrderOptions,
+        cart,
+        prepareOrderCart,
+        submitPartyOrder,
+        trackPartyOrder,
+        loadRetrospective,
       }}
     >
       {actionError && (
@@ -623,55 +697,56 @@ function StatusScreen({ message, children }: { message: string; children?: React
   );
 }
 
-/** Sem sessão: cria a Party (sem `?code`) ou entra nela (com `?code`). Ainda sem tela do Figma. */
+/**
+ * Sem sessão: entra por convite (`?code`) ou cria a Party sozinha, sem pedir nome de
+ * ninguém — quem abre o link sem código já vira host de uma Party batizada pelo dia da
+ * semana ("Sextou à distância", "Domingou à distância"...) e cai no lobby para convidar
+ * o resto do grupo.
+ */
 function EntryGate({
   onEntered,
 }: {
   onEntered: (session: StoredSession, party: PartySnapshot) => void;
 }) {
   const inviteCode = useSyncExternalStore(subscribeNoop, readInviteCode, () => null);
-  const [partyName, setPartyName] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const started = useRef(false);
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const participantId = randomParticipantId();
-      const result = inviteCode
-        ? await liveApi.joinParty(inviteCode, { participant: { id: participantId } })
-        : await liveApi.createParty({
-            name: partyName.trim() || "Party sem nome",
-            host: { id: participantId },
-          });
-      onEntered({ partyId: result.party.party.id, participantId, token: result.participantToken }, result.party);
-    } catch (cause) {
-      setError(describeError(cause));
-    } finally {
-      setBusy(false);
-    }
-  }
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    (async () => {
+      try {
+        const participantId = randomParticipantId();
+        const result = inviteCode
+          ? await liveApi.joinParty(inviteCode, { participant: { id: participantId } })
+          : await liveApi.createParty({ name: partyNameForToday(), host: { id: participantId } });
+        onEntered({ partyId: result.party.party.id, participantId, token: result.participantToken }, result.party);
+      } catch (cause) {
+        setError(describeError(cause));
+      }
+    })();
+  }, [inviteCode, onEntered]);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 p-5">
-      <h1 className="text-2xl font-bold">{inviteCode ? "Entrar na Party" : "Criar Party"}</h1>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <form className="space-y-3" onSubmit={submit}>
-        {!inviteCode && (
-          <Input
-            aria-label="Nome da Party"
-            placeholder="Nome da Party"
-            value={partyName}
-            onChange={(event) => setPartyName(event.target.value)}
-          />
-        )}
-        <Button type="submit" size="party" className="w-full" disabled={busy}>
-          {busy ? "Entrando..." : inviteCode ? "Entrar" : "Criar Party"}
-        </Button>
-      </form>
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 p-5 text-center">
+      {error ? (
+        <>
+          <p role="alert" className="text-sm text-destructive">{error}</p>
+          <Button
+            size="party"
+            className="w-full"
+            onClick={() => {
+              started.current = false;
+              setError(null);
+            }}
+          >
+            Tentar de novo
+          </Button>
+        </>
+      ) : (
+        <p className="text-muted-foreground">{inviteCode ? "Entrando na Party..." : "Criando Party..."}</p>
+      )}
     </div>
   );
 }

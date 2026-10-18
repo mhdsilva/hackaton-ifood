@@ -65,7 +65,7 @@ Passo a passo do que aconteceria:
    da Casa do Norte e o macarrão da Cantina".
 5. **O executor revalida e calcula (fato).** Para cada item proposto, ele confere que o `itemId`
    **apareceu de fato numa resposta desta sessão** (whitelist do que o MCP devolveu), roda
-   `getItem` + `buildOption` de novo e refaz preço, quantidade, mínimo e orçamento. ID que o
+   `getItem` + `buildOption` de novo e refaz preço, quantidade e mínimo. ID que o
    modelo "inventou" é descartado.
 6. **Resposta.** Sai o mesmo `ResolveOptionsOutput` de hoje (`source: "live"`, até 3 opções), que o
    `POST /options` já sabe devolver. O resto do fluxo (`/cart`, `/order`) **não muda em nada**.
@@ -140,7 +140,7 @@ decidir qual das duas entra no pitch.
 | --- | --- | --- | --- |
 | ✅ P1 | Montar as mensagens iniciais (tema, orçamento, restrições, endereços sanitizados) | `agent/planner-context.ts` | feito: `planner-context.test.ts` |
 | ✅ P2 | Tool de finalização `proposeOptions` + whitelist dos IDs vistos | `agent/planner.ts` | feito: ID inventado é descartado (`planner.test.ts`) |
-| ✅ P3 | Traduzir a proposta em `LocalOption[]` reusando `getItem` + `buildOption` | `agent/planner-options.ts` | feito: proposta vira até 3 opções no orçamento (`planner-options.test.ts`) |
+| ✅ P3 | Traduzir a proposta em `LocalOption[]` reusando `getItem` + `buildOption` | `agent/planner-options.ts` | feito: proposta vira até 3 opções, com o orçamento como referência (`planner-options.test.ts`) |
 | ✅ P4 | Ligar na integração: com config → planner; alguns erros → determinístico | `agent/integration.ts`, `server.ts` | feito: sem chave = caminho de hoje; com `ChatClient` = planner (`fallback.test.ts`) |
 | ✅ P5 | Timeout/limite e degradação sem quebrar os outros participantes | `agent/fallback.ts` | feito: planner travado degrada pro determinístico (`fallback.test.ts`) |
 | ✅ P6 | Tools próprias: `themeFromAnswers`, `proposeSubstitutes`, `describeOption`, `rankOptions` | `agent/planner-tools.ts` | feito: substituto só aponta para o que existe (`planner-tools.test.ts`) |
