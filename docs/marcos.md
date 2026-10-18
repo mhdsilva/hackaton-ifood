@@ -112,6 +112,11 @@ Tela de conexão iFood, escolha de endereço, lista de opções e andamento, usa
 `fixtures/options-*.json` do Maeda até a API real existir. Inclui o bug de `fetch` em
 [`pendencias-frontend.md`](pendencias-frontend.md).
 
+**Regra do produto (17/10/2026):** abrir a rota base **sem** `?code` **cria** a Party
+(`POST /parties`, sem autenticação) e mostra o link de convite; abrir com `?code` **entra**
+(`POST /parties/:code/join`). Cuidar da idempotência (não criar duas Parties em reload/StrictMode).
+Detalhes e o mapa das telas → chamadas em [`handoff-colucci.md`](handoff-colucci.md) §1 e §6.
+
 ## Marco E — Demonstração (todos)
 
 Três dispositivos, roteiro de 90 segundos, backend com HTTPS, contingência por etapa e checklist

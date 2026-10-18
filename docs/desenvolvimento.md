@@ -51,7 +51,7 @@ O backend valida as respostas contra a definição (`requireComplete` só quando
 
 Cada `participant` no snapshot traz `answeredCount` (quantas perguntas já respondeu) e `questionnaireResponse.completed` — use para a tela "Etapa X de 8" e para o host ver `Pronto`/`Aguardando`. A Party vira `READY_FOR_THEME` quando **todos** enviam `completed: true`.
 
-**Revelar resultado (host):** `POST /parties/:id/reveal` (Bearer; só o host, só em `READY_FOR_THEME`) leva a Party a `THEME_REVEALED` e grava `party.theme` (hoje `italiano`, o tema das fixtures do demo; a regra vive em `apps/api/src/party/theme.ts` e será refinada pelo Júlio). Erros: `403 HOST_ONLY`, `409 NOT_READY_FOR_REVEAL`. Depois disso, o front lê `party.theme` e envia em `POST /parties/:id/options`; todos veem pelo polling.
+**Revelar resultado (host):** `POST /parties/:id/reveal` (Bearer; só o host, só em `READY_FOR_THEME`) leva a Party a `THEME_REVEALED` e grava `party.theme` **derivado das respostas** (explícito → sinais das Etapas 4–7 → vibe do dia, ex.: `sabadou a distancia`; a regra vive em `apps/api/src/party/theme.ts` e a tabela de sinais será refinada pelo Júlio). Erros: `403 HOST_ONLY`, `409 NOT_READY_FOR_REVEAL`. Depois disso, o front lê `party.theme` e **não** precisa mais mandá-lo: `POST /parties/:id/options` usa o tema da Party (o `theme` do corpo virou opcional/fallback); todos veem pelo polling.
 
 ## Conexão MCP (OAuth por participante)
 
