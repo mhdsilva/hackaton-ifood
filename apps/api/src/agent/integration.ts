@@ -123,6 +123,37 @@ export function createIfoodIntegration(deps: {
     });
   };
 
+  // `listAddresses` já roda na busca de opções (resolveOptions/personalization) com o mesmo
+  // endereço que depois vira o pedido; reaproveita essa leitura em vez de chamar o iFood de
+  // novo em prepareCart, o que também evita falhas por chamadas repetidas em sequência.
+  const ADDRESS_CACHE_TTL_MS = 5 * 60_000;
+  const addressListCache = new Map<string, { addresses: IfoodAddress[]; expiresAt: number }>();
+
+  const invalidateAddressCache = (actor: ParticipantRef) => {
+    addressListCache.delete(ownerKey(actor));
+  };
+
+  /** Mesma interface de `clientFor`, mas serve `listAddresses` do cache quando ainda válido. */
+  const cachedCallerFor = (actor: ParticipantRef): Pick<IfoodMcpClient, "callTool"> => {
+    const real = clientFor(actor);
+    return {
+      async callTool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+        if (name !== "listAddresses") return real.callTool<T>(name, args);
+        const key = ownerKey(actor);
+        const cached = addressListCache.get(key);
+        if (cached && cached.expiresAt > Date.now()) {
+          return { results: cached.addresses } as unknown as T;
+        }
+        const result = await real.callTool<{ results?: IfoodAddress[] }>(name, args);
+        addressListCache.set(key, {
+          addresses: result.results ?? [],
+          expiresAt: Date.now() + ADDRESS_CACHE_TTL_MS,
+        });
+        return result as unknown as T;
+      },
+    };
+  };
+
   return {
     async validateConnection(actor) {
       try {
@@ -132,18 +163,20 @@ export function createIfoodIntegration(deps: {
       }
     },
     async listAddresses(actor) {
-      const result = await clientFor(actor).callTool<{ results?: IfoodAddress[] }>("listAddresses");
+      const result = await cachedCallerFor(actor).callTool<{ results?: IfoodAddress[] }>("listAddresses");
       return (result.results ?? []).map(toParticipantAddress);
     },
     async resolveNewAddress(actor, input) {
       return resolveAddressCandidates(clientFor(actor), input.address);
     },
     async createParticipantAddress(actor, input) {
-      return persistParticipantAddress(clientFor(actor), input);
+      const created = await persistParticipantAddress(clientFor(actor), input);
+      invalidateAddressCache(actor);
+      return created;
     },
     async resolveOptions(actor, input) {
       const fullInput = { ...input, participantId: actor.participantId };
-      const caller = clientFor(actor);
+      const caller = cachedCallerFor(actor);
       // Personalization enriches discovery when available; it must not block real MCP searches.
       const personalization = await loadPersonalization(fullInput, caller);
       return deps.llm
@@ -165,7 +198,7 @@ export function createIfoodIntegration(deps: {
         // em vez de depender da submissão/entrega, que este modo nunca faz.
         let participantCoordinates: IfoodCoordinates | undefined;
         try {
-          const address = await resolveAddress(clientFor(actor), input.addressId);
+          const address = await resolveAddress(cachedCallerFor(actor), input.addressId);
           participantCoordinates = address.coordinates;
           if (!participantCoordinates) {
             console.warn("Simulated checkout: resolved address has no coordinates", {
@@ -196,7 +229,7 @@ export function createIfoodIntegration(deps: {
         };
       }
 
-      const client = clientFor(actor);
+      const client = cachedCallerFor(actor);
       const address = await resolveAddress(client, input.addressId);
       const cart = await prepareCart(client, { option: input.option, addressId: address.addressId });
       return {

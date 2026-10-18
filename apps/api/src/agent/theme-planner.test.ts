@@ -49,11 +49,20 @@ test("rejects incomplete or malformed responses", () => {
   assert.equal(parseThemePlan('{"theme":"italiano"'), undefined);
 });
 
-test("the prompt carries the time and each participant's signals but no personal data", () => {
+test("the prompt carries the time and only the group consensus, never personal data", () => {
   const messages = themePlannerMessages(
     [
-      { address: "Rua das Flores, 10", budget: "ate-50", budget__value: 50, energy: "picante" },
-      { address: "casa", restrictions: ["vegetariano"] },
+      {
+        address: "Rua das Flores, 10",
+        budget: "ate-50",
+        budget__value: 50,
+        energy: "intensa-marcante",
+        restrictions: ["veganismo"],
+        restrictions__other: "sem coentro",
+        exclusions: ["fritura"],
+        cravings: ["picante", "crocante"],
+      },
+      { address: "casa", energy: "intensa-marcante", cravings: ["picante"] },
     ],
     new Date("2026-10-18T14:30:00-03:00"),
   );
@@ -63,13 +72,17 @@ test("the prompt carries the time and each participant's signals but no personal
   assert.match(system, /LIVRE/);
   assert.match(system, /Não existe lista de temas permitidos/);
   assert.match(system, /2 a 4 termos/);
+  assert.match(system, /O tema é o consenso do grupo/);
+  assert.equal(system.includes("veto"), false);
   assert.match(user, /Horário de referência: domingo, 18 de outubro de 2026/);
   assert.match(user, /14:30/);
-  assert.equal(user.includes("Rua das Flores"), false);
-  assert.equal(user.includes("__value"), false);
-  assert.ok(user.includes("ate-50"));
-  assert.ok(user.includes("vegetariano"));
-  assert.equal((JSON.parse(user.slice(user.indexOf("["))) as unknown[]).length, 2);
+  assert.match(user, /Participantes: 2/);
+  assert.ok(user.includes("intensa-marcante"));
+  assert.ok(user.includes("picante"));
+  assert.equal(user.includes("crocante"), false, "desejo de uma pessoa só não vira tema");
+  for (const personal of ["Rua das Flores", "__value", "ate-50", "veganismo", "sem coentro", "fritura"]) {
+    assert.equal(user.includes(personal), false, `${personal} não deve chegar ao modelo`);
+  }
 });
 
 test("without theme signals the model is not called", async () => {
@@ -82,7 +95,7 @@ test("without theme signals the model is not called", async () => {
   };
 
   await assert.rejects(async () =>
-    createLlmThemePlanner(client)([{ address: "casa" }]),
+    createLlmThemePlanner(client)([{ address: "casa" }, { address: "praia" }]),
   );
   assert.equal(called, false);
 });
@@ -102,7 +115,7 @@ test("the planner returns the model's free-form choice and queries", async () =>
 
   const plan = await createLlmThemePlanner(client, {
     now: () => new Date("2026-10-18T14:30:00-03:00"),
-  })([{ energy: "intensa-marcante" }]);
+  })([{ energy: "intensa-marcante" }, { energy: "intensa-marcante" }]);
 
   assert.deepEqual(plan, {
     theme: "Domingo de Massa",
@@ -121,7 +134,7 @@ test("an answer without queries fails so the caller can fall back", async () => 
     },
   };
 
-  await assert.rejects(async () => createLlmThemePlanner(client)([{ energy: "surpreenda" }]));
+  await assert.rejects(async () => createLlmThemePlanner(client)([{ energy: "leve-refrescante" }, { energy: "leve-refrescante" }]));
 });
 
 test("a slow model times out", async () => {
@@ -131,7 +144,25 @@ test("a slow model times out", async () => {
 
   await assert.rejects(
     async () =>
-      createLlmThemePlanner(client, { timeoutMs: 10 })([{ energy: "surpreenda" }]),
+      createLlmThemePlanner(client, { timeoutMs: 10 })([{ energy: "leve-refrescante" }, { energy: "leve-refrescante" }]),
     /tempo limite/,
   );
+});
+
+test("without a group consensus the model is not called, even if one person has signals", async () => {
+  let called = false;
+  const client: ChatClient = {
+    async complete() {
+      called = true;
+      return { role: "assistant", content: '{"theme":"vegano","queries":["vegano"]}' };
+    },
+  };
+
+  await assert.rejects(async () =>
+    createLlmThemePlanner(client)([
+      { restrictions: ["veganismo"], energy: "leve-refrescante" },
+      { restrictions: [], energy: "intensa-marcante" },
+    ]),
+  );
+  assert.equal(called, false);
 });

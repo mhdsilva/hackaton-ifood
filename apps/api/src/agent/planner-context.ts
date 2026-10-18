@@ -6,6 +6,8 @@
  * para orientar a escolha. Ver docs/superpowers/specs/2026-10-17-agente-llm-ifood-mcp.md.
  */
 
+import type { PersonalPreferences } from "@sidequest/contracts";
+
 import type { ChatMessage } from "../llm/client.js";
 import { mapRestrictions } from "./restrictions.js";
 import { sanitizeAddress } from "./sanitize.js";
@@ -17,6 +19,8 @@ export interface PlannerContext {
   queries?: string[];
   budget: number;
   restrictions?: string[];
+  /** Só deste participante: vale para o pedido dele, nunca para o tema nem para as buscas obrigatórias. */
+  preferences?: PersonalPreferences;
   /** Endereço escolhido na Party, quando a conta tem mais de um. */
   addressId?: string;
   addresses: IfoodAddress[];
@@ -42,6 +46,9 @@ function systemPrompt(maxOptions: number): string {
     "- O orçamento é uma referência: prefira o que cabe nele, mas não deixe de propor por estar um",
     "  pouco acima, e nunca ignore as restrições alimentares.",
     "- Quando tiver a proposta, chame proposeOptions com os itens escolhidos.",
+    "- Preferências pessoais do participante (desejos, o que evitar, observações) valem só para",
+    "  o pedido dele: use-as para escolher entre os itens, mas nunca para mudar o tema nem as",
+    "  buscas obrigatórias do grupo.",
     "- Responda em português do Brasil, em poucas frases.",
   ].join("\n");
 }
@@ -70,6 +77,13 @@ function userPrompt(context: PlannerContext, maxOptions: number): string {
     lines.push(
       `Restrições sem filtro no iFood (considere ao escolher): ${ignored.join(", ")}.`,
     );
+  }
+  const { cravings = [], avoid = [], notes = [] } = context.preferences ?? {};
+  if (cravings.length > 0 || avoid.length > 0 || notes.length > 0) {
+    lines.push("Preferências só deste participante (não são tema; aplique apenas no pedido dele):");
+    if (cravings.length > 0) lines.push(`- Desejos: ${cravings.join(", ")}.`);
+    if (avoid.length > 0) lines.push(`- Evitar: ${avoid.join(", ")}.`);
+    if (notes.length > 0) lines.push(`- Observações dele: ${notes.join("; ")}.`);
   }
   if (context.addressId) {
     lines.push(`Endereço escolhido: ${context.addressId}.`);

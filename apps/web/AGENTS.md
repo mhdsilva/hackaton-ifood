@@ -2,6 +2,10 @@
 
 Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávio no iFood Party (anteriormente SideQuest Party). O objetivo é entregar uma jornada demonstrável, com estrutura simples e adequada ao hackathon.
 
+## Regra sobre textos
+
+**Não altere nenhum texto visível da interface (`apps/web/**`) sem autorização explícita do Lucas Maeda.** Isso inclui títulos, rótulos, botões, mensagens, placeholders, erros e `aria-label`. Se uma mudança exigir texto novo ou diferente, proponha o texto e espere aprovação. Detalhes em `../../AGENTS.md`.
+
 ## Contexto e estado atual
 
 “Voltar ao início” na retrospectiva remove somente a sessão da Party do `sessionStorage` no modo real e recarrega `/`, descartando respostas, carrinho e caches locais para criar uma nova Party. No mock, recarrega `/` para reiniciar a prévia. A Party anterior continua disponível para os demais participantes.

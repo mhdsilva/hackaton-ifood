@@ -488,6 +488,31 @@ test("the retrospective is ready once every participant has a cart, no delivery 
   assert.equal(ready.summary?.participantCount, 2);
 });
 
+test("the fallback theme ignores signals held by only one participant", async () => {
+  const service = createService(() => new Date(2026, 9, 16, 12));
+  const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
+  const guest = service.join(host.party.party.id, { participant: { id: "bruno", name: "Bruno" } });
+  const partyId = host.party.party.id;
+  connectGuests(service, partyId);
+  service.closeMembership(partyId, host.participantToken);
+  const base = { address: "casa", budget: "ate-50", "order-style": "refeicao-completa", cravings: ["crocante"] };
+  service.submitAnswers(partyId, host.participantToken, {
+    questionnaireVersion: "v2",
+    answers: { ...base, energy: "leve-refrescante", restrictions: ["veganismo"] },
+    completed: true,
+  });
+  service.submitAnswers(partyId, guest.participantToken, {
+    questionnaireVersion: "v2",
+    answers: { ...base, energy: "intensa-marcante", cravings: ["cremoso"] },
+    completed: true,
+  });
+
+  const revealed = await service.revealTheme(partyId, host.participantToken);
+
+  // Energia e desejos divergem; só o formato é comum: "brasileiro", nunca vegano/saudável/mexicano.
+  assert.equal(revealed.party.theme, "brasileiro");
+});
+
 test("tracks each participant's order progress", () => {
   const service = createService();
   const host = service.create({

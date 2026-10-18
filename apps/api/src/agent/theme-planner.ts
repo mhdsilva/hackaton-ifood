@@ -8,6 +8,7 @@
  */
 
 import type { ChatClient, ChatMessage } from "../llm/client.js";
+import { groupConsensus } from "../party/consensus.js";
 import type { Answers, ThemePlan, ThemePlanner } from "../party/theme-plan.js";
 
 export interface LlmThemePlannerSettings {
@@ -24,20 +25,6 @@ const MAX_QUERY_CHARS = 40;
 const MAX_QUERIES = 4;
 const MAX_REASON_CHARS = 140;
 
-/**
- * Respostas que o modelo pode ver. `address` fica de fora (dado pessoal/de entrega) e
- * `*__value` é só o valor monetário que o front envia — o orçamento já vai pelo enum.
- */
-const THEME_ANSWER_KEYS = new Set([
-  "restrictions",
-  "restrictions__other",
-  "budget",
-  "energy",
-  "order-style",
-  "cravings",
-  "exclusions",
-  "exclusions__other",
-]);
 
 /** Extrai o primeiro objeto JSON da resposta (aceita ```json ... ```). */
 function extractJsonObject(content: string): string | undefined {
@@ -120,10 +107,12 @@ function systemPrompt(): string {
     "Você é o anfitrião de uma Party: um jogo em grupo que monta pedidos do iFood para amigos",
     "em endereços diferentes a partir de UM tema comum.",
     "",
-    "Leia as respostas de cada participante (restrições, orçamento, energia, formato e desejos)",
-    "e invente o tema que melhor representa o grupo. Considere TODOS: quando as respostas",
-    "divergirem, procure o ponto em comum. Restrições valem como veto (ex.: vegetariano +",
-    "churrasco não combina).",
+    "Você recebe apenas o CONSENSO do grupo: os sinais (energia, formato, desejos) que TODOS os",
+    "participantes compartilham. Invente o tema que melhor representa esse ponto em comum.",
+    "",
+    "O tema é o consenso do grupo. Restrição alimentar ou preferência de uma pessoa só (ou de",
+    "parte do grupo) nunca aparece no título, na justificativa nem nos termos de busca: isso vale",
+    "apenas para o pedido dessa pessoa e já é tratado em outra etapa. Não invente restrições.",
     "",
     "O tema é LIVRE. Não existe lista de temas permitidos e você não deve escolher uma",
     "categoria pronta. Crie um título curto e natural em português, com até 5 palavras e no",
@@ -145,21 +134,12 @@ function systemPrompt(): string {
   ].join("\n");
 }
 
-/** Só os sinais que importam para o tema, por participante (sem dados pessoais). */
-export function themeAnswers(answers: Answers): Answers {
-  const picked: Answers = {};
-  for (const [key, value] of Object.entries(answers)) {
-    if (THEME_ANSWER_KEYS.has(key)) picked[key] = value;
-  }
-  return picked;
-}
-
-/** Mensagens iniciais do planner: horário, respostas anonimizadas e nenhum catálogo fixo. */
+/** Mensagens iniciais do planner: horário, consenso do grupo e nenhum catálogo fixo. */
 export function themePlannerMessages(
   answersByParticipant: Answers[],
   now: Date = new Date(),
 ): ChatMessage[] {
-  const participants = answersByParticipant.map((answers) => themeAnswers(answers));
+  const consensus = groupConsensus(answersByParticipant);
   return [
     { role: "system", content: systemPrompt() },
     {
@@ -167,7 +147,8 @@ export function themePlannerMessages(
       content: [
         timeContext(now),
         "",
-        `Respostas do grupo (uma entrada por participante):\n${JSON.stringify(participants, null, 2)}`,
+        `Participantes: ${answersByParticipant.length}.`,
+        `Consenso do grupo (só o que todos compartilham):\n${JSON.stringify(consensus, null, 2)}`,
       ].join("\n"),
     },
   ];
@@ -198,11 +179,8 @@ export function createLlmThemePlanner(
   const timeoutMs = settings.timeoutMs ?? DEFAULT_THEME_PLANNER_TIMEOUT_MS;
 
   return async (answersByParticipant) => {
-    const hasSignal = answersByParticipant.some(
-      (answers) => Object.keys(themeAnswers(answers)).length > 0,
-    );
-    if (!hasSignal) {
-      throw new Error("Sem sinais de tema nas respostas");
+    if (Object.keys(groupConsensus(answersByParticipant)).length === 0) {
+      throw new Error("Sem consenso de tema entre os participantes");
     }
 
     const messages = themePlannerMessages(

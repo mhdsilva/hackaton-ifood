@@ -102,6 +102,7 @@ export async function resolveOptionsWithPlanner(
       ...(input.queries?.length ? { queries: input.queries } : {}),
       budget: input.budget,
       restrictions: input.restrictions,
+      ...(input.preferences ? { preferences: input.preferences } : {}),
       addressId: address.addressId,
       addresses: addresses.results ?? [],
       maxOptions,

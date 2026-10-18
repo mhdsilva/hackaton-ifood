@@ -14,6 +14,7 @@ import type {
 } from "@sidequest/contracts";
 
 import { ParticipantAccessStore, type ParticipantActor } from "./access.js";
+import { groupConsensus } from "./consensus.js";
 import { countAnswered, getQuestionnaire, validateAnswers } from "./questionnaire.js";
 import { PartyStore } from "./store.js";
 import { deriveTheme } from "./theme.js";
@@ -64,15 +65,6 @@ function answersByParticipant(snapshot: PartySnapshot): Record<string, unknown>[
   return snapshot.participants
     .map((participant) => participant.questionnaireResponse?.answers)
     .filter((answers): answers is Record<string, unknown> => Boolean(answers));
-}
-
-/** Fallback determinístico: respostas mescladas, a última vence por chave. */
-function mergedAnswers(snapshot: PartySnapshot): Record<string, unknown> {
-  const answers: Record<string, unknown> = {};
-  for (const participantAnswers of answersByParticipant(snapshot)) {
-    Object.assign(answers, participantAnswers);
-  }
-  return answers;
 }
 
 export class PartyError extends Error {
@@ -260,7 +252,7 @@ export class PartyService {
     }
 
     snapshot.party.status = "THEME_REVEALED";
-    snapshot.party.theme = plan?.theme ?? deriveTheme(mergedAnswers(snapshot), this.now());
+    snapshot.party.theme = plan?.theme ?? deriveTheme(groupConsensus(answersByParticipant(snapshot)), this.now());
     if (plan?.queries.length) {
       snapshot.party.themeQueries = plan.queries;
     }

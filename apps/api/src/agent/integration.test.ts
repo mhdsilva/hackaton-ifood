@@ -95,11 +95,13 @@ test("checkoutMode simulated still resolves the real chosen address for the retr
   };
 
   const cart = await integration.prepareCart!(actor, { option, addressId: "home" });
+  const again = await integration.prepareCart!(actor, { option, addressId: "home" });
 
   assert.equal(cart.simulated, true);
   assert.deepEqual(cart.participantCoordinates, { latitude: -22.01, longitude: -47.89 });
+  assert.deepEqual(again.participantCoordinates, cart.participantCoordinates);
   const toolCalls = seen.filter((entry) => entry.body.method === "tools/call");
-  // Lê o endereço real (sem custo), mas nunca cria carrinho/pedido de verdade no iFood.
+  // Lê o endereço real uma única vez (cache) e nunca cria carrinho/pedido de verdade no iFood.
   assert.deepEqual(toolCalls.map((entry) => entry.body.params?.name), ["listAddresses"]);
 });
 
