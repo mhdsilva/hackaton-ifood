@@ -134,6 +134,24 @@ export class PartyService {
     return this.store.save(snapshot);
   }
 
+  revealTheme(idOrCode: string, actorToken: string): PartySnapshot {
+    const snapshot = this.get(idOrCode);
+    const actor = this.authorizeParticipant(idOrCode, actorToken);
+    if (actor.participantId !== snapshot.party.hostParticipantId) {
+      throw new PartyError(403, "HOST_ONLY", "Only the host can reveal the result");
+    }
+    if (snapshot.party.status !== "READY_FOR_THEME") {
+      throw new PartyError(
+        409,
+        "NOT_READY_FOR_REVEAL",
+        "Party is not ready for the reveal yet",
+      );
+    }
+
+    snapshot.party.status = "THEME_REVEALED";
+    return this.store.save(snapshot);
+  }
+
   submitAnswers(
     idOrCode: string,
     actorToken: string,

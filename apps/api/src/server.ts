@@ -375,7 +375,7 @@ async function routeRequest(
   }
 
   const route = url.pathname.match(
-    /^\/parties\/([^/]+)(?:\/(join|close|answers))?$/,
+    /^\/parties\/([^/]+)(?:\/(join|close|answers|reveal))?$/,
   );
   if (!route) {
     throw new PartyError(404, "ROUTE_NOT_FOUND", "Route not found");
@@ -417,6 +417,14 @@ async function routeRequest(
           bearerToken(request),
           await readJson<SubmitAnswersRequest>(request),
         ),
+        allowedOrigin,
+      );
+      return;
+    case "reveal":
+      sendJson(
+        response,
+        200,
+        service.revealTheme(partyId, bearerToken(request)),
         allowedOrigin,
       );
       return;

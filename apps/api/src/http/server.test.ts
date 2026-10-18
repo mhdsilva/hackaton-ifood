@@ -813,3 +813,57 @@ test("rejects invalid questionnaire answers over HTTP", async () => {
   assert.equal(unknown.statusCode, 400);
   assert.equal(unknown.json().error.code, "QUESTIONNAIRE_VERSION_UNKNOWN");
 });
+
+test("reveals the result over HTTP with host-only access", async () => {
+  const api = createApi();
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const partyId = host.party.party.id;
+  const guest = (
+    await request(api, "POST", `/parties/${partyId}/join`, {
+      participant: { id: "bruno", name: "Bruno" },
+    })
+  ).json();
+  await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
+  await request(
+    api,
+    "POST",
+    `/parties/${partyId}/answers`,
+    { questionnaireVersion: "v1", answers: { address: "casa" }, completed: true },
+    host.participantToken,
+  );
+  await request(
+    api,
+    "POST",
+    `/parties/${partyId}/answers`,
+    { questionnaireVersion: "v1", answers: { address: "casa" }, completed: true },
+    guest.participantToken,
+  );
+
+  const denied = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/reveal`,
+    {},
+    guest.participantToken,
+  );
+  assert.equal(denied.statusCode, 403);
+  assert.equal(denied.json().error.code, "HOST_ONLY");
+
+  const revealed = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/reveal`,
+    {},
+    host.participantToken,
+  );
+  assert.equal(revealed.statusCode, 200);
+  assert.equal(revealed.json().party.status, "THEME_REVEALED");
+
+  const missing = await request(api, "POST", `/parties/${partyId}/reveal`, {});
+  assert.equal(missing.statusCode, 401);
+});

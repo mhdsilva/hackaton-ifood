@@ -29,7 +29,14 @@ invocation` no navegador (passa nos testes do Node).
   `status` e `mcpConnectionStatus`.
 - Link de convite: montado no front a partir do `code` (6 caracteres). Não há endpoint.
 
-Estados: `OPEN` → `COLLECTING_ANSWERS` → `READY_FOR_THEME`.
+Estados: `OPEN` → `COLLECTING_ANSWERS` → `READY_FOR_THEME` → `THEME_REVEALED`.
+
+### 1b. Revelar resultado (Etapa 8)
+
+- `POST /parties/:id/reveal` (Bearer; só o host, só a partir de `READY_FOR_THEME`) →
+  `party.status = THEME_REVEALED`. Use para o botão "Revelar resultado" e para trocar a tela de
+  resultado. Segundo `reveal` ou fora de `READY_FOR_THEME` retorna `409 NOT_READY_FOR_REVEAL`;
+  outro participante recebe `403 HOST_ONLY`.
 
 ### 2. Questionário (wizard "Etapa X de 8")
 

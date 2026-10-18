@@ -134,6 +134,23 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/reveal:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: revealPartyResult
+      security:
+        - participantToken: []
+      description: |
+        O host revela o resultado a partir de `READY_FOR_THEME`, levando a Party a
+        `THEME_REVEALED`. Só o host pode executar; outro participante recebe `403`.
+        Fora de `READY_FOR_THEME` (inclusive uma segunda revelação) recebe `409`.
+      responses:
+        "200": { $ref: "#/components/responses/PartyResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
   /parties/{partyId}/mcp-connection/authorize:
     parameters:
       - $ref: "#/components/parameters/PartyId"
@@ -433,7 +450,7 @@ components:
   schemas:
     PartyStatus:
       type: string
-      enum: [OPEN, COLLECTING_ANSWERS, READY_FOR_THEME]
+      enum: [OPEN, COLLECTING_ANSWERS, READY_FOR_THEME, THEME_REVEALED]
     McpConnectionStatus:
       type: string
       enum: [not_connected, validating, connected, error]

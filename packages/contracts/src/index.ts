@@ -2,6 +2,7 @@ export const PARTY_STATUSES = [
   "OPEN",
   "COLLECTING_ANSWERS",
   "READY_FOR_THEME",
+  "THEME_REVEALED",
 ] as const;
 
 export type PartyStatus = (typeof PARTY_STATUSES)[number];

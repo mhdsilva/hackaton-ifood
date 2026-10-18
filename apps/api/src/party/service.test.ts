@@ -232,3 +232,40 @@ test("accepts a draft without advancing and tracks progress", () => {
   );
   assert.equal(hostDone.party.status, "READY_FOR_THEME");
 });
+
+test("the host reveals the result only from READY_FOR_THEME", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  const guest = service.join(host.party.party.id, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  const partyId = host.party.party.id;
+  service.closeMembership(partyId, host.participantToken);
+
+  assert.throws(
+    () => service.revealTheme(partyId, host.participantToken),
+    (error: unknown) =>
+      error instanceof PartyError && error.code === "NOT_READY_FOR_REVEAL",
+  );
+
+  service.submitAnswers(partyId, host.participantToken, answers("massa"));
+  const ready = service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
+  assert.equal(ready.party.status, "READY_FOR_THEME");
+
+  assert.throws(
+    () => service.revealTheme(partyId, guest.participantToken),
+    (error: unknown) => error instanceof PartyError && error.code === "HOST_ONLY",
+  );
+
+  const revealed = service.revealTheme(partyId, host.participantToken);
+  assert.equal(revealed.party.status, "THEME_REVEALED");
+
+  assert.throws(
+    () => service.revealTheme(partyId, host.participantToken),
+    (error: unknown) =>
+      error instanceof PartyError && error.code === "NOT_READY_FOR_REVEAL",
+  );
+});
