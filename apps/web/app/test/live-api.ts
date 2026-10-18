@@ -1,0 +1,139 @@
+/**
+ * Cliente da API real, só para a pasta de teste `app/test`.
+ *
+ * Não é a integração definitiva do produto (essa fica para o Otávio, seguindo o
+ * §6 do `docs/handoff-colucci.md`). Aqui é o mínimo para testar o backend de
+ * ponta a ponta pelo navegador.
+ */
+import type {
+  ApiErrorBody,
+  CreatePartyRequest,
+  JoinPartyRequest,
+  McpAuthorizationResponse,
+  Participant,
+  PartySessionResponse,
+  PartySnapshot,
+  QuestionnaireDefinition,
+  ResolveOptionsOutput,
+  SubmitAnswersRequest,
+} from "@sidequest/contracts";
+
+/** `?api=` na URL vence; depois `NEXT_PUBLIC_API_URL`; senão, prod (ou local no dev). */
+export function apiBase(): string {
+  if (typeof window === "undefined") return "https://api-ifood.kairootech.com.br";
+  const fromQuery = new URLSearchParams(window.location.search).get("api");
+  if (fromQuery) return fromQuery.replace(/\/+$/, "");
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL;
+  if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  const { hostname } = window.location;
+  return hostname === "localhost" || hostname === "127.0.0.1"
+    ? "http://localhost:3333"
+    : "https://api-ifood.kairootech.com.br";
+}
+
+export class LiveApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly details?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = "LiveApiError";
+  }
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  options: { body?: unknown; token?: string } = {},
+): Promise<T> {
+  const response = await fetch(apiBase() + path, {
+    method,
+    headers: {
+      ...(options.body === undefined ? {} : { "content-type": "application/json" }),
+      ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
+    },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  const text = await response.text();
+  const json = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    const error = (json as ApiErrorBody | null)?.error;
+    throw new LiveApiError(
+      response.status,
+      error?.code ?? "LIVE_API_ERROR",
+      error?.message ?? response.statusText,
+      error?.details,
+    );
+  }
+  return json as T;
+}
+
+export interface OptionsInput {
+  budget: number;
+  theme?: string;
+  restrictions?: string[];
+  addressId?: string;
+}
+
+export const liveApi = {
+  createParty: (body: CreatePartyRequest) =>
+    request<PartySessionResponse>("POST", "/parties", { body }),
+
+  joinParty: (codeOrId: string, body: JoinPartyRequest) =>
+    request<PartySessionResponse>("POST", `/parties/${encodeURIComponent(codeOrId)}/join`, { body }),
+
+  getParty: (codeOrId: string, token?: string) =>
+    request<PartySnapshot>("GET", `/parties/${encodeURIComponent(codeOrId)}`, { token }),
+
+  getSession: (codeOrId: string, token: string) =>
+    request<{ participant: Participant }>(
+      "GET",
+      `/parties/${encodeURIComponent(codeOrId)}/session`,
+      { token },
+    ),
+
+  closeParty: (codeOrId: string, token: string) =>
+    request<PartySnapshot>("POST", `/parties/${encodeURIComponent(codeOrId)}/close`, { token }),
+
+  submitAnswers: (codeOrId: string, token: string, body: SubmitAnswersRequest) =>
+    request<PartySnapshot>("POST", `/parties/${encodeURIComponent(codeOrId)}/answers`, {
+      body,
+      token,
+    }),
+
+  reveal: (codeOrId: string, token: string) =>
+    request<PartySnapshot>("POST", `/parties/${encodeURIComponent(codeOrId)}/reveal`, { token }),
+
+  authorizeMcp: (codeOrId: string, token: string) =>
+    request<McpAuthorizationResponse>(
+      "POST",
+      `/parties/${encodeURIComponent(codeOrId)}/mcp-connection/authorize`,
+      { token },
+    ),
+
+  getQuestionnaire: (version?: string) =>
+    request<QuestionnaireDefinition>(
+      "GET",
+      version ? `/questionnaire?version=${encodeURIComponent(version)}` : "/questionnaire",
+    ),
+
+  getOptions: (codeOrId: string, token: string, body: OptionsInput) =>
+    request<ResolveOptionsOutput>(
+      "POST",
+      `/parties/${encodeURIComponent(codeOrId)}/options`,
+      { body, token },
+    ),
+};
+
+/** Mensagem curta e legível para mostrar na tela de teste. */
+export function describeError(error: unknown): string {
+  if (error instanceof LiveApiError) {
+    const details = error.details ? ` ${JSON.stringify(error.details)}` : "";
+    return `${error.status} ${error.code}: ${error.message}${details}`;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
