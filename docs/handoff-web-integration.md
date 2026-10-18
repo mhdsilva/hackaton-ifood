@@ -11,16 +11,21 @@ Troquei o `MockPartyProvider` por um novo `LivePartyProvider`
 `mock-party-provider.tsx` continua intacto, sem uso — serve de referência/fallback.
 
 - **Lobby**: criar/entrar vira `POST /parties` ou `POST /parties/:code/join` de verdade (tela
-  de entrada provisória, sem desenho do Júlio — só nome da Party e nome da pessoa). Sessão
-  persiste em `sessionStorage` (`ifood-party-live-session`); `GET /parties/:id` em polling a
-  cada 1,5s; "Iniciar party" chama `POST /parties/:id/close`.
+  de entrada provisória, sem desenho do Júlio — só o nome da Party). O nome da pessoa **não é
+  pedido**: até o OAuth, o servidor usa "Anfitrião"/"Convidado N" e o `getUser` da conexão MCP
+  troca pelo `fullName` da conta. Sessão persiste em `sessionStorage`
+  (`ifood-party-live-session`); `GET /parties/:id` em polling a cada 1,5s; "Iniciar party" chama
+  `POST /parties/:id/close`.
 - **Questionário**: busca `GET /questionnaire` uma vez por sessão. Se der certo, as telas de
   restrições/orçamento/energia/formato do pedido/desejos/exclusões passam a mostrar as opções
   **reais** da API; se falhar, caem pro catálogo fixo do Figma (`usingLiveCatalog: false`) e
   ficam assim a sessão inteira — nunca troca de catálogo no meio. O envio final vira
   `POST /parties/:id/answers`.
 - **Revelar resultado**: chama `POST /parties/:id/reveal` antes de navegar pra
-  `/party/preparing` (a tela de animação do Otávio).
+  `/party/preparing` (a tela de animação do Otávio). A preparação usa os participantes reais e
+  uma bola em órbita por pessoa. Depois dela, `/party/countdown` → `/party/reveal` mostram
+  `party.theme` e `party.themeReason`; como só existe a arte italiana, todos os temas usam
+  `theme-italian.png` por enquanto.
 - **Conectar iFood**: botão novo, provisório, no lobby (sem desenho — ver bug abaixo).
 
 Arquivos novos: `live-party-provider.tsx`, `lib/live-answers.ts` (tradução dos ids do catálogo
