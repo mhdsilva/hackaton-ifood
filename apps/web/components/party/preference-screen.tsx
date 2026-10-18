@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useQuestionRouter } from "@/components/party/question-navigation";
 import { Button } from "@/components/ui/button";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
@@ -13,7 +13,7 @@ export function PreferenceScreen({ questionId }: { questionId: PreferenceQuestio
   const question = getMockPreferenceQuestion(questionId);
   const options = questionId === "energy" ? energyOptions : orderStyleOptions;
   const selected = preferences[questionId];
-  const router = useRouter();
+  const router = useQuestionRouter();
   const formId = `${questionId}-form`;
   const backHref = questionId === "energy" ? "/party/budget" : "/party/energy";
   const nextHref = questionId === "energy" ? "/party/order-style" : "/party/desires";

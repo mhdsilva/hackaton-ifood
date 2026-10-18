@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { AddressOption } from "@/components/party/address-option";
 import Link from "next/link";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
 import { getMockPreparationGroup } from "@/lib/mock-preparation";
 import { QuestionProgress } from "@/components/party/question-progress";
+import { SegmentedProgress } from "@/components/party/segmented-progress";
 import { RestrictionChoices } from "@/components/party/restriction-choices";
 import { BudgetChoices } from "@/components/party/budget-choices";
 import { QuestionChoices } from "@/components/party/question-choices";
@@ -23,6 +25,7 @@ export function PartyComponentExamples() {
   const [customBudget, setCustomBudget] = useState("");
   const [energy, setEnergy] = useState<string | null>(null);
   const [desires, setDesires] = useState<DesireId[]>([]);
+  const [progressStep, setProgressStep] = useState(1);
 
   return (
     <section aria-labelledby="party-components-title" className="rounded-xl border bg-card p-6 sm:p-8">
@@ -32,7 +35,10 @@ export function PartyComponentExamples() {
           <h3 className="font-bold">Participantes</h3>
           <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={snapshot.party.hostParticipantId} />
           <h3 className="font-bold">Progresso</h3>
-          <QuestionProgress current={1} total={MOCK_QUESTIONNAIRE_STEPS} />
+          <QuestionProgress key={progressStep} current={progressStep} total={MOCK_QUESTIONNAIRE_STEPS} />
+          <Button variant="outline" onClick={() => setProgressStep((step) => step % MOCK_QUESTIONNAIRE_STEPS + 1)}>Avançar progresso</Button>
+          <p className="text-sm text-muted-foreground">Preparação · preenchimento de três segundos</p>
+          <SegmentedProgress key={`preparation-${progressStep}`} current={(progressStep - 1) % 3 + 1} total={3} label="Exemplo de preparação simulada" duration={3000} />
         </div>
         <fieldset className="min-w-0 space-y-2">
           <legend className="mb-4 font-bold">Seleção de endereço · dados simulados</legend>

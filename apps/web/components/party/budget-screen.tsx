@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useQuestionRouter } from "@/components/party/question-navigation";
 import { Button } from "@/components/ui/button";
 import { BudgetChoices } from "@/components/party/budget-choices";
 import { useParty } from "@/components/party/party-provider";
@@ -10,7 +10,7 @@ import { parseMockBudget } from "@/lib/mock-questionnaire";
 
 export function BudgetScreen() {
   const { budgetOptions, budgetOptionId, setBudgetOptionId, customBudget, setCustomBudget, usingLiveCatalog } = useParty();
-  const router = useRouter();
+  const router = useQuestionRouter();
   const otherId = usingLiveCatalog ? "outro" : "other";
   const canContinue = budgetOptionId !== null && (budgetOptionId !== otherId || parseMockBudget(customBudget) !== null);
 

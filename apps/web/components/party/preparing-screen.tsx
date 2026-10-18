@@ -6,6 +6,7 @@ import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyHeader } from "@/components/party/party-shell";
 import { ParticipantAvatar } from "@/components/party/participant-list";
 import { PreparationIllustration } from "@/components/party/preparation-illustration";
+import { SegmentedProgress } from "@/components/party/segmented-progress";
 import { useSplashComplete } from "@/components/party/splash-intro";
 import { getMockPreparationGroup, getMockPreparationStages, MOCK_PREPARATION_STAGE_MS } from "@/lib/mock-preparation";
 
@@ -44,9 +45,7 @@ export function PreparingScreen() {
         <section aria-label="Progresso da preparação" className="space-y-4 text-preparation-caption">
           <div className="space-y-[10px]">
             <p className="text-[13px] leading-normal font-bold">Preparando a party · {stageIndex + 1} de {stages.length}</p>
-            <div role="progressbar" aria-label="Preparação simulada" aria-valuemin={0} aria-valuemax={stages.length} aria-valuenow={stageIndex + 1} className="flex h-[5px] gap-1">
-              {stages.map((item, index) => <span key={item.image} className={`h-full flex-1 rounded-full ${index <= stageIndex ? "bg-primary" : "bg-secondary"}`} />)}
-            </div>
+            <SegmentedProgress current={stageIndex + 1} total={stages.length} label="Preparação simulada" duration={MOCK_PREPARATION_STAGE_MS} running={splashComplete} />
           </div>
           <div className="space-y-[10px]">
             <ul aria-label="Participantes conectados na simulação" className="flex gap-[10px]">

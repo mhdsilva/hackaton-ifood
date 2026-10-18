@@ -38,6 +38,7 @@
 }
 
 :root {
+  --ease-party: cubic-bezier(0.22, 1, 0.36, 1);
   --radius: 0.625rem;
   color-scheme: dark;
   --background: #1c1c1c;
@@ -58,6 +59,98 @@
   --border: #333333;
   --input: #8d8d8d;
   --ring: #ea1d2c;
+}
+
+.party-progress-fill {
+  transform: scaleX(0);
+}
+
+.party-progress-fill[data-state="complete"] {
+  transform: scaleX(1);
+}
+
+.party-progress-fill[data-state="active"][data-running="true"] {
+  animation: party-progress-fill var(--progress-duration) cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
+[data-question-progress] .party-progress-fill[data-state="active"] {
+  animation-delay: 400ms;
+  animation-timing-function: var(--ease-party);
+}
+
+@keyframes party-progress-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Só o texto e o formulário deslizam: shell, ações e progresso ficam no lugar. */
+.party-content:has([data-question-progress]) .question-copy {
+  view-transition-name: question-copy;
+}
+
+.party-content:has([data-question-progress]) > :nth-child(2) {
+  view-transition-name: question-body;
+}
+
+::view-transition-old(root) {
+  display: none;
+}
+
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(question-copy),
+::view-transition-group(question-body) {
+  animation-duration: 400ms;
+  animation-timing-function: var(--ease-party);
+}
+
+::view-transition-old(question-copy),
+::view-transition-old(question-body) {
+  animation: question-exit 220ms ease-in both;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(question-copy),
+::view-transition-new(question-body) {
+  animation: question-enter 360ms var(--ease-party) 40ms both;
+  mix-blend-mode: normal;
+}
+
+@keyframes question-exit {
+  to { opacity: 0; transform: translateX(-20px); }
+}
+
+@keyframes question-enter {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@supports not (view-transition-name: question-copy) {
+  .party-content:has([data-question-progress]) .question-copy,
+  .party-content:has([data-question-progress]) > :nth-child(2) {
+    animation: question-enter 360ms var(--ease-party) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .party-progress-fill[data-state="active"][data-running="true"] {
+    animation: none;
+    transform: scaleX(1);
+  }
+
+  .party-content:has([data-question-progress]) .question-copy,
+  .party-content:has([data-question-progress]) > :nth-child(2) {
+    animation: none;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
 }
 
 @layer base {

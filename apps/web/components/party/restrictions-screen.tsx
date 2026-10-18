@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useQuestionRouter } from "@/components/party/question-navigation";
 import { Button } from "@/components/ui/button";
 import { useParty } from "@/components/party/party-provider";
 import { PartyShell } from "@/components/party/party-shell";
@@ -9,7 +9,7 @@ import { RestrictionChoices } from "@/components/party/restriction-choices";
 
 export function RestrictionsScreen() {
   const { restrictionOptions, restrictions, toggleRestriction, otherRestriction, setOtherRestriction, usingLiveCatalog } = useParty();
-  const router = useRouter();
+  const router = useQuestionRouter();
   const otherId = usingLiveCatalog ? "outro" : "other";
   const canContinue = !restrictions.includes(otherId) || otherRestriction.trim().length > 0;
 

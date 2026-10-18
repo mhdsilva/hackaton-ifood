@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useQuestionRouter } from "@/components/party/question-navigation";
 import { Button } from "@/components/ui/button";
 import { AddressOption } from "@/components/party/address-option";
 import { useParty } from "@/components/party/party-provider";
@@ -11,7 +11,7 @@ import { QuestionIntroduction } from "@/components/party/question-introduction";
 
 export function AddressScreen() {
   const { addresses, selectedAddressId, setSelectedAddressId } = useParty();
-  const router = useRouter();
+  const router = useQuestionRouter();
   const hasSelection = addresses.some((address) => address.id === selectedAddressId);
 
   return (

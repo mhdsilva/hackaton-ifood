@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useQuestionRouter } from "@/components/party/question-navigation";
 import { Button } from "@/components/ui/button";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
@@ -10,7 +10,7 @@ import { MAX_MOCK_DESIRES } from "@/lib/mock-questionnaire";
 
 export function DesiresScreen() {
   const { desireOptions, desires, toggleDesire } = useParty();
-  const router = useRouter();
+  const router = useQuestionRouter();
   const canContinue = desires.length >= 1 && desires.length <= MAX_MOCK_DESIRES;
 
   return (

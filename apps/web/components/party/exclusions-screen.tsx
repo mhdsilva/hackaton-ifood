@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQuestionRouter } from "@/components/party/question-navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PartyShell } from "@/components/party/party-shell";
@@ -10,7 +10,7 @@ import { useParty } from "@/components/party/party-provider";
 
 export function ExclusionsScreen() {
   const { exclusionOptions, exclusions, toggleExclusion, otherExclusion, setOtherExclusion, hasRequiredAnswers, canCompleteQuestionnaire, completeQuestionnaire } = useParty();
-  const router = useRouter();
+  const router = useQuestionRouter();
   const [sending, setSending] = useState(false);
 
   async function submit(event: React.FormEvent) {
