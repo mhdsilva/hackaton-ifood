@@ -278,6 +278,9 @@ export default function TestPage() {
             {snapshot?.party.theme && (
               <p className="rounded-md bg-primary/10 p-2 text-xs">
                 tema revelado: <strong>{snapshot.party.theme}</strong>
+                {snapshot.party.themeReason && (
+                  <span className="block text-muted-foreground">{snapshot.party.themeReason}</span>
+                )}
               </p>
             )}
           </section>

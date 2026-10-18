@@ -59,6 +59,8 @@ export interface PartyInfo {
   createdAt: string;
   /** Tema comum, gravado quando o host revela o resultado. */
   theme?: string;
+  /** Por que o agente escolheu esse tema (uma frase), quando a revelação usou LLM. */
+  themeReason?: string;
 }
 
 export interface PartySnapshot {

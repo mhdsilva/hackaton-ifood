@@ -17,6 +17,7 @@ import { ParticipantAccessStore, type ParticipantActor } from "./access.js";
 import { countAnswered, getQuestionnaire, validateAnswers } from "./questionnaire.js";
 import { PartyStore } from "./store.js";
 import { deriveTheme } from "./theme.js";
+import type { ThemePlan, ThemePlanner } from "./theme-plan.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MIN_PARTICIPANTS = 2;
@@ -56,6 +57,22 @@ function validCoordinates(
       coordinates.longitude >= -180 &&
       coordinates.longitude <= 180,
   );
+}
+
+/** Respostas de cada participante, na ordem em que entraram na Party. */
+function answersByParticipant(snapshot: PartySnapshot): Record<string, unknown>[] {
+  return snapshot.participants
+    .map((participant) => participant.questionnaireResponse?.answers)
+    .filter((answers): answers is Record<string, unknown> => Boolean(answers));
+}
+
+/** Fallback determinístico: respostas mescladas, a última vence por chave. */
+function mergedAnswers(snapshot: PartySnapshot): Record<string, unknown> {
+  const answers: Record<string, unknown> = {};
+  for (const participantAnswers of answersByParticipant(snapshot)) {
+    Object.assign(answers, participantAnswers);
+  }
+  return answers;
 }
 
 export class PartyError extends Error {
@@ -98,6 +115,8 @@ export class PartyService {
     private readonly access: ParticipantAccessStore,
     /** Relógio injetável: a vibe do tema depende do dia da revelação. */
     private readonly now: () => Date = () => new Date(),
+    /** Agente que escolhe o tema; ausente = regra determinística de `theme.ts`. */
+    private readonly themePlanner?: ThemePlanner,
   ) {}
 
   create(input: CreatePartyRequest): PartySessionResponse {
@@ -186,12 +205,24 @@ export class PartyService {
     return this.store.save(snapshot);
   }
 
-  revealTheme(idOrCode: string, actorToken: string): PartySnapshot {
-    const snapshot = this.get(idOrCode);
+  async revealTheme(idOrCode: string, actorToken: string): Promise<PartySnapshot> {
+    const initial = this.get(idOrCode);
     const actor = this.authorizeParticipant(idOrCode, actorToken);
-    if (actor.participantId !== snapshot.party.hostParticipantId) {
+    if (actor.participantId !== initial.party.hostParticipantId) {
       throw new PartyError(403, "HOST_ONLY", "Only the host can reveal the result");
     }
+    if (initial.party.status !== "READY_FOR_THEME") {
+      throw new PartyError(
+        409,
+        "NOT_READY_FOR_REVEAL",
+        "Party is not ready for the reveal yet",
+      );
+    }
+
+    // O modelo pode levar alguns segundos; depois dele relê o snapshot para não gravar por cima
+    // de uma resposta que tenha chegado nesse meio-tempo.
+    const plan = await this.planTheme(answersByParticipant(initial));
+    const snapshot = this.get(idOrCode);
     if (snapshot.party.status !== "READY_FOR_THEME") {
       throw new PartyError(
         409,
@@ -201,14 +232,21 @@ export class PartyService {
     }
 
     snapshot.party.status = "THEME_REVEALED";
-    const answers: Record<string, unknown> = {};
-    for (const participant of snapshot.participants) {
-      if (participant.questionnaireResponse) {
-        Object.assign(answers, participant.questionnaireResponse.answers);
-      }
+    snapshot.party.theme = plan?.theme ?? deriveTheme(mergedAnswers(snapshot), this.now());
+    if (plan?.reason) {
+      snapshot.party.themeReason = plan.reason;
     }
-    snapshot.party.theme = deriveTheme(answers, this.now());
     return this.store.save(snapshot);
+  }
+
+  /** Sem planner, ou se ele falhar, o reveal segue determinístico. */
+  private async planTheme(answers: Record<string, unknown>[]): Promise<ThemePlan | undefined> {
+    if (!this.themePlanner || answers.length === 0) return undefined;
+    try {
+      return await this.themePlanner(answers);
+    } catch {
+      return undefined;
+    }
   }
 
   submitAnswers(

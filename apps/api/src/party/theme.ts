@@ -1,5 +1,8 @@
 /**
- * Derivação do tema comum a partir das respostas do grupo.
+ * Derivação determinística do tema — o **fallback** do reveal.
+ *
+ * Com um planner de tema configurado (`party/theme-plan.ts`), quem escolhe é o agente, olhando
+ * as respostas de cada participante. Esta regra entra quando não há planner ou ele falha.
  *
  * Regra provisória (a definitiva é decisão do Júlio — Marco T):
  * 1. tema explícito, quando vier nas respostas;
@@ -8,7 +11,9 @@
  *    sabe buscar em qualquer endereço (`agent/themes.ts`, `VIBE_QUERIES`).
  */
 
-type Answers = Record<string, unknown>;
+import type { Answers } from "./theme-plan.js";
+
+export type { Answers };
 
 /** Vibe por dia da semana; a chave é `Date#getDay()` (0 = domingo). */
 const WEEKDAY_VIBE: Record<number, string> = {

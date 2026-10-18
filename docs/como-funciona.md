@@ -30,10 +30,12 @@
 
 Amigos em lugares diferentes entram na mesma **Party**, cada um pelo próprio celular. Cada pessoa
 **conecta a própria conta do iFood**. O grupo responde o questionário e **o tema sai como resultado**
-das respostas — **não há pergunta de tema** (ex.: energia "quente e confortável" → italiano; sem
-sinal claro, vale a vibe do dia). A partir do tema, o **agente** busca, para cada pessoa, restaurantes
-reais perto do endereço dela, dentro do orçamento dela. Cada um confirma o **próprio pedido**. A experiência é compartilhada; conta,
-endereço, carrinho e pagamento continuam individuais.
+das respostas — **não há pergunta de tema**. Quem escolhe é o **agente**, olhando as respostas de
+**todos** os participantes (ex.: maioria pedindo comfort food → italiano). Sem LLM ou se ele falhar,
+vale a regra determinística (energia "quente e confortável" → italiano; sem sinal claro, a vibe do
+dia). A partir do tema, o **agente** busca, para cada pessoa, restaurantes reais perto do endereço
+dela, dentro do orçamento dela. Cada um confirma o **próprio pedido**. A experiência é compartilhada;
+conta, endereço, carrinho e pagamento continuam individuais.
 
 ### Em detalhe
 
@@ -111,7 +113,7 @@ Criar Party → Entrar por código → Conectar iFood → Fechar grupo → Respo
 | 3 | Conectar iFood | cada pessoa | `POST /parties/:id/mcp-connection/authorize` → login → callback | `mcpConnectionStatus: connected` |
 | 4 | Fechar grupo | anfitrião | `POST /parties/:id/close` | `COLLECTING_ANSWERS` |
 | 5 | Responder | cada pessoa | `POST /parties/:id/answers` | quando todos respondem: `READY_FOR_THEME` |
-| 6 | Tema | grupo | *(a definir pelo Júlio)* | tema, orçamento e restrições por pessoa |
+| 6 | Tema | anfitrião revela; agente escolhe | `POST /parties/:id/reveal` | tema comum e `themeReason`; orçamento e restrições continuam por pessoa |
 | 7 | Opções locais | cada pessoa | `POST /parties/:id/options` | até 3 restaurantes reais, dentro do orçamento |
 | 8 | Carrinho | cada pessoa | `POST /parties/:id/cart` | carrinho no iFood com entrega e Pix |
 | 9 | Confirmar | cada pessoa | `POST /parties/:id/order` com `userConsent: true` | `orderId` |
@@ -119,6 +121,12 @@ Criar Party → Entrar por código → Conectar iFood → Fechar grupo → Respo
 
 As etapas 3 e 4 podem ocorrer em qualquer ordem. A conexão com o iFood só é exigida a partir da
 etapa 7.
+
+O tema é **único por Party** e não muda depois do reveal. O agente recebe as respostas de cada
+participante (sem nome, token ou endereço) e escolhe um tema do catálogo de `agent/themes.ts`
+(`italiano`, `japones`, `hamburguer`, `mexicano`, `brasileiro`, `arabe`, `saudavel`, `doce`). Resposta
+fora do catálogo, timeout ou falta de `OPENCODE_API_KEY` caem em `deriveTheme` — o reveal nunca falha
+por causa do modelo.
 
 ---
 
@@ -348,8 +356,8 @@ Rota: `POST /parties/:id/options` (Bearer)
 { "budget": 60, "restrictions": ["vegetariano"], "addressId": "opcional" }
 ```
 
-O `theme` do corpo é **opcional** (fallback): em geral o valor vem de `party.theme`, derivado no
-`reveal` (ver "Revelar resultado"). Se o corpo trouxer `theme`, o da Party vence.
+O `theme` do corpo é **opcional** (fallback): em geral o valor vem de `party.theme`, escolhido no
+`reveal` (ver "Em detalhe"). Se o corpo trouxer `theme`, o da Party vence.
 
 `resolveOptions` (`src/agent/resolve-options.ts`) segue estes passos:
 

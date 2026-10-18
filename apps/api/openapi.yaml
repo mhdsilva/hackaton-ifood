@@ -718,6 +718,11 @@ components:
             theme:
               type: string
               description: Tema comum, gravado quando o host revela o resultado (POST /parties/{partyId}/reveal).
+            themeReason:
+              type: string
+              description: |
+                Por que o agente escolheu esse tema (uma frase), quando o reveal usou LLM.
+                Ausente quando o tema veio da regra determinística.
         participants:
           type: array
           minItems: 1

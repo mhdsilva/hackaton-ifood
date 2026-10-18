@@ -6,9 +6,10 @@ import type { SubmitAnswersRequest } from "@sidequest/contracts";
 import { ParticipantAccessStore } from "./access.js";
 import { PartyError, PartyService } from "./service.js";
 import { PartyStore } from "./store.js";
+import type { ThemePlanner } from "./theme-plan.js";
 
-function createService(now?: () => Date): PartyService {
-  return new PartyService(new PartyStore(), new ParticipantAccessStore(), now);
+function createService(now?: () => Date, themePlanner?: ThemePlanner): PartyService {
+  return new PartyService(new PartyStore(), new ParticipantAccessStore(), now, themePlanner);
 }
 
 function answers(value: string): SubmitAnswersRequest {
@@ -105,7 +106,7 @@ test("only the host closes membership and late joiners still enter during answer
   assert.equal(late.party.participants.length, 3);
 });
 
-test("nobody joins after the result is ready or revealed", () => {
+test("nobody joins after the result is ready or revealed", async () => {
   const service = createService();
   const host = service.create({
     name: "Jantar de sexta",
@@ -124,7 +125,7 @@ test("nobody joins after the result is ready or revealed", () => {
     (error: unknown) => error instanceof PartyError && error.code === "PARTY_CLOSED",
   );
 
-  service.revealTheme(partyId, host.participantToken);
+  await service.revealTheme(partyId, host.participantToken);
   assert.throws(
     () => service.join(partyId, { participant: { id: "caio", name: "Caio" } }),
     (error: unknown) => error instanceof PartyError && error.code === "PARTY_CLOSED",
@@ -288,7 +289,7 @@ test("accepts a draft without advancing and tracks progress", () => {
   assert.equal(hostDone.party.status, "READY_FOR_THEME");
 });
 
-test("the host reveals the result only from READY_FOR_THEME", () => {
+test("the host reveals the result only from READY_FOR_THEME", async () => {
   const service = createService(() => new Date(2026, 9, 17, 12));
   const host = service.create({
     name: "Jantar de sexta",
@@ -300,8 +301,8 @@ test("the host reveals the result only from READY_FOR_THEME", () => {
   const partyId = host.party.party.id;
   service.closeMembership(partyId, host.participantToken);
 
-  assert.throws(
-    () => service.revealTheme(partyId, host.participantToken),
+  await assert.rejects(
+    async () => service.revealTheme(partyId, host.participantToken),
     (error: unknown) =>
       error instanceof PartyError && error.code === "NOT_READY_FOR_REVEAL",
   );
@@ -310,20 +311,63 @@ test("the host reveals the result only from READY_FOR_THEME", () => {
   const ready = service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
   assert.equal(ready.party.status, "READY_FOR_THEME");
 
-  assert.throws(
-    () => service.revealTheme(partyId, guest.participantToken),
+  await assert.rejects(
+    async () => service.revealTheme(partyId, guest.participantToken),
     (error: unknown) => error instanceof PartyError && error.code === "HOST_ONLY",
   );
 
-  const revealed = service.revealTheme(partyId, host.participantToken);
+  const revealed = await service.revealTheme(partyId, host.participantToken);
   assert.equal(revealed.party.status, "THEME_REVEALED");
   assert.equal(revealed.party.theme, "sabadou a distancia");
 
-  assert.throws(
-    () => service.revealTheme(partyId, host.participantToken),
+  await assert.rejects(
+    async () => service.revealTheme(partyId, host.participantToken),
     (error: unknown) =>
       error instanceof PartyError && error.code === "NOT_READY_FOR_REVEAL",
   );
+});
+
+test("the agent chooses the theme from every participant's answers", async () => {
+  const received: Record<string, unknown>[][] = [];
+  const service = createService(undefined, async (answersByParticipant) => {
+    received.push(answersByParticipant);
+    return { theme: "mexicano", reason: "A maioria pediu algo picante." };
+  });
+  const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
+  const guest = service.join(host.party.party.id, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  const partyId = host.party.party.id;
+  service.closeMembership(partyId, host.participantToken);
+  service.submitAnswers(partyId, host.participantToken, answers("massa"));
+  service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
+
+  const revealed = await service.revealTheme(partyId, host.participantToken);
+
+  assert.equal(revealed.party.theme, "mexicano");
+  assert.equal(revealed.party.themeReason, "A maioria pediu algo picante.");
+  assert.equal(received.length, 1);
+  assert.equal(received[0].length, 2, "uma entrada por participante, não o objeto mesclado");
+});
+
+test("a failing agent falls back to the deterministic theme", async () => {
+  const service = createService(() => new Date(2026, 9, 17, 12), async () => {
+    throw new Error("LLM indisponível");
+  });
+  const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
+  const guest = service.join(host.party.party.id, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  const partyId = host.party.party.id;
+  service.closeMembership(partyId, host.participantToken);
+  service.submitAnswers(partyId, host.participantToken, answers("massa"));
+  service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
+
+  const revealed = await service.revealTheme(partyId, host.participantToken);
+
+  assert.equal(revealed.party.status, "THEME_REVEALED");
+  assert.equal(revealed.party.theme, "sabadou a distancia");
+  assert.equal(revealed.party.themeReason, undefined);
 });
 
 test("tracks each participant's order progress", () => {
