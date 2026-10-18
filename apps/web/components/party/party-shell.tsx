@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuestionRouter } from "@/components/party/question-navigation";
 
-export function PartyHeader({ backHref }: { backHref?: string }) {
+export function PartyHeader({ backHref, brandTone = "primary" }: { backHref?: string; brandTone?: "primary" | "light" }) {
   const router = useQuestionRouter();
   return (
     <header className={`shrink-0 ${backHref ? "border-b" : ""}`}>
@@ -16,7 +16,7 @@ export function PartyHeader({ backHref }: { backHref?: string }) {
         <p className="font-heading text-base font-bold">IFOOD PARTY</p>
       </> : <div aria-label="iFood Party" className="flex items-center gap-[2.732px]">
         <Image src="/figma/logo.svg" alt="iFood" width={54.8293} height={30.439} />
-        <span className="text-[21.219px] leading-[31.828px] font-black text-primary italic">Party</span>
+        <span className={`text-[21.219px] leading-[31.828px] font-black italic ${brandTone === "light" ? "text-foreground" : "text-primary"}`}>Party</span>
       </div>}
       </div>
     </header>

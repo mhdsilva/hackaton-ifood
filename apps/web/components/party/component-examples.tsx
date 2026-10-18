@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { FlipDigit } from "@/components/party/flip-digit";
 import { AddressOption } from "@/components/party/address-option";
 import Link from "next/link";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
@@ -26,6 +27,7 @@ export function PartyComponentExamples() {
   const [energy, setEnergy] = useState<string | null>(null);
   const [desires, setDesires] = useState<DesireId[]>([]);
   const [progressStep, setProgressStep] = useState(1);
+  const [flip, setFlip] = useState({ value: 3, previous: 3 });
 
   return (
     <section aria-labelledby="party-components-title" className="rounded-xl border bg-card p-6 sm:p-8">
@@ -63,6 +65,12 @@ export function PartyComponentExamples() {
             </ul>
           </div>)}
           <Link href="/party/preparing" className="inline-block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar as três etapas de preparação</Link>
+          <Link href="/party/countdown" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar a contagem 3 → 2 → 1</Link>
+        </div>
+        <div className="space-y-4 text-center">
+          <h3 className="font-bold">Contagem · split-flap</h3>
+          <FlipDigit value={flip.value} previous={flip.previous} />
+          <Button variant="outline" onClick={() => setFlip(({ value }) => ({ previous: value, value: value > 1 ? value - 1 : 3 }))}>Trocar número</Button>
         </div>
       </div>
     </section>

@@ -4,14 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyHeader } from "@/components/party/party-shell";
-import { ParticipantAvatar } from "@/components/party/participant-list";
+import { PreparationParticipants } from "@/components/party/preparation-participants";
 import { PreparationIllustration } from "@/components/party/preparation-illustration";
 import { PreparationTitle } from "@/components/party/preparation-title";
 import { SegmentedProgress } from "@/components/party/segmented-progress";
 import { useSplashComplete } from "@/components/party/splash-intro";
 import { getMockPreparationGroup, getMockPreparationStages, MOCK_PREPARATION_STAGE_MS } from "@/lib/mock-preparation";
 
-const participantNames = new Intl.ListFormat("pt-BR", { style: "long", type: "conjunction" });
 const preparationTitles = getMockPreparationStages().map((stage) => stage.title);
 
 export function PreparingScreen() {
@@ -25,7 +24,7 @@ export function PreparingScreen() {
     if (!splashComplete) return;
     const timeout = window.setTimeout(() => {
       if (stageIndex < stages.length - 1) setStageIndex((current) => current + 1);
-      else router.replace("/party/pending/reveal");
+      else router.replace("/party/countdown");
     }, MOCK_PREPARATION_STAGE_MS);
     return () => window.clearTimeout(timeout);
   }, [stageIndex, splashComplete, router, stages.length]);
@@ -49,14 +48,7 @@ export function PreparingScreen() {
             <p className="text-[13px] leading-normal font-bold">Preparando a party · {stageIndex + 1} de {stages.length}</p>
             <SegmentedProgress current={stageIndex + 1} total={stages.length} label="Preparação simulada" duration={MOCK_PREPARATION_STAGE_MS} running={splashComplete} />
           </div>
-          <div className="space-y-[10px]">
-            <ul aria-label="Participantes conectados na simulação" className="flex gap-[10px]">
-              {group.participants.map((participant) => <li key={participant.id} aria-label={participant.name}>
-                <ParticipantAvatar name={participant.name} isHost={participant.id === group.hostId} variant="connected" className="size-[42px] text-[16.8px]" />
-              </li>)}
-            </ul>
-            <p className="text-xs leading-normal">{participantNames.format(group.participants.map((participant) => participant.name))} conectados</p>
-          </div>
+          <PreparationParticipants participants={group.participants} hostId={group.hostId} />
         </section>
       </main>
     </div>
