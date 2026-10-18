@@ -457,6 +457,37 @@ test("a failing agent falls back to the deterministic theme", async () => {
   assert.equal(revealed.party.themeReason, undefined);
 });
 
+test("the retrospective is ready once every participant has a cart, no delivery required", async () => {
+  const service = createService(() => new Date(2026, 9, 17, 12));
+  const host = service.create({ name: "Jantar de sexta", host: { id: "ana", name: "Ana" } });
+  const guest = service.join(host.party.party.id, { participant: { id: "bruno", name: "Bruno" } });
+  const partyId = host.party.party.id;
+  connectGuests(service, partyId);
+  service.closeMembership(partyId, host.participantToken);
+  service.submitAnswers(partyId, host.participantToken, answers("massa"));
+  service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
+  await service.revealTheme(partyId, host.participantToken);
+
+  const waiting = service.getRetrospective(partyId, host.participantToken);
+  assert.equal(waiting.state, "waiting_for_deliveries");
+  assert.equal(waiting.pendingDeliveryCount, 2);
+
+  service.recordCartSummaryForParticipant(partyId, "ana", { merchantId: "m1", itemCount: 2 });
+  const halfway = service.getRetrospective(partyId, host.participantToken);
+  assert.equal(halfway.state, "waiting_for_deliveries");
+  assert.equal(halfway.pendingDeliveryCount, 1);
+
+  // Nenhum participante tem orderStatus/orderId: ninguém submeteu ou rastreou o pedido.
+  service.recordCartSummaryForParticipant(partyId, "bruno", { merchantId: "m2", itemCount: 1 });
+  const ready = service.getRetrospective(partyId, host.participantToken);
+  assert.equal(ready.state, "ready");
+  assert.equal(ready.pendingDeliveryCount, 0);
+  assert.equal(ready.summary?.completedOrderCount, 2);
+  assert.equal(ready.summary?.itemCount, 3);
+  assert.equal(ready.summary?.merchantCount, 2);
+  assert.equal(ready.summary?.participantCount, 2);
+});
+
 test("tracks each participant's order progress", () => {
   const service = createService();
   const host = service.create({

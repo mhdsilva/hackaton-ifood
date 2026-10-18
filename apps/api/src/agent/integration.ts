@@ -160,6 +160,30 @@ export function createIfoodIntegration(deps: {
       if (checkoutMode === "simulated") {
         const cartId = `demo-${randomUUID()}`;
         demoCarts.set(cartId, ownerKey(actor));
+        // Carrinho e pagamento ficam simulados, mas o endereço que seria usado no pedido é
+        // real (mesma leitura MCP de sempre, sem custo): a retrospectiva usa essa coordenada
+        // em vez de depender da submissão/entrega, que este modo nunca faz.
+        let participantCoordinates: IfoodCoordinates | undefined;
+        try {
+          const address = await resolveAddress(clientFor(actor), input.addressId);
+          participantCoordinates = address.coordinates;
+          if (!participantCoordinates) {
+            console.warn("Simulated checkout: resolved address has no coordinates", {
+              partyId: actor.partyId,
+              participantId: actor.participantId,
+              hadAddressId: Boolean(input.addressId),
+            });
+          }
+        } catch (cause) {
+          // Sem endereço resolvível (ex.: várias contas sem escolha): segue sem distância.
+          console.warn("Simulated checkout: could not resolve the chosen address", {
+            partyId: actor.partyId,
+            participantId: actor.participantId,
+            hadAddressId: Boolean(input.addressId),
+            code: cause instanceof AgentError ? cause.code : undefined,
+            message: cause instanceof Error ? cause.message : String(cause),
+          });
+        }
         return {
           cartId,
           merchantId: input.option.merchant.id,
@@ -168,6 +192,7 @@ export function createIfoodIntegration(deps: {
           total: input.option.total,
           simulated: true,
           checkoutSimulated: true,
+          ...(participantCoordinates ? { participantCoordinates } : {}),
         };
       }
 

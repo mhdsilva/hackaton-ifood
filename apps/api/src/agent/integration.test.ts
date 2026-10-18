@@ -53,6 +53,56 @@ const provider: McpOAuthProvider = {
   },
 };
 
+test("checkoutMode simulated still resolves the real chosen address for the retrospective distance", async () => {
+  const { fetchImpl, seen } = fakeMcp((tool) => {
+    if (tool === "listAddresses") {
+      return {
+        results: [
+          {
+            addressId: "home",
+            alias: "Casa",
+            location: { neighborhood: "Centro", city: "São Carlos" },
+            coordinates: { latitude: -22.01, longitude: -47.89 },
+          },
+        ],
+      };
+    }
+    throw new Error(`Unexpected MCP tool: ${tool}`);
+  });
+  const sessions = new McpSessionRegistry();
+  sessions.set("party-1", "participant-1", {
+    accessToken: "participant-access-token",
+    refreshToken: "participant-refresh-token",
+    accessTokenExpiresAt: "2999-01-01T00:00:00.000Z",
+  });
+  const integration = createIfoodIntegration({
+    sessions,
+    provider,
+    mcpUrl: "https://mcp.example/marketplace",
+    fetchImpl,
+    checkoutMode: "simulated",
+  });
+  const actor = { partyId: "party-1", participantId: "participant-1" };
+  const option = {
+    merchant: { id: "merchant-1", name: "Cantina", distanceKm: 1.2 },
+    items: [{ itemId: "item-1", name: "Massa", quantity: 1, unitPrice: 42, selectedOptions: [] }],
+    subtotal: 42,
+    deliveryFee: 5,
+    total: 47,
+    minimumOrderAmount: 20,
+    deliveryMethodId: "delivery-1",
+    estimatedDeliveryMinutes: { min: 30, max: 45 },
+  };
+
+  const cart = await integration.prepareCart!(actor, { option, addressId: "home" });
+
+  assert.equal(cart.simulated, true);
+  assert.deepEqual(cart.participantCoordinates, { latitude: -22.01, longitude: -47.89 });
+  const toolCalls = seen.filter((entry) => entry.body.method === "tools/call");
+  // Lê o endereço real (sem custo), mas nunca cria carrinho/pedido de verdade no iFood.
+  assert.deepEqual(toolCalls.map((entry) => entry.body.params?.name), ["listAddresses"]);
+});
+
 test("uses the participant MCP session for geocoding and confirmed address creation", async () => {
   const { fetchImpl, seen } = fakeMcp((tool, args) => {
     if (tool === "listAddresses") {
