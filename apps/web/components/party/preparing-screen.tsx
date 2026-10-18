@@ -6,11 +6,13 @@ import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyHeader } from "@/components/party/party-shell";
 import { ParticipantAvatar } from "@/components/party/participant-list";
 import { PreparationIllustration } from "@/components/party/preparation-illustration";
+import { PreparationTitle } from "@/components/party/preparation-title";
 import { SegmentedProgress } from "@/components/party/segmented-progress";
 import { useSplashComplete } from "@/components/party/splash-intro";
 import { getMockPreparationGroup, getMockPreparationStages, MOCK_PREPARATION_STAGE_MS } from "@/lib/mock-preparation";
 
 const participantNames = new Intl.ListFormat("pt-BR", { style: "long", type: "conjunction" });
+const preparationTitles = getMockPreparationStages().map((stage) => stage.title);
 
 export function PreparingScreen() {
   const [group] = useState(getMockPreparationGroup);
@@ -37,7 +39,7 @@ export function PreparingScreen() {
       <main id="main-content" aria-label="Preparação simulada da Party" className="relative mx-auto flex w-full max-w-md flex-1 flex-col gap-8 px-5 pt-5 pb-[max(40px,env(safe-area-inset-bottom))]">
         <section aria-live="polite" aria-atomic="true" className="space-y-1">
           <p className="text-[11px] leading-normal font-bold text-primary">AS ESCOLHAS SE ENCONTRAM</p>
-          <h1 className="font-preparation text-5xl leading-[1.2] font-bold">{stage.title}</h1>
+          <PreparationTitle titles={preparationTitles} current={stageIndex} />
         </section>
         <div className="flex min-h-[306px] flex-1 items-center justify-center py-6">
           <PreparationIllustration stage={stage} participants={group.participants} hostId={group.hostId} />

@@ -111,6 +111,8 @@ lib/                  Acesso a dados, mocks e utilitários
 
 ## Animações
 
+- Os títulos da preparação usam `PreparationTitle` com GSAP e `useGSAP`: palavras do título anterior sobem e desaparecem em 320 ms; as seguintes entram por baixo em 520 ms com `power3.out`, sobreposição de 80 ms e stagger discreto de 18 ms. Máscaras por palavra recortam o movimento. Os títulos compartilham uma célula de grid para reservar a altura do maior texto, sem deslocar a ilustração ou as barras. Somente o texto atual é exposto à tecnologia assistiva; movimento reduzido troca imediatamente. A animação tem limpeza ao atualizar/desmontar e não controla os timers nem o avanço das etapas.
+
 - As barras do questionário e da preparação compartilham `SegmentedProgress`, com preenchimento por `scaleX` e easing. O questionário preenche o segmento atual em 700 ms após 400 ms para acompanhar a troca de conteúdo; a preparação preenche cada segmento durante os três segundos da etapa, começando somente após a splash. Segmentos anteriores permanecem completos. A vitrine permite avançar e repetir as barras.
 - `QuestionNavigationProvider` usa a View Transition API, quando disponível, para capturar a troca entre rotas do questionário: texto e formulário saem 20 px à esquerda com fade de 220 ms; os seguintes entram 24 px da direita com fade de 360 ms. Header, footer e progresso não deslizam. A ação e a navegação não aguardam o término da animação; a captura aguarda a montagem da rota e possui cancelamento/limite de 1,5 segundo. Navegadores sem suporte recebem entrada CSS quando suportada; movimento reduzido dispensa o slide e preenche as barras imediatamente. Não exige GSAP nem dependências adicionais.
 
