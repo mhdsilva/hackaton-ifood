@@ -34,7 +34,8 @@ function systemPrompt(maxOptions: number): string {
     "  mínimo é o executor; você nunca inventa IDs, preços ou valores.",
     "- Só proponha itens que apareceram de fato nas respostas das tools. IDs inventados são",
     "  descartados.",
-    "- Respeite o orçamento (inclui frete) e as restrições alimentares.",
+    "- O orçamento é uma referência: prefira o que cabe nele, mas não deixe de propor por estar um",
+    "  pouco acima, e nunca ignore as restrições alimentares.",
     "- Quando tiver a proposta, chame proposeOptions com os itens escolhidos.",
     "- Responda em português do Brasil, em poucas frases.",
   ].join("\n");
@@ -46,7 +47,7 @@ function userPrompt(context: PlannerContext, maxOptions: number): string {
 
   const lines = [
     `Tema escolhido pelo grupo: ${context.theme.trim() || "(sem tema definido)"}`,
-    `Orçamento do participante: R$ ${context.budget.toFixed(2)} (inclui frete).`,
+    `Orçamento de referência do participante: R$ ${context.budget.toFixed(2)} (inclui frete).`,
     `Opções desejadas: até ${maxOptions}.`,
   ];
   if (itemRestrictions.length > 0) {

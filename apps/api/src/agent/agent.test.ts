@@ -96,14 +96,28 @@ test("resolves real captured options within budget, minimum order included", asy
   assert.equal(pizza.items[0].selectedOptions.length, 2);
 });
 
-test("drops options over budget and fails clearly when nothing fits", async () => {
-  const tight = await resolveOptions({ ...input, budget: 39 }, fixtureCaller(fixture));
-  assert.deepEqual(tight.options.map((option) => option.merchant.name), [
+test("keeps options over the budget instead of returning nothing", async () => {
+  const { options } = await resolveOptions({ ...input, budget: 30 }, fixtureCaller(fixture));
+  assert.deepEqual(options.map((option) => option.merchant.name), [
+    "Tomate Cru Pizzaria",
     "Italin House Macarrão Gourmet - São Carlos",
   ]);
+});
 
+test("orders options within the budget reference before the ones over it", async () => {
+  const { options } = await resolveOptions({ ...input, budget: 36 }, fixtureCaller(fixture));
+  assert.deepEqual(
+    options.map((option) => [option.merchant.name, option.total]),
+    [
+      ["Italin House Macarrão Gourmet - São Carlos", 38.17],
+      ["Tomate Cru Pizzaria", 39.8],
+    ],
+  );
+});
+
+test("fails clearly when the theme has no results", async () => {
   await assert.rejects(
-    resolveOptions({ ...input, budget: 30 }, fixtureCaller(fixture)),
+    resolveOptions({ ...input, theme: "inexistente", budget: 60 }, fixtureCaller(fixture)),
     (error: unknown) => error instanceof AgentError && error.code === "NO_OPTIONS",
   );
 });
