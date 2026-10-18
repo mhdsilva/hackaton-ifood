@@ -1,16 +1,17 @@
 import type { PartyInfo } from "@sidequest/contracts";
 
 /** O agente escreve um título livre; as buscas que ele escolheu orientam a arte da revelação. */
-const DEFAULT_IMAGE = "/themes/theme-distancia.png";
+const DEFAULT_IMAGE = "/themes/theme-distancia.webp";
 const THEME_IMAGES = {
   italiano: "/figma/theme-italian.png",
-  japones: "/themes/theme-japones.png",
-  hamburguer: "/themes/theme-hamburguer.png",
-  mexicano: "/themes/theme-mexicano.png",
-  brasileiro: "/themes/theme-brasileiro.png",
-  arabe: "/themes/theme-arabe.png",
-  saudavel: "/themes/theme-saudavel.png",
-  doce: "/themes/theme-doce.png",
+  japones: "/themes/theme-japones.webp",
+  hamburguer: "/themes/theme-hamburguer.webp",
+  mexicano: "/themes/theme-mexicano.webp",
+  brasileiro: "/themes/theme-brasileiro.webp",
+  arabe: "/themes/theme-arabe.webp",
+  saudavel: "/themes/theme-saudavel.webp",
+  doce: "/themes/theme-doce.webp",
+  cafeDaManha: "/themes/theme-cafe-da-manha.webp",
   distancia: DEFAULT_IMAGE,
 } as const;
 
@@ -20,6 +21,7 @@ const THEME_SIGNALS: Record<keyof typeof THEME_IMAGES, string[]> = {
   mexicano: ["mexicano", "mexican", "taco", "burrito", "nachos", "quesadilla"],
   brasileiro: ["brasileiro", "brasileira", "feijoada", "farofa", "prato feito", "parmegiana"],
   arabe: ["arabe", "arab", "esfiha", "kibe", "shawarma", "falafel", "homus"],
+  cafeDaManha: ["cafe da manha", "breakfast", "cafe", "pao", "croissant", "tapioca", "ovos", "omelete", "waffle", "panqueca"],
   saudavel: ["saudavel", "salada", "poke", "bowl", "leve", "vegetal", "fitness"],
   doce: ["doce", "sobremesa", "brigadeiro", "acai", "bolo", "chocolate", "sorvete"],
   italiano: ["italiano", "italiana", "pizza", "massa", "lasanha", "pasta", "nhoque", "ravioli"],
