@@ -68,15 +68,19 @@ O fluxo OAuth 2.1 com PKCE já está implementado atrás de duas rotas:
 estado público só expõe `mcpConnectionStatus` (`validating`, `connected` ou `error`); nunca
 `client_secret`, `access_token`, `refresh_token` ou codes.
 
-O que falta para produção:
+O provedor real do iFood já existe (`IfoodMcpOAuthProvider`, em `apps/api/src/ifood/`).
+`MCP_OAUTH_MODE=ifood` sobe quando `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET` e a redirect estão
+definidos; sem essa config, recusa subir de propósito. O `MCP_OAUTH_MODE` aceita `demo` ou `ifood`
+— qualquer outro valor recusa subir. O `IfoodMcpClient` renova o `access_token` com o
+`refresh_token` antes de expirar.
 
-- trocar `DemoMcpOAuthProvider` pelo provedor real do iFood quando o agente for homologado
-  (`MCP_OAUTH_MODE` só aceita `demo`; qualquer outro valor recusa subir de propósito);
-- renovar o `access_token` com o `refresh_token` antes de expirar (hoje os tokens são apenas
-  guardados);
-- executar o spike do [ADR de sessões](adr/0001-uma-sessao-mcp-por-participante.md). A interface
-  pública da Party não depende de a biblioteca usar clientes no mesmo processo ou processos
-  trabalhadores.
+O que ainda falta para produção:
+
+- cadastrar a redirect pública HTTPS (`PUBLIC_API_URL/mcp-connection/callback`) no agente do iFood
+  (hoje só `http://localhost:8080/callback` está cadastrada);
+- repetir o spike do [ADR de sessões](adr/0001-uma-sessao-mcp-por-participante.md) com três contas
+  (feito com duas);
+- os estados da Party depois de `READY_FOR_THEME` e as rotas de tema, que são dos outros marcos.
 
 Detalhes do modelo real em [`docs/ifood-mcp.md`](ifood-mcp.md).
 
@@ -91,11 +95,16 @@ Aponte o DNS do domínio para o IP da instância e, no Coolify, crie um recurso 
 - Variáveis de ambiente:
   - `PUBLIC_API_URL=https://api.exemplo.com`;
   - `CORS_ORIGIN=https://party.exemplo.com`;
-  - `MCP_OAUTH_MODE=demo` (padrão).
+  - `MCP_OAUTH_MODE=demo` (padrão) ou `ifood` (conexão real);
+  - em `ifood`: `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET` e, se a redirect não for derivada de
+    `PUBLIC_API_URL`, `IFOOD_REDIRECT_URI`.
 
 `PUBLIC_API_URL` é obrigatório no deploy: é a base do callback OAuth e precisa ser a URL HTTPS
-pública da API (não `localhost`), alcançável pelo navegador do participante. `MCP_OAUTH_MODE`
-tem padrão `demo`; qualquer outro valor recusa subir até o provedor real existir.
+pública da API (não `localhost`), alcançável pelo navegador do participante. `MCP_OAUTH_MODE` tem
+padrão `demo`; em `ifood`, o container precisa das credenciais do agente e a redirect usada deve
+estar cadastrada no portal do iFood. O `compose.yaml` repassa `IFOOD_CLIENT_ID`,
+`IFOOD_CLIENT_SECRET` e `IFOOD_REDIRECT_URI` (opcional) ao serviço `api`; cadastre os valores como
+variáveis/segredos no Coolify, nunca no arquivo.
 
 A porta 3333 não é publicada no host. O proxy do Coolify alcança o contêiner `api` pela rede do recurso.
 
@@ -110,7 +119,7 @@ Esperado: `{"status":"ok"}`. Status, logs e o domínio concreto ficam no painel 
 ## Decisões deste recorte
 
 - estado e tokens ficam em memória;
-- a conexão MCP usa OAuth 2.1 por participante, em modo de demonstração até a homologação;
+- a conexão MCP usa OAuth 2.1 por participante; o modo `demo` (padrão) serve para ensaiar sem contas reais e `ifood` conecta contas de verdade;
 - duas pessoas no mínimo e quatro no máximo;
 - somente o anfitrião fecha o grupo;
 - depois do fechamento, o último participante a concluir causa a transição automática;

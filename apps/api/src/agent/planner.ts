@@ -147,6 +147,9 @@ export interface IfoodToolboxSettings {
   maxSearchResults?: number;
 }
 
+/** Observa os itens que o MCP devolveu, para a whitelist de IDs do planner. */
+type ItemRecorder = (items: IfoodSearchItem[]) => void;
+
 /** O executor resolve o endereço; o modelo nunca precisa (nem vê) as coordenadas. */
 async function resolveCoordinates(caller: ToolCaller, addressId: unknown): Promise<IfoodCoordinates> {
   const payload = await caller.callTool<{ results?: IfoodAddress[] }>("listAddresses");
@@ -158,10 +161,15 @@ async function resolveCoordinates(caller: ToolCaller, addressId: unknown): Promi
 }
 
 /**
- * Allowlist das tools do iFood MCP que o plano pode dirigir. É o único ponto por onde o modelo
+ * Allowlist das tools do iFood MCP. `record` observa os itens devolvidos pelo MCP — é assim que o
+ * planner monta a whitelist de IDs que o modelo pode propor. É o único ponto por onde o modelo
  * alcança o catálogo real; IDs e preços continuam vindo do MCP.
  */
-export function ifoodToolbox(caller: ToolCaller, settings: IfoodToolboxSettings = {}): ToolBox {
+function baseIfoodTools(
+  caller: ToolCaller,
+  settings: IfoodToolboxSettings = {},
+  record?: ItemRecorder,
+): ToolBox {
   return {
     listAddresses: {
       description:
@@ -197,7 +205,9 @@ export function ifoodToolbox(caller: ToolCaller, settings: IfoodToolboxSettings 
           userLocation,
           ...(typeof args.pageSize === "number" ? { pageSize: args.pageSize } : {}),
         });
-        return { results: payload.results ?? [] };
+        const results = payload.results ?? [];
+        record?.(results);
+        return { results };
       },
     },
     searchOffers: {
@@ -228,7 +238,9 @@ export function ifoodToolbox(caller: ToolCaller, settings: IfoodToolboxSettings 
             ...(typeof args.maxItemPrice === "number" ? { maxItemPrice: args.maxItemPrice } : {}),
           },
         });
-        return { results: payload.results ?? [] };
+        const results = payload.results ?? [];
+        record?.(results);
+        return { results };
       },
     },
     getItem: {
@@ -253,4 +265,115 @@ export function ifoodToolbox(caller: ToolCaller, settings: IfoodToolboxSettings 
       },
     },
   };
+}
+
+/**
+ * Allowlist das tools do iFood MCP que o plano pode dirigir. É o único ponto por onde o modelo
+ * alcança o catálogo real; IDs e preços continuam vindo do MCP.
+ */
+export function ifoodToolbox(caller: ToolCaller, settings: IfoodToolboxSettings = {}): ToolBox {
+  return baseIfoodTools(caller, settings);
+}
+
+export interface PlannerToolboxSettings extends IfoodToolboxSettings {
+  /** Teto de itens aceitos em `proposeOptions`. */
+  maxOptions?: number;
+}
+
+export interface PlannerToolbox {
+  /** Allowlist do iFood mais a tool de finalização `proposeOptions`. */
+  toolbox: ToolBox;
+  /** Itens que o MCP devolveu nesta execução, por `merchantId`+`itemId`. */
+  seen: ReadonlyMap<string, IfoodSearchItem>;
+  /** Itens aceitos (só IDs que o MCP devolveu), ou `undefined` se ainda não houve proposta. */
+  proposal(): IfoodSearchItem[] | undefined;
+}
+
+const DEFAULT_MAX_PROPOSED = 3;
+
+function itemKey(merchantId: unknown, itemId: unknown): string | undefined {
+  if (typeof merchantId !== "string" || typeof itemId !== "string") return undefined;
+  const merchant = merchantId.trim();
+  const item = itemId.trim();
+  return merchant && item ? `${merchant}\u0000${item}` : undefined;
+}
+
+/**
+ * Allowlist do iFood + `proposeOptions`: a tool que o modelo chama para finalizar. Ela só aceita
+ * IDs que apareceram nas respostas do MCP (`seen`); o resto volta como `rejected` e o modelo pode
+ * corrigir. É o invariante "nunca ID inventado" da spec, sem depender do bom comportamento do LLM.
+ */
+export function plannerToolbox(
+  caller: ToolCaller,
+  settings: PlannerToolboxSettings = {},
+): PlannerToolbox {
+  const seen = new Map<string, IfoodSearchItem>();
+  let accepted: IfoodSearchItem[] | undefined;
+
+  const record: ItemRecorder = (items) => {
+    for (const item of items) {
+      if (!item || !item.merchant || !item.itemId) continue;
+      const key = itemKey(item.merchant.merchantId, item.itemId);
+      if (key && !seen.has(key)) seen.set(key, item);
+    }
+  };
+
+  const toolbox = baseIfoodTools(caller, settings, record);
+  toolbox.proposeOptions = {
+    description:
+      "Finaliza a busca propondo as opções escolhidas. Só aceita itens que apareceram nas respostas das tools.",
+    parameters: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            properties: {
+              merchantId: { type: "string" },
+              itemId: { type: "string" },
+            },
+            required: ["merchantId", "itemId"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["items"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const requested = Array.isArray(args.items) ? args.items : [];
+      const chosen = new Set<string>();
+      const acceptedItems: IfoodSearchItem[] = [];
+      const rejected: string[] = [];
+
+      for (const entry of requested) {
+        const raw = (entry ?? {}) as Record<string, unknown>;
+        const key = itemKey(raw.merchantId, raw.itemId);
+        const item = key ? seen.get(key) : undefined;
+        if (!key || !item || chosen.has(key)) {
+          rejected.push(key ?? `${String(raw.merchantId)}/${String(raw.itemId)}`);
+          continue;
+        }
+        chosen.add(key);
+        acceptedItems.push(item);
+      }
+
+      const limited = acceptedItems.slice(0, settings.maxOptions ?? DEFAULT_MAX_PROPOSED);
+      if (limited.length > 0) accepted = limited;
+
+      return {
+        accepted: limited.map((item) => ({
+          merchantId: item.merchant.merchantId,
+          itemId: item.itemId,
+          itemName: item.itemName,
+        })),
+        rejected,
+        seen: seen.size,
+      };
+    },
+  };
+
+  return { toolbox, seen, proposal: () => accepted };
 }
