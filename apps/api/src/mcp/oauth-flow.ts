@@ -81,9 +81,14 @@ export class McpOAuthFlow {
   }): Promise<OAuthActor> {
     const state = input.state?.trim();
     if (!state) {
+      // O iFood pode recusar o `authorize` e voltar ao callback só com `error`,
+      // sem `state`. Não repetimos o detalhe do provedor aqui (a resposta é
+      // sanitizada); o detalhe vai para o log do servidor.
       throw new McpOAuthError(
         "OAUTH_CALLBACK_INVALID",
-        "OAuth callback requires state",
+        input.providerError
+          ? "OAuth callback without state (provider returned an error; see server logs)"
+          : "OAuth callback requires state",
       );
     }
 

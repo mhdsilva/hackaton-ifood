@@ -151,6 +151,34 @@ test("wraps provider failures without exposing their message and identifies the 
   );
 });
 
+test("sanitizes a provider error that arrives without state", async () => {
+  const flow = new McpOAuthFlow(new RecordingProvider(), new McpSessionRegistry());
+
+  await assert.rejects(
+    () =>
+      flow.complete({
+        state: "",
+        code: "",
+        providerError: "invalid_client: leak-abc123",
+      }),
+    (error: unknown) => {
+      assert.ok(error instanceof McpOAuthError);
+      assert.equal(error.code, "OAUTH_CALLBACK_INVALID");
+      assert.equal(error.message.includes("leak-abc123"), false);
+      assert.match(error.message, /without state/);
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    () => flow.complete({ state: "", code: "" }),
+    (error: unknown) =>
+      error instanceof McpOAuthError &&
+      error.code === "OAUTH_CALLBACK_INVALID" &&
+      /requires state/.test(error.message),
+  );
+});
+
 test("turns provider cancellation into a sanitized one-time error", async () => {
   const provider = new RecordingProvider();
   const flow = new McpOAuthFlow(provider, new McpSessionRegistry());

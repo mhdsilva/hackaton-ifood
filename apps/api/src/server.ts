@@ -144,6 +144,18 @@ function parseOptionsRequest(body: Record<string, unknown>, partyTheme?: string)
   };
 }
 
+/**
+ * Detalhe do `error`/`error_description` que o provedor devolve ao callback —
+ * **só para o log do servidor**. A resposta ao navegador continua sanitizada.
+ * Sem dados sensíveis (não inclui `code`) e com tamanho limitado.
+ */
+function providerErrorDetail(url: URL): string | undefined {
+  const error = url.searchParams.get("error") ?? url.searchParams.get("error_code");
+  if (!error) return undefined;
+  const description = (url.searchParams.get("error_description") ?? "").slice(0, 200);
+  return description ? `${error}: ${description}` : error;
+}
+
 async function completeOAuthCallback(
   url: URL,
   response: ServerResponse,
@@ -151,11 +163,22 @@ async function completeOAuthCallback(
   options: PartyServerOptions,
   partyId?: string,
 ): Promise<void> {
+  const state = url.searchParams.get("state");
+  const providerError = providerErrorDetail(url);
+  if (!state || providerError) {
+    console.warn("MCP OAuth callback problem", {
+      path: url.pathname,
+      hasState: Boolean(state),
+      hasCode: Boolean(url.searchParams.get("code")),
+      providerError: providerError ?? null,
+    });
+  }
+
   const actor = await options.oauth.complete({
     ...(partyId ? { partyId: service.get(partyId).party.id } : {}),
     code: url.searchParams.get("code") ?? "",
-    state: url.searchParams.get("state") ?? "",
-    providerError: url.searchParams.get("error") ?? undefined,
+    state: state ?? "",
+    providerError: providerError ?? undefined,
   });
   const status = options.agent?.validateConnection
     ? await options.agent.validateConnection(actor)
