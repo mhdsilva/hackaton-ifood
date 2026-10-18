@@ -1,9 +1,10 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
+import type { PartyRetrospectiveResponse } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
 import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyShell } from "@/components/party/party-shell";
@@ -12,19 +13,54 @@ import { RetrospectiveStats } from "@/components/party/retrospective-stats";
 import { RetrospectiveShareDialog } from "@/components/party/retrospective-share-dialog";
 import { useParty } from "@/components/party/party-provider";
 import { useSplashComplete } from "@/components/party/splash-intro";
+import { describeError } from "@/lib/api-client";
 import { getMockRetrospective, retrospectiveThemeLabel, type RetrospectivePreview } from "@/lib/mock-retrospective";
 
 const distanceFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const integerFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+/** Enquanto a Party espera todo mundo escolher o pedido, confere de novo a cada 3s. */
+const RETROSPECTIVE_POLL_MS = 3000;
 
 export function RetrospectiveScreen() {
-  const { snapshot } = useParty();
+  const { snapshot, isMock, loadRetrospective } = useParty();
   const params = useSearchParams();
   const rawPreview = params.get("preview");
   const preview: RetrospectivePreview = rawPreview === "waiting" || rawPreview === "no-distance" || rawPreview === "empty" ? rawPreview : "ready";
-  const response = useMemo(() => getMockRetrospective(snapshot, preview), [snapshot, preview]);
-  const summary = response.summary;
-  const waiting = response.state === "waiting_for_deliveries";
+  // `?preview=` força o cenário simulado da vitrine mesmo em modo real; fora dele, o modo
+  // real busca a retrospectiva de verdade (baseada no pedido que cada um escolheu).
+  const usingPreview = isMock || rawPreview !== null;
+  const mockResponse = useMemo(() => getMockRetrospective(snapshot, preview), [snapshot, preview]);
+  const [liveResponse, setLiveResponse] = useState<PartyRetrospectiveResponse | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (usingPreview) return;
+    let alive = true;
+    let timer: number | undefined;
+    const tick = () => {
+      loadRetrospective()
+        .then((result) => {
+          if (!alive) return;
+          setLiveResponse(result);
+          setLiveError(null);
+          if (result.state === "waiting_for_deliveries") {
+            timer = window.setTimeout(tick, RETROSPECTIVE_POLL_MS);
+          }
+        })
+        .catch((cause: unknown) => {
+          if (alive) setLiveError(describeError(cause));
+        });
+    };
+    tick();
+    return () => {
+      alive = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [usingPreview, loadRetrospective]);
+
+  const response = usingPreview ? mockResponse : liveResponse;
+  const summary = response?.summary;
+  const waiting = response?.state === "waiting_for_deliveries";
   const container = useRef<HTMLDivElement>(null);
   const splashComplete = useSplashComplete();
 
@@ -51,6 +87,23 @@ export function RetrospectiveScreen() {
     return () => { media.revert(); finishNumbers(); };
   }, { scope: container, dependencies: [splashComplete, preview, summary?.participantCount, summary?.completedOrderCount, summary?.itemCount, summary?.merchantCount, summary?.maxDistanceKm], revertOnUpdate: true });
 
+  if (!usingPreview && liveError) {
+    return (
+      <PartyShell brandTone="light" backdrop={<BrandBackdrop />} footer={
+        <Button asChild variant="ghost" className="w-full text-order-detail"><a href="/">Voltar para a Party</a></Button>
+      }>
+        <p role="alert" className="pt-10 text-center text-sm text-destructive">{liveError}</p>
+      </PartyShell>
+    );
+  }
+  if (!usingPreview && response === null) {
+    return (
+      <PartyShell brandTone="light" backdrop={<BrandBackdrop />} footer={null}>
+        <p role="status" className="pt-10 text-center text-muted-foreground">Carregando retrospectiva...</p>
+      </PartyShell>
+    );
+  }
+
   return (
     <PartyShell brandTone="light" backdrop={<BrandBackdrop />} contentClassName="pt-6 pb-8" footerClassName="space-y-2 pt-4" footer={<>
       {summary && <RetrospectiveShareDialog summary={summary} />}
@@ -60,7 +113,7 @@ export function RetrospectiveScreen() {
         <header data-retro-reveal className="space-y-3">
           <div className="flex items-center justify-between gap-2 text-[10px] leading-4 font-bold tracking-[0.08em]">
             <p className="flex items-center gap-2 text-primary"><span className="size-1.5 rounded-full bg-primary" />{waiting ? "A PARTY AINDA ESTÁ ACONTECENDO" : "A RETROSPECTIVA DA PARTY"}</p>
-            <span className="rounded-full border border-border bg-background px-2 py-0.5 text-muted-foreground">PRÉVIA</span>
+            {usingPreview && <span className="rounded-full border border-border bg-background px-2 py-0.5 text-muted-foreground">PRÉVIA</span>}
           </div>
           <h1 className="font-preparation text-[48px] leading-[1.05] font-bold tracking-[-0.015em]">
             {waiting ? <>A mesa está<br />quase completa.</> : summary ? <>Cada um num canto.<br /><span className="text-primary">Todo mundo junto.</span></> : <>Esse encontro ainda<br />vai virar história.</>}
@@ -102,12 +155,12 @@ export function RetrospectiveScreen() {
             <h2 id="memory-title" className="mt-1 break-words font-preparation text-[30px] leading-tight font-semibold">{summary.partyName}</h2>
             <p className="mt-2 text-xs leading-5 text-order-detail">Que o próximo pedido seja mais uma desculpa para estar perto.</p>
           </section>
-          <p data-retro-reveal className="text-[10px] leading-4 text-muted-foreground">{summary.maxDistanceKm !== undefined ? "A distância é aproximada, em linha reta, e compartilhada apenas como um número do grupo. Os endereços individuais não aparecem aqui. " : "Os endereços individuais não aparecem nesta retrospectiva. "}Dados simulados para esta prévia.</p>
+          <p data-retro-reveal className="text-[10px] leading-4 text-muted-foreground">{summary.maxDistanceKm !== undefined ? "A distância é aproximada, em linha reta, e compartilhada apenas como um número do grupo. Os endereços individuais não aparecem aqui. " : "Os endereços individuais não aparecem nesta retrospectiva. "}{usingPreview ? "Dados simulados para esta prévia." : ""}</p>
         </> : <section data-retro-reveal role="status" className="rounded-tl-[40px] rounded-tr-xl rounded-br-[40px] rounded-bl-xl border bg-background/90 p-7">
-          <p className="font-preparation text-[80px] leading-none font-semibold text-primary">{waiting ? response.pendingDeliveryCount : "—"}</p>
-          <h2 className="mt-2 text-lg font-bold">{waiting ? response.pendingDeliveryCount === 1 ? "pedido ainda em andamento" : "pedidos ainda em andamento" : "Retrospectiva indisponível"}</h2>
+          <p className="font-preparation text-[80px] leading-none font-semibold text-primary">{waiting ? response?.pendingDeliveryCount : "—"}</p>
+          <h2 className="mt-2 text-lg font-bold">{waiting ? response?.pendingDeliveryCount === 1 ? "pedido ainda em andamento" : "pedidos ainda em andamento" : "Retrospectiva indisponível"}</h2>
           <p className="mt-3 text-sm leading-6 text-order-detail">{waiting ? "Cada entrega tem seu tempo. Quando todas forem concluídas, a gente reúne os números desse encontro aqui." : "Volte para a Party para continuar. Assim que o resumo estiver disponível, ele aparece aqui."}</p>
-          <p className="mt-6 text-[10px] text-muted-foreground">Dados simulados para esta prévia.</p>
+          {usingPreview && <p className="mt-6 text-[10px] text-muted-foreground">Dados simulados para esta prévia.</p>}
         </section>}
       </div>
     </PartyShell>

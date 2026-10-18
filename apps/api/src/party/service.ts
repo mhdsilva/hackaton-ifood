@@ -469,9 +469,10 @@ export class PartyService {
     this.authorizeParticipant(idOrCode, actorToken);
 
     const records = this.recordsForParty(snapshot.party.id);
+    // "Pendente" é quem ainda não escolheu/preparou o pedido (sem carrinho registrado);
+    // não depende de submeter ou rastrear o pedido até a entrega.
     const pendingDeliveryCount = snapshot.participants.filter(
-      (participant) =>
-        participant.orderStatus !== "CONCLUDED" || !records.has(participant.id),
+      (participant) => !records.has(participant.id),
     ).length;
     if (pendingDeliveryCount > 0 || snapshot.party.status !== "THEME_REVEALED") {
       return { state: "waiting_for_deliveries", pendingDeliveryCount };
