@@ -22,6 +22,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import type {
   AddressResolutionResponse,
   CreateParticipantAddressRequest,
@@ -35,6 +36,7 @@ import { describeError, liveApi, LiveApiError } from "@/lib/api-client";
 import { fromParticipantAddress, pickDefaultAddress, type PartyAddress } from "@/lib/addresses";
 import { buildQuestionnaireAnswers } from "@/lib/live-answers";
 import { getMockAddresses } from "@/lib/mock-party";
+import { partyFlowTarget } from "@/lib/party-flow";
 import {
   getMockBudgetOptions,
   getMockDesireOptions,
@@ -161,6 +163,8 @@ export function useParty(): LivePartyValue {
 
 export function LivePartyProvider({ children }: { children: ReactNode }) {
   const isClient = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [session, setSession] = useState<StoredSession | null>(() => loadStoredSession());
   const [snapshot, setSnapshot] = useState<PartySnapshot | null>(null);
@@ -252,6 +256,14 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
       window.clearInterval(timer);
     };
   }, [session]);
+
+  // Segue o fluxo coletivo: o estado chega pelo polling e move cada navegador sozinho.
+  // Ex.: o anfitrião aperta "Iniciar party" e os convidados saem do lobby sem clicar.
+  useEffect(() => {
+    if (!session || !snapshot) return;
+    const target = partyFlowTarget(snapshot, session.participantId, pathname);
+    if (target && target !== pathname) router.replace(target);
+  }, [router, pathname, session, snapshot]);
 
   // Endereços reais do iFood: recarrega quando a conexão MCP muda de estado (o polling
   // atualiza o snapshot). Sem conta conectada a API responde 409 e a tela mantém os

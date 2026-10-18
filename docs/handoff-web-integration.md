@@ -66,6 +66,24 @@ pelo polling de `GET /parties/:id`.
 Ainda falta o desenho do Júlio para essa tela e para o detalhe do endereço (complemento,
 apelido, referência). O envio ficou só com `address` + `candidateId` + `neighborhood`.
 
+## Fluxo coletivo (sem socket)
+
+Não existe webhook nem WebSocket: cada navegador já consulta `GET /parties/:id` a cada 1,5 s.
+O que faltava era **reagir** ao estado. `lib/party-flow.ts` (`partyFlowTarget`) decide o destino
+automático a cada snapshot e o provider chama `router.replace`:
+
+| Estado da Party | Quem está no lobby | Quem está numa tela de pergunta | Quem está na espera |
+| --- | --- | --- | --- |
+| `OPEN` | fica | fica | fica |
+| `COLLECTING_ANSWERS` | vai para `/party/address` | fica (ou vai para a espera se já concluiu) | fica |
+| `READY_FOR_THEME` | vai para `/party/waiting` | vai para `/party/waiting` | fica |
+| `THEME_REVEALED` | vai para `/party/preparing` | vai para `/party/preparing` | vai para `/party/preparing` |
+
+Telas `/party/pending/*`, `/party/preparing` e a própria espera nunca são interrompidas. Assim,
+quando o anfitrião aperta "Iniciar party", os convidados saem do lobby sem clique; quando ele
+revela o tema, todos entram na preparação juntos. O polling continua sendo a única fonte de
+verdade — abas em segundo plano podem atrasar a transição até o navegador liberar os timers.
+
 
 ## O que ainda fica fora (sem desenho do Júlio)
 

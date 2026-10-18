@@ -1,0 +1,66 @@
+/**
+ * Sincronização do fluxo entre os participantes.
+ *
+ * Não existe socket nem webhook: cada navegador já consulta `GET /parties/:id` a cada
+ * 1,5 s (`live-party-provider.tsx`). O que faltava era **reagir** ao estado da Party —
+ * quando o anfitrião inicia, revela o tema etc., os outros navegadores ficavam parados
+ * no lobby. Esta função diz para onde cada pessoa deve ir agora.
+ */
+import type { PartySnapshot } from "@sidequest/contracts";
+
+/** Telas do questionário, na ordem em que o fluxo as percorre. */
+export const QUESTION_PATHS = [
+  "/party/address",
+  "/party/restrictions",
+  "/party/budget",
+  "/party/energy",
+  "/party/order-style",
+  "/party/desires",
+  "/party/avoid",
+] as const;
+
+const WAITING_PATH = "/party/waiting";
+const PREPARING_PATH = "/party/preparing";
+
+function isQuestionPath(pathname: string): boolean {
+  return (QUESTION_PATHS as readonly string[]).includes(pathname);
+}
+
+/**
+ * Destino automático para o estado atual da Party, ou `null` para ficar onde está.
+ *
+ * - `OPEN`: ninguém é movido; o lobby é o lugar.
+ * - `COLLECTING_ANSWERS`: quem estava no lobby entra no questionário; quem já concluiu
+ *   vai para a espera (útil também depois de recarregar a página no meio do fluxo).
+ * - `READY_FOR_THEME`: todos responderam, então todos esperam o anfitrião revelar.
+ * - `THEME_REVEALED`: todos vão para a preparação.
+ *
+ * Telas fora dessa lista (`/party/pending/*`, a própria espera/preparação) nunca são
+ * interrompidas.
+ */
+export function partyFlowTarget(
+  snapshot: PartySnapshot,
+  participantId: string,
+  pathname: string,
+): string | null {
+  const status = snapshot.party.status;
+  const completed =
+    snapshot.participants.find((participant) => participant.id === participantId)
+      ?.questionnaireResponse?.completed === true;
+
+  switch (status) {
+    case "OPEN":
+      return null;
+    case "COLLECTING_ANSWERS":
+      if (completed && (pathname === "/" || isQuestionPath(pathname))) return WAITING_PATH;
+      return pathname === "/" ? QUESTION_PATHS[0] : null;
+    case "READY_FOR_THEME":
+      return pathname === "/" || isQuestionPath(pathname) ? WAITING_PATH : null;
+    case "THEME_REVEALED":
+      return pathname === "/" || pathname === WAITING_PATH || isQuestionPath(pathname)
+        ? PREPARING_PATH
+        : null;
+    default:
+      return null;
+  }
+}
