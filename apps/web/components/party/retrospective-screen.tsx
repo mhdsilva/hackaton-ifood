@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -90,7 +91,7 @@ export function RetrospectiveScreen() {
   if (!usingPreview && liveError) {
     return (
       <PartyShell brandTone="light" backdrop={<BrandBackdrop />} footer={
-        <Button asChild variant="ghost" className="w-full text-order-detail"><a href="/">Voltar para a Party</a></Button>
+        <Button asChild variant="ghost" className="w-full text-order-detail"><Link href="/">Voltar para a Party</Link></Button>
       }>
         <p role="alert" className="pt-10 text-center text-sm text-destructive">{liveError}</p>
       </PartyShell>
