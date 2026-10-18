@@ -44,7 +44,7 @@ import {
 import { fromParticipantAddress, pickDefaultAddress, type PartyAddress } from "@/lib/addresses";
 import { buildQuestionnaireAnswers, budgetFromAnswers } from "@/lib/live-answers";
 import { getMockAddresses } from "@/lib/mock-party";
-import { partyFlowTarget } from "@/lib/party-flow";
+import { canStartLiveParty, partyFlowTarget } from "@/lib/party-flow";
 import {
   getMockBudgetOptions,
   getMockDesireOptions,
@@ -91,16 +91,6 @@ function saveStoredSession(session: StoredSession | null): void {
 
 function randomParticipantId(): string {
   return `p-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function canStartLiveParty(snapshot: PartySnapshot, participantId: string): boolean {
-  return (
-    snapshot.party.status === "OPEN" &&
-    !snapshot.party.membershipLocked &&
-    snapshot.party.hostParticipantId === participantId &&
-    snapshot.participants.length >= 2 &&
-    snapshot.participants.length <= 4
-  );
 }
 
 function questionOptions(

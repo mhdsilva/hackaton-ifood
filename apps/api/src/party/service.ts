@@ -209,6 +209,25 @@ export class PartyService {
       );
     }
 
+    // Trava do anfitrião: a Party não começa enquanto algum convidado não conectou o iFood.
+    // O host é quem inicia, então ele não entra na checagem.
+    const pendingGuests = snapshot.participants.filter(
+      (participant) =>
+        participant.id !== snapshot.party.hostParticipantId &&
+        participant.mcpConnectionStatus !== "connected",
+    );
+    if (pendingGuests.length > 0) {
+      throw new PartyError(
+        409,
+        "GUESTS_NOT_CONNECTED",
+        "Aguarde todos os convidados conectarem a conta do iFood antes de iniciar",
+        {
+          pendingParticipantIds: pendingGuests.map((participant) => participant.id),
+          pendingParticipantNames: pendingGuests.map((participant) => participant.name),
+        },
+      );
+    }
+
     snapshot.party.membershipLocked = true;
     snapshot.party.status = "COLLECTING_ANSWERS";
     return this.store.save(snapshot);

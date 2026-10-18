@@ -158,6 +158,8 @@ test("exposes the onboarding flow and a token-free polling snapshot", async () =
   assert.equal(joinResponse.statusCode, 200);
   const guest = joinResponse.json();
 
+  // O convidado precisa ter conectado o iFood antes de o host iniciar (trava da Party).
+  api.service.setMcpConnectionStatusForParticipant(host.party.party.id, "bruno", "connected");
   const closeResponse = await request(
     api,
     "POST",
@@ -232,6 +234,29 @@ test("requires a Party-scoped Bearer token and keeps CORS on errors", async () =
   assert.equal(foreignToken.statusCode, 403);
   assert.equal(foreignToken.json().error.code, "ACCESS_DENIED");
   assert.equal(foreignToken.responseHeaders.get("access-control-allow-origin"), allowedOrigin);
+});
+
+test("the host cannot close the Party until every guest connected the iFood", async () => {
+  const api = createApi();
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const partyId = host.party.party.id;
+  await request(api, "POST", `/parties/${partyId}/join`, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+
+  const locked = await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
+  assert.equal(locked.statusCode, 409);
+  assert.equal(locked.json().error.code, "GUESTS_NOT_CONNECTED");
+
+  api.service.setMcpConnectionStatusForParticipant(partyId, "bruno", "connected");
+  const closed = await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
+  assert.equal(closed.statusCode, 200);
+  assert.equal(closed.json().party.status, "COLLECTING_ANSWERS");
 });
 
 test("completes OAuth without exposing tokens and rejects a foreign Party token", async () => {
@@ -819,6 +844,7 @@ test("rejects invalid questionnaire answers over HTTP", async () => {
   await request(api, "POST", `/parties/${partyId}/join`, {
     participant: { id: "bruno", name: "Bruno" },
   });
+  api.service.setMcpConnectionStatusForParticipant(partyId, "bruno", "connected");
   await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
 
   const invalid = await request(
@@ -856,6 +882,7 @@ test("reveals the result over HTTP with host-only access", async () => {
       participant: { id: "bruno", name: "Bruno" },
     })
   ).json();
+  api.service.setMcpConnectionStatusForParticipant(partyId, "bruno", "connected");
   await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
   await request(
     api,
@@ -911,6 +938,7 @@ test("the revealed result wins over the theme sent in the body", async () => {
       participant: { id: "bruno", name: "Bruno" },
     })
   ).json();
+  api.service.setMcpConnectionStatusForParticipant(partyId, "bruno", "connected");
   await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
   for (const token of [host.participantToken, guest.participantToken]) {
     await request(

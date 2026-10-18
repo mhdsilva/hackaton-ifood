@@ -197,7 +197,11 @@ paths:
       operationId: closePartyMembership
       security:
         - participantToken: []
-      description: Fecha o grupo com 2–4 participantes; somente o anfitrião pode executar.
+      description: |
+        Fecha o grupo com 2–4 participantes; somente o anfitrião pode executar.
+        O anfitrião não inicia enquanto algum convidado não tiver conectado a conta
+        do iFood: nesse caso a API responde `409 GUESTS_NOT_CONNECTED` com os
+        participantes pendentes em `error.details`.
       responses:
         "200": { $ref: "#/components/responses/PartyResponse" }
         "401": { $ref: "#/components/responses/ErrorResponse" }
