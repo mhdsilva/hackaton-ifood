@@ -46,8 +46,16 @@ monta `<IFOOD_AUTH_BASE_URL>/authorize` e `/token` a partir da configuração.
 ### Spike de sessões (ADR 0001)
 
 `apps/api/src/ifood/spike-sessions.ts` faz o login de N contas e chama `getUser` intercalado.
-Resultado em 17/10/2026 com **uma** conta: tokens obtidos pelo nosso provider, três rodadas,
-mesmo dono, zero vazamentos. **Falta repetir com duas contas** para provar o isolamento.
+
+**Resultado em 17/10/2026 com duas contas diferentes** (Lucas e Júlio, logadas em navegadores
+com cookies separados): tokens obtidos pelo nosso provider, 3 rodadas de `getUser` em paralelo,
+**cada sessão devolveu sempre o próprio dono**, 2 `sub` distintos no JWT e 0 vazamentos. Isso
+confirma o ADR 0001: vários clientes MCP com tokens diferentes convivem no mesmo processo, sem
+processo por token.
+
+Para repetir: `set -a; . ./.env; set +a; node apps/api/dist/ifood/spike-sessions.js 2`. Cada
+conta precisa logar em um navegador de cookies separados (por exemplo Chrome anônimo e Safari);
+senão o iFood reaproveita a sessão e o script avisa "alguma conta foi repetida".
 
 ## Resumo em uma frase
 
