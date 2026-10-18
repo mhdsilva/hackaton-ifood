@@ -222,6 +222,10 @@ paths:
         Troca o code pelos tokens, valida a conexão com uma leitura no iFood (modo `ifood`) e
         redireciona ao frontend com `mcp=connected` ou `mcp=error`. Não exige Bearer porque é
         chamado pelo redirecionamento do servidor de autorização.
+
+        Em modo `ifood`, a API atende no **caminho** da `IFOOD_REDIRECT_URI` cadastrada
+        (`server.callbackPath = new URL(IFOOD_REDIRECT_URI).pathname`), que pode diferir de
+        `/mcp-connection/callback`; este caminho só é o padrão em modo demo.
       parameters:
         - name: code
           in: query
