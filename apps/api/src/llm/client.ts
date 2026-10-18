@@ -5,6 +5,8 @@
  * mensagens, incluindo tool calls. Quem decide o que fazer com isso é `agent/planner.ts`.
  */
 
+import { randomUUID } from "node:crypto";
+
 import type { OpenCodeConfig } from "./config.js";
 
 type Fetch = typeof globalThis.fetch;
@@ -64,10 +66,12 @@ interface CompletionResponse {
 export class OpenCodeClient implements ChatClient {
   private readonly config: OpenCodeConfig;
   private readonly fetchImpl: Fetch;
+  private readonly sessionId: string;
 
   constructor(options: OpenCodeClientOptions) {
     this.config = options.config;
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+    this.sessionId = options.config.sessionId ?? randomUUID();
   }
 
   async complete(messages: ChatMessage[], tools: ChatTool[] = []): Promise<ChatMessage> {
@@ -78,6 +82,7 @@ export class OpenCodeClient implements ChatClient {
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${this.config.apiKey}`,
+          "x-opencode-session": this.sessionId,
         },
         body: JSON.stringify({
           model: this.config.model,

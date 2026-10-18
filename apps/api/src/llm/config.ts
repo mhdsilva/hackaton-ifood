@@ -15,6 +15,11 @@ export interface OpenCodeConfig {
   model: string;
   baseUrl: string;
   chatCompletionsUrl: string;
+  /**
+   * ID estável da conversa, enviado como `x-opencode-session`. O endpoint do plano Go
+   * (`/inference/go`) exige esse header para rotear; sem ele responde `400 MissingSessionID`.
+   */
+  sessionId?: string;
 }
 
 type Env = Record<string, string | undefined>;
@@ -34,11 +39,13 @@ export function loadOpenCodeConfig(env: Env = process.env): OpenCodeConfig | und
   if (!apiKey) return undefined;
 
   const baseUrl = withoutTrailingSlash(read(env, "OPENCODE_BASE_URL") ?? DEFAULT_OPENCODE_BASE_URL);
+  const sessionId = read(env, "OPENCODE_SESSION_ID");
 
   return {
     apiKey,
     model: read(env, "OPENCODE_MODEL") ?? DEFAULT_OPENCODE_MODEL,
     baseUrl,
     chatCompletionsUrl: `${baseUrl}${OPENAI_COMPATIBLE_CHAT_PATH}`,
+    ...(sessionId ? { sessionId } : {}),
   };
 }

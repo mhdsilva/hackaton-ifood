@@ -52,6 +52,27 @@ test("sends the key, model and messages and returns the assistant tool call", as
   assert.equal(reply.tool_calls?.[0].function.name, "listAddresses");
 });
 
+test("sends a stable x-opencode-session header (required by the Go endpoint)", async () => {
+  const sessions: string[] = [];
+  const client = new OpenCodeClient({
+    config,
+    fetchImpl: async (_url, init) => {
+      const headers = init?.headers as unknown as Record<string, string>;
+      sessions.push(headers["x-opencode-session"]);
+      return new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), {
+        status: 200,
+      });
+    },
+  });
+
+  await client.complete(messages);
+  await client.complete(messages);
+
+  assert.equal(sessions.length, 2);
+  assert.ok(sessions[0] && sessions[0].length > 0);
+  assert.equal(sessions[0], sessions[1]);
+});
+
 test("omits tools when there are none", async () => {
   let body: Record<string, unknown> = {};
   const client = new OpenCodeClient({
