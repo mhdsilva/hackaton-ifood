@@ -30,6 +30,7 @@ import { AgentError, pickAddress } from "./pick-address.js";
 import type { PlannerOptionsSettings } from "./planner-options.js";
 import { resolveOptions } from "./resolve-options.js";
 import type {
+  IfoodCoordinates,
   IfoodAddress,
   LocalOption,
   ResolveOptionsInput,
@@ -52,7 +53,7 @@ export interface PartyAgentIntegration {
   prepareCart?(
     actor: ParticipantRef,
     input: { option: LocalOption; addressId?: string },
-  ): Promise<CartSummary & { simulated: boolean }>;
+  ): Promise<CartSummary & { simulated: boolean; participantCoordinates?: IfoodCoordinates }>;
   submitOrder?(
     actor: ParticipantRef,
     input: { cartId: string; userConsent: boolean },
@@ -100,8 +101,12 @@ export function createIfoodIntegration(deps: {
     },
     async prepareCart(actor, input) {
       const client = clientFor(actor);
-      const addressId = await resolveAddressId(client, input.addressId);
-      return { ...(await prepareCart(client, { option: input.option, addressId })), simulated: false };
+      const address = await resolveAddress(client, input.addressId);
+      return {
+        ...(await prepareCart(client, { option: input.option, addressId: address.addressId })),
+        simulated: false,
+        ...(address.coordinates ? { participantCoordinates: address.coordinates } : {}),
+      };
     },
     async submitOrder(actor, input) {
       return { ...(await submitOrder(clientFor(actor), input)), simulated: false };
@@ -112,9 +117,9 @@ export function createIfoodIntegration(deps: {
   };
 }
 
-async function resolveAddressId(caller: ToolCaller, addressId?: string): Promise<string> {
+async function resolveAddress(caller: ToolCaller, addressId?: string): Promise<IfoodAddress> {
   const addresses = await caller.callTool<{ results?: IfoodAddress[] }>("listAddresses");
-  return pickAddress(addresses.results ?? [], addressId).addressId;
+  return pickAddress(addresses.results ?? [], addressId);
 }
 
 const DEMO_TIMELINE: Array<{ afterSeconds: number; code: string; description: string }> = [

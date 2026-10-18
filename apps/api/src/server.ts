@@ -347,12 +347,17 @@ async function routeRequest(
         throw new PartyError(400, "INVALID_INPUT", "addressId must be a string");
       }
       const prepare = requireAgent(options.agent, "prepareCart");
-      const cart = await runAgent(() =>
+      const { participantCoordinates, ...cart } = await runAgent(() =>
         prepare(actor, {
           option,
           ...(typeof body.addressId === "string" ? { addressId: body.addressId } : {}),
         }),
       );
+      service.recordCartSummaryForParticipant(actor.partyId, actor.participantId, {
+        merchantId: option.merchant.id,
+        itemCount: option.items.reduce((count, item) => count + item.quantity, 0),
+        ...(participantCoordinates ? { coordinates: participantCoordinates } : {}),
+      });
       service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
         orderStage: "cart_created",
       });
@@ -380,16 +385,28 @@ async function routeRequest(
     if (resource === "order" && method === "GET" && orderId) {
       const track = requireAgent(options.agent, "trackOrder");
       const tracking = await runAgent(() => track(actor, orderId));
+      const concluded = tracking.statusCode === "CONCLUDED";
       service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
         orderId: tracking.orderId,
         orderStatus: tracking.statusCode,
-        ...(tracking.terminal ? { orderStage: "delivered" as const } : {}),
+        ...(concluded ? { orderStage: "delivered" as const } : {}),
       });
       sendJson(response, 200, tracking, allowedOrigin);
       return;
     }
 
     throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+  }
+
+  const retrospectiveRoute = url.pathname.match(/^\/parties\/([^/]+)\/retrospective$/);
+  if (retrospectiveRoute) {
+    if (method !== "GET") {
+      throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+    }
+    const partyId = decodeURIComponent(retrospectiveRoute[1]);
+    const result = service.getRetrospective(partyId, bearerToken(request));
+    sendJson(response, 200, result, allowedOrigin);
+    return;
   }
 
   const oauthRoute = url.pathname.match(

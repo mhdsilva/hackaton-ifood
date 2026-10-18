@@ -421,6 +421,28 @@ paths:
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/retrospective:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    get:
+      operationId: getPartyRetrospective
+      security:
+        - participantToken: []
+      description: |
+        Resumo factual da Party, acessível a qualquer participante autenticado. Retorna
+        `waiting_for_deliveries` até o tema ter sido revelado e cada participante ter um pedido
+        com status `CONCLUDED`; depois retorna `ready` e agregados do grupo. Não inclui feedback,
+        endereços, coordenadas individuais, tokens, IDs de pedido ou valores individuais. A maior
+        distância usa as coordenadas dos endereços escolhidos e é aproximada em linha reta.
+      responses:
+        "200":
+          description: Estado de prontidão ou retrospectiva agregada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PartyRetrospectiveResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
 components:
   securitySchemes:
     participantToken:
@@ -611,6 +633,37 @@ components:
           minItems: 1
           maxItems: 4
           items: { $ref: "#/components/schemas/Participant" }
+    PartyRetrospectiveSummary:
+      type: object
+      additionalProperties: false
+      required: [partyName, participantCount, completedOrderCount, itemCount, merchantCount]
+      properties:
+        partyName: { type: string }
+        theme: { type: string }
+        participantCount: { type: integer, minimum: 1, maximum: 4 }
+        completedOrderCount: { type: integer, minimum: 1, maximum: 4 }
+        itemCount:
+          type: integer
+          minimum: 1
+          description: Soma das quantidades nas opções usadas para preparar os carrinhos.
+        merchantCount: { type: integer, minimum: 1 }
+        maxDistanceKm:
+          type: number
+          minimum: 0
+          description: Maior distância aproximada em linha reta entre endereços; omitida se faltar alguma coordenada.
+    PartyRetrospectiveResponse:
+      type: object
+      additionalProperties: false
+      required: [state, pendingDeliveryCount]
+      properties:
+        state:
+          type: string
+          enum: [waiting_for_deliveries, ready]
+        pendingDeliveryCount:
+          type: integer
+          minimum: 0
+          description: Participantes sem pedido concluído; inclui quem ainda não enviou pedido.
+        summary: { $ref: "#/components/schemas/PartyRetrospectiveSummary" }
     ApiError:
       type: object
       required: [error]

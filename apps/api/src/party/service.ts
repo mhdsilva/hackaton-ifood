@@ -5,6 +5,8 @@ import type {
   JoinPartyRequest,
   McpConnectionStatus,
   Participant,
+  PartyRetrospectiveResponse,
+  PartyRetrospectiveSummary,
   PartyOrderStage,
   PartySessionResponse,
   PartySnapshot,
@@ -19,6 +21,42 @@ import { deriveTheme } from "./theme.js";
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MIN_PARTICIPANTS = 2;
 const MAX_PARTICIPANTS = 4;
+
+interface ParticipantRetrospectiveRecord {
+  merchantId: string;
+  itemCount: number;
+  coordinates?: { latitude: number; longitude: number };
+}
+
+function distanceKm(
+  first: { latitude: number; longitude: number },
+  second: { latitude: number; longitude: number },
+): number {
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = radians(second.latitude - first.latitude);
+  const longitudeDelta = radians(second.longitude - first.longitude);
+  const a =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(radians(first.latitude)) *
+      Math.cos(radians(second.latitude)) *
+      Math.sin(longitudeDelta / 2) ** 2;
+  const boundedA = Math.min(1, Math.max(0, a));
+  return 6371.0088 * 2 * Math.atan2(Math.sqrt(boundedA), Math.sqrt(1 - boundedA));
+}
+
+function validCoordinates(
+  coordinates: { latitude: number; longitude: number } | undefined,
+): coordinates is { latitude: number; longitude: number } {
+  return Boolean(
+    coordinates &&
+      Number.isFinite(coordinates.latitude) &&
+      coordinates.latitude >= -90 &&
+      coordinates.latitude <= 90 &&
+      Number.isFinite(coordinates.longitude) &&
+      coordinates.longitude >= -180 &&
+      coordinates.longitude <= 180,
+  );
+}
 
 export class PartyError extends Error {
   constructor(
@@ -50,6 +88,11 @@ function newParticipant(id: string, name: string): Participant {
 }
 
 export class PartyService {
+  private readonly retrospectiveRecords = new Map<
+    string,
+    Map<string, ParticipantRetrospectiveRecord>
+  >();
+
   constructor(
     private readonly store: PartyStore,
     private readonly access: ParticipantAccessStore,
@@ -314,6 +357,84 @@ export class PartyService {
     if (patch.orderId !== undefined) participant.orderId = patch.orderId;
     if (patch.orderStatus !== undefined) participant.orderStatus = patch.orderStatus;
     return this.store.save(snapshot);
+  }
+
+  recordCartSummaryForParticipant(
+    idOrCode: string,
+    participantId: string,
+    input: {
+      merchantId: string;
+      itemCount: number;
+      coordinates?: { latitude: number; longitude: number };
+    },
+  ): void {
+    const snapshot = this.get(idOrCode);
+    if (!snapshot.participants.some((participant) => participant.id === participantId)) {
+      throw new PartyError(404, "PARTICIPANT_NOT_FOUND", "Participant not found");
+    }
+
+    const partyRecords = this.recordsForParty(snapshot.party.id);
+    partyRecords.set(participantId, {
+      merchantId: input.merchantId,
+      itemCount: input.itemCount,
+      ...(validCoordinates(input.coordinates) ? { coordinates: input.coordinates } : {}),
+    });
+  }
+
+  getRetrospective(
+    idOrCode: string,
+    actorToken: string,
+  ): PartyRetrospectiveResponse {
+    const snapshot = this.get(idOrCode);
+    this.authorizeParticipant(idOrCode, actorToken);
+
+    const records = this.recordsForParty(snapshot.party.id);
+    const pendingDeliveryCount = snapshot.participants.filter(
+      (participant) =>
+        participant.orderStatus !== "CONCLUDED" || !records.has(participant.id),
+    ).length;
+    if (pendingDeliveryCount > 0 || snapshot.party.status !== "THEME_REVEALED") {
+      return { state: "waiting_for_deliveries", pendingDeliveryCount };
+    }
+
+    const participantRecords = snapshot.participants.map((participant) =>
+      records.get(participant.id)!,
+    );
+    const coordinates = participantRecords.map((record) => record.coordinates);
+    let maxDistanceKm: number | undefined;
+    if (coordinates.every(validCoordinates)) {
+      let maxDistance = 0;
+      for (let first = 0; first < coordinates.length; first += 1) {
+        for (let second = first + 1; second < coordinates.length; second += 1) {
+          maxDistance = Math.max(
+            maxDistance,
+            distanceKm(coordinates[first], coordinates[second]),
+          );
+        }
+      }
+      maxDistanceKm = Math.round(maxDistance * 10) / 10;
+    }
+
+    const summary: PartyRetrospectiveSummary = {
+      partyName: snapshot.party.name,
+      ...(snapshot.party.theme ? { theme: snapshot.party.theme } : {}),
+      participantCount: snapshot.participants.length,
+      completedOrderCount: participantRecords.length,
+      itemCount: participantRecords.reduce((total, record) => total + record.itemCount, 0),
+      merchantCount: new Set(participantRecords.map((record) => record.merchantId)).size,
+      ...(maxDistanceKm !== undefined ? { maxDistanceKm } : {}),
+    };
+
+    return { state: "ready", pendingDeliveryCount: 0, summary };
+  }
+
+  private recordsForParty(partyId: string): Map<string, ParticipantRetrospectiveRecord> {
+    let records = this.retrospectiveRecords.get(partyId);
+    if (!records) {
+      records = new Map();
+      this.retrospectiveRecords.set(partyId, records);
+    }
+    return records;
   }
 
   private createCode(): string {

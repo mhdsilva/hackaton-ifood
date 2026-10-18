@@ -66,6 +66,24 @@ export interface PartySnapshot {
   participants: Participant[];
 }
 
+export interface PartyRetrospectiveSummary {
+  partyName: string;
+  theme?: string;
+  participantCount: number;
+  completedOrderCount: number;
+  /** Soma das quantidades nas opções usadas para preparar os carrinhos. */
+  itemCount: number;
+  merchantCount: number;
+  /** Maior distância aproximada em linha reta entre os endereços escolhidos. */
+  maxDistanceKm?: number;
+}
+
+export interface PartyRetrospectiveResponse {
+  state: "waiting_for_deliveries" | "ready";
+  pendingDeliveryCount: number;
+  summary?: PartyRetrospectiveSummary;
+}
+
 export interface ParticipantIdentity {
   id: string;
   name: string;

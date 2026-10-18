@@ -94,6 +94,7 @@ flowchart LR
 - A API e os tokens dos participantes ficam somente em memória durante o MVP.
 - O participante usa um único botão para consentir e confirmar o pedido na etapa futura.
 - Haverá fixtures previamente capturadas como contingência da demonstração.
+- A primeira versão da retrospectiva resume dados agregados da Party, incluindo a maior distância entre endereços, quando todos os pedidos chegam a `CONCLUDED`; feedback fica para depois.
 
 ## Decisões ainda abertas
 
@@ -102,7 +103,7 @@ flowchart LR
 - necessidade e formato das rodadas de votação;
 - quantidade de opções apresentadas a cada participante;
 - composição exata dos cardápios;
-- informações da retrospectiva final.
+- feedback final e destaques adicionais da retrospectiva.
 
 ## Limites do primeiro recorte
 
@@ -111,7 +112,7 @@ Não implementar ainda:
 - tema ou votação;
 - cardápios e carrinhos;
 - envio e acompanhamento de pedidos;
-- retrospectiva;
+- feedback final da retrospectiva;
 - banco de dados;
 - WebSocket;
 - login permanente;

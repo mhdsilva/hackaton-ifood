@@ -215,12 +215,12 @@ Só começa com A, B e T prontos. Cada task usa o token do **próprio** particip
 | D3 | Vouchers opcionais: `listVouchers`, `setVoucher` | `ifood/checkout.ts` | D2 | P | cupom aplicado quando existir |
 | D4 ✅ | `submitOrder` **só** com `userConsent: true` do próprio participante | `ifood/checkout.ts` | D2 | M | teste recusa sem consentimento |
 | D5 ✅ | `trackOrder` com a cadência de `agentHints.retryMessage` e parada em `pollingStop` | `ifood/checkout.ts` | D4 | M | estado resumido sem dados pessoais |
-| D6 | Reduzir o estado para o `PartySnapshot` (`→ Matheus` integra) | `ifood/order-summary.ts` (a criar) | D5, T | P | resumo contém só status e prazo |
+| D6 | Expor retrospectiva factual agregada, sem feedback | `GET /parties/:id/retrospective` | D5, T | libera tema, participantes, unidades, estabelecimentos e maior distância aproximada entre endereços depois de todos os pedidos `CONCLUDED` |
 | D7 | Decidir o modo da demo: pedido real com Pix não pago, só carrinho ou simulado | `docs/marcos.md` | grupo | P | decisão registrada |
 
 > D1, D2, D4 e D5 foram consolidados em **`ifood/checkout.ts`** (não há `cart.ts`, `cart-checkout.ts`,
 > `submit-order.ts` nem `track-order.ts` separados). D3 só lê `voucherTotalAmount` do breakdown; não
-> aplica cupom. D6 depende do Matheus mudar o `PartySnapshot`.
+> aplica cupom. D6 usa uma rota autenticada própria e não acrescenta endereços ou coordenadas ao `PartySnapshot`.
 
 **Risco:** pedido real em conta pessoal pode gerar cobrança; preferir a test account.
 
