@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { LocalOption } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
 import { OrderDetailCard } from "@/components/party/order-detail-card";
@@ -25,6 +26,7 @@ function distanceLabel(km: number): string {
 }
 
 export function OrderSummaryScreen() {
+  const router = useRouter();
   const {
     snapshot,
     currentParticipantId,
@@ -32,13 +34,17 @@ export function OrderSummaryScreen() {
     resolveOrderOptions,
     connectMcp,
     connectingMcp,
+    addressesLoading,
     addresses,
     addressesLive,
     selectedAddressId,
+    prepareOrderCart,
   } = useParty();
   const [order, setOrder] = useState<OrderState>({ status: "loading" });
   const [optionIndex, setOptionIndex] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+  const [preparingCart, setPreparingCart] = useState(false);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   // O snapshot é atualizado pelo polling; o ref evita refazer a busca a cada 1,5 s.
   const resolveRef = useRef(resolveOrderOptions);
@@ -49,10 +55,10 @@ export function OrderSummaryScreen() {
   const themeCopy = revealTheme(snapshot.party);
 
   useEffect(() => {
-    if (isMock) return;
+    if (isMock || addressesLoading) return;
     let alive = true;
     resolveRef
-      .current()
+      .current(reloadKey > 0)
       .then((options) => {
         if (alive) setOrder({ status: "ready", options });
       })
@@ -67,13 +73,13 @@ export function OrderSummaryScreen() {
     return () => {
       alive = false;
     };
-  }, [isMock, currentParticipantId, theme, reloadKey]);
+  }, [isMock, addressesLoading, currentParticipantId, theme, reloadKey]);
 
   if (isMock) {
     const mock = getMockRevealedOrder();
     return (
       <PartyShell brandTone="light" contentClassName="gap-4 pt-3" footerClassName="space-y-2 pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={<>
-        <Button asChild size="party" className="w-full"><Link href="/party/confirmed">Confirmar e pagar</Link></Button>
+        <Button asChild size="party" className="w-full"><Link href="/party/confirmed">Continuar demonstração</Link></Button>
         <Button asChild variant="secondary" size="party" className="w-full text-primary"><Link href="/party/pending/alternative">Gerar outra opção</Link></Button>
       </>}>
         <section aria-labelledby="order-title" className="space-y-1">
@@ -96,9 +102,6 @@ export function OrderSummaryScreen() {
         </section>
         <OrderDetailCard icon="/figma/order-motorbike.svg" title="Entrega hoje" detail={mock.delivery} />
         <OrderDetailCard icon="/figma/order-map-pin.svg" title={mock.address} detail={mock.complement} />
-        <OrderDetailCard icon="/figma/order-wallet.svg" title="Método de Pagamento" detail={mock.paymentMethod} action={
-          <Button asChild variant="link" className="h-auto shrink-0 p-0 text-[11px] font-normal"><Link href="/party/pending/payment-method">Trocar método</Link></Button>
-        } />
       </PartyShell>
     );
   }
@@ -168,7 +171,17 @@ export function OrderSummaryScreen() {
 
   return (
     <PartyShell brandTone="light" contentClassName="gap-4 pt-3" footerClassName="space-y-2 pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={<>
-      <Button asChild size="party" className="w-full"><Link href="/party/pending/checkout">Confirmar e pagar</Link></Button>
+      <Button size="party" className="w-full" disabled={preparingCart} onClick={async () => {
+        setPreparingCart(true);
+        setCartError(null);
+        try {
+          await prepareOrderCart(option);
+          router.push("/party/confirmed");
+        } catch (cause) {
+          setCartError(describeError(cause));
+          setPreparingCart(false);
+        }
+      }}>{preparingCart ? "Preparando pedido..." : "Preparar pedido"}</Button>
       {options.length > 1 && (
         <Button type="button" variant="secondary" size="party" className="w-full text-primary" onClick={() => setOptionIndex((index) => index + 1)}>
           Gerar outra opção
@@ -203,7 +216,7 @@ export function OrderSummaryScreen() {
       </ul>
       <section aria-label="Total do pedido" className="space-y-2 leading-[1.35]">
         <div className="flex items-center justify-between gap-3 text-2xl font-bold"><h2>Total do pedido</h2><p className="shrink-0">{currency.format(option.total)}</p></div>
-        <p className="text-xs text-muted-foreground">Esse valor considera o frete e as taxas estimadas; o valor final aparece no pagamento.</p>
+        <p className="text-xs text-muted-foreground">Valor estimado com frete. O checkout desta demonstração não cobra nada.</p>
       </section>
       <OrderDetailCard icon="/figma/order-motorbike.svg" title="Entrega hoje" detail={delivery} />
       <OrderDetailCard
@@ -211,9 +224,8 @@ export function OrderSummaryScreen() {
         title={themeAddress?.label ?? "Endereço de entrega"}
         detail={themeAddress?.street ?? themeAddress?.region ?? "Endereço cadastrado no iFood"}
       />
-      <OrderDetailCard icon="/figma/order-wallet.svg" title="Método de Pagamento" detail="Definido no pagamento" action={
-        <Button asChild variant="link" className="h-auto shrink-0 p-0 text-[11px] font-normal"><Link href="/party/pending/payment-method">Trocar método</Link></Button>
-      } />
+      {cartError && <p role="alert" className="text-center text-xs text-destructive">{cartError}</p>}
+      <p className="text-center text-xs text-muted-foreground">O checkout desta demonstração é simulado. Nenhum pedido será enviado nem cobrado.</p>
     </PartyShell>
   );
 }

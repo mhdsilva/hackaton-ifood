@@ -11,6 +11,7 @@ import type {
   ResolveOptionsOutput,
   ToolCaller,
 } from "./types.js";
+import type { RequiredPersonalization } from "./personalization.js";
 
 export interface DiscoveryFixture {
   searchOffers: Record<string, { results: IfoodSearchItem[] }>;
@@ -64,9 +65,10 @@ export async function resolveOptionsWithFallback(
   caller: ToolCaller,
   fixture: DiscoveryFixture | (() => Promise<DiscoveryFixture>) = loadDiscoveryFixture,
   settings: ResolveOptionsSettings = {},
+  personalization?: RequiredPersonalization,
 ): Promise<ResolveOptionsOutput> {
   try {
-    return await resolveOptions(input, caller, settings);
+    return await resolveOptions(input, caller, settings, personalization);
   } catch (error) {
     if (isActionableAgentError(error)) {
       throw error;
@@ -98,14 +100,15 @@ export async function resolveOptionsPreferringPlanner(
   caller: ToolCaller,
   client: ChatClient,
   settings: PlannerOptionsSettings = {},
+  personalization?: RequiredPersonalization,
 ): Promise<ResolveOptionsOutput> {
   try {
     return await withTimeout(
-      resolveOptionsWithPlanner(input, caller, client, settings),
+      resolveOptionsWithPlanner(input, caller, client, settings, personalization),
       settings.timeoutMs ?? PLANNER_TIMEOUT_MS,
     );
   } catch (error) {
     if (isActionableAgentError(error)) throw error;
-    return resolveOptionsWithFallback(input, caller);
+    return resolveOptionsWithFallback(input, caller, undefined, {}, personalization);
   }
 }

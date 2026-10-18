@@ -24,6 +24,7 @@ import type {
   ResolveOptionsOutput,
   ToolCaller,
 } from "./types.js";
+import type { RequiredPersonalization } from "./personalization.js";
 
 const DEFAULT_MAX_OPTIONS = 3;
 
@@ -78,6 +79,7 @@ export async function resolveOptionsWithPlanner(
   caller: ToolCaller,
   client: ChatClient,
   settings: PlannerOptionsSettings = {},
+  personalization?: RequiredPersonalization,
 ): Promise<ResolveOptionsOutput> {
   const maxOptions = input.maxOptions ?? DEFAULT_MAX_OPTIONS;
 
@@ -87,6 +89,7 @@ export async function resolveOptionsWithPlanner(
   const { maxSearchResults, ...plannerSettings } = settings;
   const toolbox = plannerToolbox(caller, {
     maxOptions,
+    initialCandidates: personalization?.recommendations ?? [],
     ...(maxSearchResults !== undefined ? { maxSearchResults } : {}),
   });
 
@@ -100,6 +103,8 @@ export async function resolveOptionsWithPlanner(
       addressId: address.addressId,
       addresses: addresses.results ?? [],
       maxOptions,
+      profile: personalization?.profile,
+      recommendations: personalization?.recommendations,
     }),
     plannerSettings,
   );

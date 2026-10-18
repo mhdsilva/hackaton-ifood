@@ -9,7 +9,7 @@
 import type { ChatMessage } from "../llm/client.js";
 import { mapRestrictions } from "./restrictions.js";
 import { sanitizeAddress } from "./sanitize.js";
-import type { IfoodAddress } from "./types.js";
+import type { IfoodAddress, IfoodSearchItem } from "./types.js";
 
 export interface PlannerContext {
   theme: string;
@@ -19,6 +19,9 @@ export interface PlannerContext {
   addressId?: string;
   addresses: IfoodAddress[];
   maxOptions?: number;
+  /** Perfil já sanitizado pelo executor; nunca contém identificadores pessoais. */
+  profile?: unknown;
+  recommendations?: IfoodSearchItem[];
 }
 
 const DEFAULT_MAX_OPTIONS = 3;
@@ -59,6 +62,22 @@ function userPrompt(context: PlannerContext, maxOptions: number): string {
   }
   if (context.addressId) {
     lines.push(`Endereço escolhido: ${context.addressId}.`);
+  }
+  if (context.profile !== undefined) {
+    let profile = JSON.stringify(context.profile) ?? "null";
+    if (profile.length > 2_000) profile = `${profile.slice(0, 2_000)}…`;
+    lines.push(`Perfil e preferências do participante (considere na escolha): ${profile}`);
+  }
+  if (context.recommendations?.length) {
+    const items = context.recommendations.slice(0, 20).map((item) => ({
+      itemId: item.itemId,
+      itemName: item.itemName,
+      merchantId: item.merchant.merchantId,
+      merchantName: item.merchant.merchantName,
+      price: item.promotionalUnitPrice ?? item.unitPrice,
+      isOpen: item.merchant.isOpen,
+    }));
+    lines.push(`Recomendações pessoais do iFood (priorize as que combinarem com o tema): ${JSON.stringify(items)}`);
   }
   lines.push(
     addresses.length === 0

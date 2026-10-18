@@ -18,6 +18,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -33,7 +34,13 @@ import type {
 } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { describeError, liveApi, LiveApiError } from "@/lib/api-client";
+import {
+  describeError,
+  liveApi,
+  LiveApiError,
+  type CartResponse,
+  type OrderTrackingResponse,
+} from "@/lib/api-client";
 import { fromParticipantAddress, pickDefaultAddress, type PartyAddress } from "@/lib/addresses";
 import { buildQuestionnaireAnswers, budgetFromAnswers } from "@/lib/live-answers";
 import { getMockAddresses } from "@/lib/mock-party";
@@ -158,7 +165,12 @@ export interface LivePartyValue {
    * Busca no iFood (via agente/MCP) opções reais para o participante atual, com o tema da
    * Party, o orçamento, as restrições e o endereço das respostas dele.
    */
-  resolveOrderOptions: () => Promise<LocalOption[]>;
+  resolveOrderOptions: (forceRefresh?: boolean) => Promise<LocalOption[]>;
+  cart: CartResponse | null;
+  prepareOrderCart: (option: LocalOption) => Promise<CartResponse>;
+  submitPartyOrder: (cartId: string) => Promise<{ orderId: string; simulated: boolean }>;
+  trackPartyOrder: (orderId: string) => Promise<OrderTrackingResponse>;
+  loadRetrospective: () => ReturnType<typeof liveApi.getRetrospective>;
 }
 
 const LivePartyContext = createContext<LivePartyValue | null>(null);
@@ -182,6 +194,8 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(() => loadStoredSession() !== null);
   const [connectingMcp, setConnectingMcp] = useState(false);
+  const [cart, setCart] = useState<CartResponse | null>(null);
+  const orderOptionsRequests = useRef(new Map<string, Promise<LocalOption[]>>());
 
   const [addresses, setAddresses] = useState<PartyAddress[]>(getMockAddresses);
   const [addressesLive, setAddressesLive] = useState(false);
@@ -365,7 +379,7 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     }
   }, [session]);
 
-  const resolveOrderOptions = useCallback(async (): Promise<LocalOption[]> => {
+  const resolveOrderOptions = useCallback(async (forceRefresh = false): Promise<LocalOption[]> => {
     if (!session || !snapshot) throw new Error("Sessão da Party indisponível.");
     const me = snapshot.participants.find((participant) => participant.id === session.participantId);
     const answers = me?.questionnaireResponse?.answers ?? {};
@@ -386,19 +400,71 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     const addressId = addressesLive
       ? chosenAddress?.id ?? selectedAddressId ?? undefined
       : undefined;
-    const result = await liveApi.getOptions(session.partyId, session.token, {
+    const cacheKey = JSON.stringify({
+      partyId: session.partyId,
+      participantId: session.participantId,
+      theme: snapshot.party.theme ?? null,
       budget,
       restrictions,
-      maxOptions: 3,
-      ...(addressId ? { addressId } : {}),
+      addressId: addressId ?? null,
     });
-    if (result.options.length === 0) {
-      throw new Error(
-        "Nenhuma loja atendeu ao tema e ao orçamento agora. Ajuste o valor ou tente de novo.",
-      );
+    if (forceRefresh) orderOptionsRequests.current.delete(cacheKey);
+    let request = orderOptionsRequests.current.get(cacheKey);
+    if (!request) {
+      request = liveApi
+        .getOptions(session.partyId, session.token, {
+          budget,
+          restrictions,
+          maxOptions: 3,
+          ...(addressId ? { addressId } : {}),
+        })
+        .then((result) => {
+          if (result.options.length === 0) {
+            throw new Error(
+              "Nenhuma loja atendeu ao tema e ao orçamento agora. Ajuste o valor ou tente de novo.",
+            );
+          }
+          return result.options;
+        });
+      orderOptionsRequests.current.set(cacheKey, request);
     }
-    return result.options;
+    // Preserve failures too: the order screen can display the prefetch result immediately,
+    // and an explicit retry invalidates this entry.
+    return request;
   }, [session, snapshot, questionnaire, addresses, addressesLive, selectedAddressId]);
+
+  const prepareOrderCart = useCallback(async (option: LocalOption): Promise<CartResponse> => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    const result = await liveApi.createCart(session.partyId, session.token, {
+      option,
+      ...(selectedAddressId ? { addressId: selectedAddressId } : {}),
+    });
+    setCart(result);
+    setSnapshot(await liveApi.getParty(session.partyId, session.token));
+    return result;
+  }, [session, selectedAddressId]);
+
+  const submitPartyOrder = useCallback(async (cartId: string) => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    const result = await liveApi.submitOrder(session.partyId, session.token, {
+      cartId,
+      userConsent: true,
+    });
+    setSnapshot(await liveApi.getParty(session.partyId, session.token));
+    return result;
+  }, [session]);
+
+  const trackPartyOrder = useCallback(async (orderId: string) => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    const result = await liveApi.trackOrder(session.partyId, session.token, orderId);
+    setSnapshot(await liveApi.getParty(session.partyId, session.token));
+    return result;
+  }, [session]);
+
+  const loadRetrospective = useCallback(async () => {
+    if (!session) throw new Error("Sessão da Party indisponível.");
+    return liveApi.getRetrospective(session.partyId, session.token);
+  }, [session]);
 
   const findAddressCandidates = useCallback(
     async (address: string): Promise<AddressResolutionResponse> => {
@@ -605,6 +671,11 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
         connectMcp,
         connectingMcp,
         resolveOrderOptions,
+        cart,
+        prepareOrderCart,
+        submitPartyOrder,
+        trackPartyOrder,
+        loadRetrospective,
       }}
     >
       {actionError && (

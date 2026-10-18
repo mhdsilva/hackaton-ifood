@@ -279,6 +279,8 @@ export function ifoodToolbox(caller: ToolCaller, settings: IfoodToolboxSettings 
 export interface PlannerToolboxSettings extends IfoodToolboxSettings {
   /** Teto de itens aceitos em `proposeOptions`. */
   maxOptions?: number;
+  /** Recomendações personalizadas pré-carregadas para esta execução. */
+  initialCandidates?: IfoodSearchItem[];
 }
 
 export interface PlannerToolbox {
@@ -312,6 +314,7 @@ export function plannerToolbox(
       if (key && !seen.has(key)) seen.set(key, item);
     }
   };
+  record(settings.initialCandidates ?? []);
 
   const toolbox: ToolBox = {
     ...baseIfoodTools(caller, settings, record),

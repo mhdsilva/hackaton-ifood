@@ -12,12 +12,38 @@ import type {
   McpAuthorizationResponse,
   Participant,
   ParticipantAddressesResponse,
+  PartyRetrospectiveResponse,
   PartySessionResponse,
   PartySnapshot,
   QuestionnaireDefinition,
   ResolveOptionsOutput,
   SubmitAnswersRequest,
 } from "@sidequest/contracts";
+import type { LocalOption } from "@sidequest/contracts";
+
+export interface CartResponse {
+  cartId: string;
+  merchantId: string;
+  deliveryMethodId: string;
+  paymentMethod: string;
+  total?: number;
+  simulated: boolean;
+  checkoutSimulated?: boolean;
+}
+
+export interface OrderResponse {
+  orderId: string;
+  simulated: boolean;
+}
+
+export interface OrderTrackingResponse {
+  orderId: string;
+  statusCode: string;
+  description: string;
+  retryAfterSeconds?: number;
+  terminal: boolean;
+  simulated: boolean;
+}
 
 /** `?api=` na URL vence; depois `NEXT_PUBLIC_API_URL`; senão, prod (ou local no dev). */
 export function apiBase(): string {
@@ -151,6 +177,26 @@ export const liveApi = {
       "POST",
       `/parties/${encodeURIComponent(codeOrId)}/options`,
       { body, token },
+    ),
+
+  createCart: (codeOrId: string, token: string, body: { option: LocalOption; addressId?: string }) =>
+    request<CartResponse>("POST", `/parties/${encodeURIComponent(codeOrId)}/cart`, { body, token }),
+
+  submitOrder: (codeOrId: string, token: string, body: { cartId: string; userConsent: boolean }) =>
+    request<OrderResponse>("POST", `/parties/${encodeURIComponent(codeOrId)}/order`, { body, token }),
+
+  trackOrder: (codeOrId: string, token: string, orderId: string) =>
+    request<OrderTrackingResponse>(
+      "GET",
+      `/parties/${encodeURIComponent(codeOrId)}/order/${encodeURIComponent(orderId)}`,
+      { token },
+    ),
+
+  getRetrospective: (codeOrId: string, token: string) =>
+    request<PartyRetrospectiveResponse>(
+      "GET",
+      `/parties/${encodeURIComponent(codeOrId)}/retrospective`,
+      { token },
     ),
 };
 

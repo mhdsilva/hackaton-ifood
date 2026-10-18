@@ -19,6 +19,16 @@ const THEME_QUERIES: Record<string, string[]> = {
  */
 export const VIBE_QUERIES = ["pizza", "hamburguer", "porcao", "lanche", "broto"];
 
+/** Buscas genéricas usadas só quando o tema não produz nenhum pedido válido. */
+export const BROAD_FALLBACK_QUERIES = [
+  "prato feito",
+  "marmita",
+  "lanche",
+  "pizza",
+  "hamburguer",
+  "comida",
+];
+
 const VIBE_THEMES = new Set([
   "a distancia",
   "sabadou a distancia",

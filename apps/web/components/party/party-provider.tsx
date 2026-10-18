@@ -72,6 +72,11 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
     resolveOrderOptions: async () => {
       throw new Error("A busca de pedido usa o iFood; indisponível na prévia mockada.");
     },
+    cart: null,
+    prepareOrderCart: async () => { throw new Error("Carrinho indisponível na prévia mockada."); },
+    submitPartyOrder: async () => { throw new Error("Pedido indisponível na prévia mockada."); },
+    trackPartyOrder: async () => { throw new Error("Rastreio indisponível na prévia mockada."); },
+    loadRetrospective: async () => { throw new Error("Retrospectiva indisponível na prévia mockada."); },
   };
 
   if (mock.inviteCode !== code) return <PartyLoading />;

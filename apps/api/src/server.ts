@@ -49,6 +49,7 @@ const AGENT_ERROR_STATUS: Record<AgentError["code"], number> = {
   ADDRESS_NOT_FOUND: 409,
   ADDRESS_CREATION_FAILED: 502,
   MCP_NOT_CONNECTED: 409,
+  PERSONALIZATION_REQUIRED: 502,
   NOT_FOUND: 404,
   NO_OPTIONS: 422,
   TIMEOUT: 504,
@@ -671,6 +672,12 @@ export function resolveMcpOAuthMode(
   throw new Error(`MCP_OAUTH_MODE inválido: ${raw}`);
 }
 
+export function resolveCheckoutMode(raw: string | undefined): "ifood" | "simulated" {
+  const value = (raw ?? "ifood").trim().toLowerCase();
+  if (value === "ifood" || value === "simulated") return value;
+  throw new Error(`CHECKOUT_MODE inválido: ${raw}`);
+}
+
 if (isEntrypoint) {
   const port = Number(process.env.PORT ?? 3333);
   const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
@@ -680,6 +687,7 @@ if (isEntrypoint) {
   const frontendUrl = process.env.FRONTEND_URL ?? allowedOrigins[0] ?? "http://localhost:5173";
   const publicApiUrl = process.env.PUBLIC_API_URL ?? `http://localhost:${port}`;
   const oauthMode = resolveMcpOAuthMode(process.env.MCP_OAUTH_MODE);
+  const checkoutMode = resolveCheckoutMode(process.env.CHECKOUT_MODE);
   const env = { ...process.env, PUBLIC_API_URL: publicApiUrl };
   const llmConfig = loadOpenCodeConfig(env);
   const themePlanner = llmConfig
@@ -701,6 +709,7 @@ if (isEntrypoint) {
         sessions,
         provider,
         mcpUrl: ifoodConfig.mcpUrl,
+        checkoutMode,
         ...(llmConfig ? { llm: { client: new OpenCodeClient({ config: llmConfig }) } } : {}),
       })
     : createDemoIntegration();
