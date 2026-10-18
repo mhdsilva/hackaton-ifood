@@ -36,6 +36,7 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
   const exclusionOptions = getMockExclusionOptions();
   const value: PartyValue = {
     ...mock,
+    restartSession: () => window.location.replace("/"),
     isMock: true,
     usingLiveCatalog: false,
     addressesLive: false,

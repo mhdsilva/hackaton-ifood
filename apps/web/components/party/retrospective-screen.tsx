@@ -23,7 +23,7 @@ const integerFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 
 const RETROSPECTIVE_POLL_MS = 3000;
 
 export function RetrospectiveScreen() {
-  const { snapshot, isMock, loadRetrospective } = useParty();
+  const { snapshot, isMock, loadRetrospective, restartSession } = useParty();
   const params = useSearchParams();
   const rawPreview = params.get("preview");
   const preview: RetrospectivePreview = rawPreview === "waiting" || rawPreview === "no-distance" || rawPreview === "empty" ? rawPreview : "ready";
@@ -109,7 +109,7 @@ export function RetrospectiveScreen() {
     <PartyShell brandTone="light" backdrop={<BrandBackdrop />} contentClassName="pt-6 pb-8" footerClassName="space-y-2 pt-4" footer={<>
       {summary && <RetrospectiveShareDialog summary={summary} />}
       <Button asChild variant="ghost" className="w-full text-order-detail"><a href="https://www.ifood.com.br/">Acompanhar pedido</a></Button>
-      <Button asChild variant="ghost" className="w-full text-order-detail"><Link href="/">Voltar ao início</Link></Button>
+      <Button variant="ghost" className="w-full text-order-detail" onClick={restartSession}>Voltar ao início</Button>
     </>}>
       <div ref={container} className="flex flex-col gap-6">
         <header data-retro-reveal className="space-y-3">

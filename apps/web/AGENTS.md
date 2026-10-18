@@ -4,6 +4,8 @@ Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávi
 
 ## Contexto e estado atual
 
+“Voltar ao início” na retrospectiva remove somente a sessão da Party do `sessionStorage` no modo real e recarrega `/`, descartando respostas, carrinho e caches locais para criar uma nova Party. No mock, recarrega `/` para reiniciar a prévia. A Party anterior continua disponível para os demais participantes.
+
 Os itens do resumo de pedido usam a mesma composição nos modos mock e real, com altura de 60 px. Sem complemento, o título fica centralizado verticalmente; o preço fica sempre centralizado verticalmente, com ou sem complemento. A Focaccia do mock não tem complemento para demonstrar esse estado.
 
 Na retrospectiva, o número da distância e o título alternativo do card vermelho usam 40 px. A seção “Esse encontro tem nome”, com o nome da Party e a frase abaixo, foi removida da tela.

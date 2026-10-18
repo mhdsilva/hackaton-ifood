@@ -114,6 +114,7 @@ function questionOptions(
 }
 
 export interface LivePartyValue {
+  restartSession: () => void;
   snapshot: PartySnapshot;
   currentParticipantId: string;
   startParty: () => Promise<boolean>;
@@ -632,6 +633,10 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
   return (
     <LivePartyContext.Provider
       value={{
+        restartSession: () => {
+          saveStoredSession(null);
+          window.location.replace("/");
+        },
         snapshot,
         currentParticipantId: session.participantId,
         startParty,
