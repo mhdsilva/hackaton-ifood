@@ -16,6 +16,7 @@ interface TokenEndpointBody {
   refresh_expires_in?: unknown;
   scope?: unknown;
   error?: unknown;
+  error_description?: unknown;
 }
 
 export class IfoodMcpOAuthProvider implements McpOAuthProvider {
@@ -89,7 +90,19 @@ export class IfoodMcpOAuthProvider implements McpOAuthProvider {
     }
 
     const body = (await response.json().catch(() => ({}))) as TokenEndpointBody;
-    if (!response.ok) throw classifyTokenError(response.status, body.error);
+    if (!response.ok) {
+      // Diagnóstico no log do servidor: o `error` do OAuth e uma descrição curta
+      // não carregam token nem segredo. A resposta ao navegador é sanitizada.
+      console.warn("iFood token endpoint refused the request", {
+        status: response.status,
+        error: typeof body.error === "string" ? body.error : null,
+        description:
+          typeof body.error_description === "string"
+            ? body.error_description.slice(0, 200)
+            : null,
+      });
+      throw classifyTokenError(response.status, body.error);
+    }
 
     if (typeof body.access_token !== "string" || body.access_token.length === 0) {
       throw new IfoodOAuthError(

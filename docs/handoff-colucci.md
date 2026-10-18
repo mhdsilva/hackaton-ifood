@@ -15,6 +15,9 @@ invocation` no navegador (passa nos testes do Node).
 - Base local: `http://localhost:3333`.
 - CORS aceita lista separada por vírgula:
   `CORS_ORIGIN=http://localhost:5173,http://SEU_IP:5173 npm run dev:api` (testa do celular na rede).
+  ⚠️ No **prod**, hoje o CORS libera **só** `https://ifood-party.matheushenrique2773.workers.dev`
+  (origem do front no Workers). Para testar do `localhost:5173` contra a API de prod, é preciso
+  **adicionar `http://localhost:5173` ao `CORS_ORIGIN` no Coolify**; senão o navegador bloqueia.
 - Guardar o `participantToken` em `sessionStorage`; enviar `Authorization: Bearer <token>` só nas
   rotas privadas. Nunca na URL nem no estado compartilhado.
 
@@ -134,6 +137,12 @@ fonte de ids — senão o `POST /answers` volta `INVALID_ANSWERS`.
 
 Falta criar (não existe em `apps/web`): a tela de **resultado** (`READY_FOR_THEME` →
 `POST /parties/:id/reveal` → `THEME_REVEALED` com `party.theme`).
+
+**Referência executável (teste):** `apps/web/app/test/` (rota `/test`) — integração mínima que já
+funciona contra a API: cria/entra pela regra do `?code`, faz polling, baixa o questionário de
+`GET /questionnaire` (sem ids fixos), conecta o iFood, revela o tema e busca opções. Serve para
+validar o backend pelo navegador e como referência para ligar as telas de verdade — **não é a tela
+final** (visual é do Otávio).
 
 ## Ainda NÃO existe (não bloqueia)
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { McpOAuthError, McpOAuthFlow } from "./oauth-flow.js";
+import { IfoodOAuthError } from "../ifood/oauth-errors.js";
 import type {
   McpOAuthProvider,
   OAuthAuthorizationInput,
@@ -146,6 +147,64 @@ test("wraps provider failures without exposing their message and identifies the 
       assert.equal(error.code, "OAUTH_EXCHANGE_FAILED");
       assert.deepEqual(error.actor, { partyId: "party-a", participantId: "ana" });
       assert.equal(error.message.includes("secret-token-value"), false);
+      return true;
+    },
+  );
+});
+
+test("sanitizes a provider error that arrives without state", async () => {
+  const flow = new McpOAuthFlow(new RecordingProvider(), new McpSessionRegistry());
+
+  await assert.rejects(
+    () =>
+      flow.complete({
+        state: "",
+        code: "",
+        providerError: "invalid_client: leak-abc123",
+      }),
+    (error: unknown) => {
+      assert.ok(error instanceof McpOAuthError);
+      assert.equal(error.code, "OAUTH_CALLBACK_INVALID");
+      assert.equal(error.message.includes("leak-abc123"), false);
+      assert.match(error.message, /without state/);
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    () => flow.complete({ state: "", code: "" }),
+    (error: unknown) =>
+      error instanceof McpOAuthError &&
+      error.code === "OAUTH_CALLBACK_INVALID" &&
+      /requires state/.test(error.message),
+  );
+});
+
+test("surfaces the sanitized classification of a provider exchange error", async () => {
+  const provider = new RecordingProvider();
+  provider.exchangeCode = async () => {
+    throw new IfoodOAuthError(
+      "INVALID_CLIENT",
+      "O iFood recusou as credenciais do agente (client id ou secret)",
+      401,
+    );
+  };
+  const flow = new McpOAuthFlow(provider, new McpSessionRegistry());
+  flow.start({ partyId: "party-a", participantId: "ana" });
+  assert.ok(provider.authorization);
+
+  await assert.rejects(
+    () =>
+      flow.complete({
+        partyId: "party-a",
+        state: provider.authorization!.state,
+        code: "any-code",
+      }),
+    (error: unknown) => {
+      assert.ok(error instanceof McpOAuthError);
+      assert.equal(error.code, "OAUTH_EXCHANGE_FAILED");
+      assert.match(error.message, /credenciais do agente/);
+      assert.deepEqual(error.actor, { partyId: "party-a", participantId: "ana" });
       return true;
     },
   );
