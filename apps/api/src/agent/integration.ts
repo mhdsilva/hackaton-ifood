@@ -54,7 +54,9 @@ export interface ParticipantRef {
 
 export interface PartyAgentIntegration {
   /** Ausente no modo `demo`: lá a conexão é sintética e vai direto para `connected`. */
-  validateConnection?(actor: ParticipantRef): Promise<Extract<McpConnectionStatus, "connected" | "error">>;
+  validateConnection?(
+    actor: ParticipantRef,
+  ): Promise<{ status: Extract<McpConnectionStatus, "connected" | "error">; name?: string }>;
   listAddresses?(actor: ParticipantRef): Promise<ParticipantAddress[]>;
   resolveNewAddress?(
     actor: ParticipantRef,
@@ -109,7 +111,7 @@ export function createIfoodIntegration(deps: {
       try {
         return await validateConnection(clientFor(actor));
       } catch {
-        return "error";
+        return { status: "error" as const };
       }
     },
     async listAddresses(actor) {

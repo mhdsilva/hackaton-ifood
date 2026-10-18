@@ -238,13 +238,18 @@ async function completeOAuthCallback(
     state: state ?? "",
     providerError: providerError ?? undefined,
   });
-  const status = options.agent?.validateConnection
+  const validation = options.agent?.validateConnection
     ? await options.agent.validateConnection(actor)
-    : "connected";
-  service.setMcpConnectionStatusForParticipant(actor.partyId, actor.participantId, status);
+    : { status: "connected" as const };
+  service.setMcpConnectionStatusForParticipant(
+    actor.partyId,
+    actor.participantId,
+    validation.status,
+    validation.name,
+  );
   const redirect = new URL(options.frontendUrl);
   redirect.searchParams.set("partyId", actor.partyId);
-  redirect.searchParams.set("mcp", status);
+  redirect.searchParams.set("mcp", validation.status);
   sendRedirect(response, redirect.toString());
 }
 

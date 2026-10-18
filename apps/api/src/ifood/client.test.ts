@@ -117,12 +117,12 @@ test("maps an MCP errors envelope to TOOL_ERROR", async () => {
   );
 });
 
-test("validateConnection exposes only connected or error", async () => {
+test("validateConnection returns the status and only the display name", async () => {
   const ok = fakeMcp(() => ({ success: true, data: { fullName: "Pessoa", email: "x@y" } }));
   const okClient = new IfoodMcpClient({ session: session("t"), fetchImpl: ok.fetchImpl, now: () => NOW });
-  assert.equal(await validateConnection(okClient), "connected");
+  assert.deepEqual(await validateConnection(okClient), { status: "connected", name: "Pessoa" });
 
   const denied = fakeMcp(() => ({}), 401);
   const deniedClient = new IfoodMcpClient({ session: session("t"), fetchImpl: denied.fetchImpl, now: () => NOW });
-  assert.equal(await validateConnection(deniedClient), "error");
+  assert.deepEqual(await validateConnection(deniedClient), { status: "error" });
 });

@@ -94,6 +94,11 @@ function requiredText(value: unknown, field: string): string {
   return value.trim();
 }
 
+/** Nome opcional (o front não pergunta): o `getUser` do iFood preenche depois do OAuth. */
+function optionalText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
 function newParticipant(id: string, name: string): Participant {
   return {
     id,
@@ -121,7 +126,7 @@ export class PartyService {
 
   create(input: CreatePartyRequest): PartySessionResponse {
     const hostId = requiredText(input?.host?.id, "host.id");
-    const hostName = requiredText(input?.host?.name, "host.name");
+    const hostName = optionalText(input?.host?.name) ?? "Anfitrião";
     const partyName = requiredText(input?.name, "name");
     const partyId = randomUUID();
 
@@ -167,7 +172,11 @@ export class PartyService {
     }
 
     const id = requiredText(input?.participant?.id, "participant.id");
-    const name = requiredText(input?.participant?.name, "participant.name");
+    const guestCount = snapshot.participants.filter(
+      (participant) => participant.id !== snapshot.party.hostParticipantId,
+    ).length;
+    // Sem nome digitado, o rótulo provisório é "Convidado 1", "Convidado 2"… até o getUser.
+    const name = optionalText(input?.participant?.name) ?? `Convidado ${guestCount + 1}`;
     if (snapshot.participants.some((participant) => participant.id === id)) {
       throw new PartyError(
         409,
@@ -370,6 +379,8 @@ export class PartyService {
     idOrCode: string,
     participantId: string,
     status: McpConnectionStatus,
+    /** Nome vindo do `getUser`; substitui o rótulo provisório quando presente. */
+    name?: string,
   ): PartySnapshot {
     const snapshot = this.get(idOrCode);
     const participant = snapshot.participants.find(
@@ -380,6 +391,10 @@ export class PartyService {
     }
 
     participant.mcpConnectionStatus = status;
+    const profileName = optionalText(name);
+    if (profileName) {
+      participant.name = profileName.slice(0, 80);
+    }
     return this.store.save(snapshot);
   }
 

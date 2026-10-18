@@ -1,20 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyHeader } from "@/components/party/party-shell";
 import { PreparationParticipants } from "@/components/party/preparation-participants";
+import { useParty } from "@/components/party/party-provider";
 import { useSplashComplete } from "@/components/party/splash-intro";
-import { getMockPreparationGroup } from "@/lib/mock-preparation";
 
 const UNBOXING_DURATION_MS = 2400;
 
 export function UnboxingScreen() {
-  const [group] = useState(getMockPreparationGroup);
+  const { snapshot } = useParty();
   const bag = useRef<HTMLDivElement>(null);
   const splashComplete = useSplashComplete();
   const router = useRouter();
@@ -56,7 +56,7 @@ export function UnboxingScreen() {
               <div ref={bag}><Image src="/figma/reveal-bag.svg" alt="Sacola surpresa do iFood" width={262.069} height={280} priority /></div>
             </div>
           </section>
-          <PreparationParticipants participants={group.participants} hostId={group.hostId} centered />
+          <PreparationParticipants participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} centered />
         </div>
       </main>
     </div>

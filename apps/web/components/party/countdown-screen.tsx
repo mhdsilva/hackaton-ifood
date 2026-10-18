@@ -6,11 +6,11 @@ import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyHeader } from "@/components/party/party-shell";
 import { FlipDigit } from "@/components/party/flip-digit";
 import { PreparationParticipants } from "@/components/party/preparation-participants";
+import { useParty } from "@/components/party/party-provider";
 import { useSplashComplete } from "@/components/party/splash-intro";
-import { getMockPreparationGroup } from "@/lib/mock-preparation";
 
 export function CountdownScreen() {
-  const [group] = useState(getMockPreparationGroup);
+  const { snapshot } = useParty();
   const [count, setCount] = useState(3);
   const splashComplete = useSplashComplete();
   const router = useRouter();
@@ -40,7 +40,7 @@ export function CountdownScreen() {
               <FlipDigit value={count} previous={count === 3 ? 3 : count + 1} />
             </div>
           </section>
-          <PreparationParticipants participants={group.participants} hostId={group.hostId} centered />
+          <PreparationParticipants participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} centered />
         </div>
       </main>
     </div>

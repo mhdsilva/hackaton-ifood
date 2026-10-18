@@ -1,13 +1,15 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyShell } from "@/components/party/party-shell";
 import { PreparationParticipants } from "@/components/party/preparation-participants";
-import { getMockPreparationGroup } from "@/lib/mock-preparation";
+import { useParty } from "@/components/party/party-provider";
 
 export function OrderConfirmedScreen() {
-  const group = getMockPreparationGroup();
+  const { snapshot } = useParty();
 
   return (
     <PartyShell
@@ -23,7 +25,7 @@ export function OrderConfirmedScreen() {
           <Image src="/figma/reveal-bag.svg" alt="Sacola do iFood" width={262.069} height={280} priority />
         </div>
       </section>
-      <PreparationParticipants participants={group.participants} hostId={group.hostId} centered />
+      <PreparationParticipants participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} centered />
     </PartyShell>
   );
 }
