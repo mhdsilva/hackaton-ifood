@@ -1,5 +1,6 @@
 import type { PartySnapshot } from "@sidequest/contracts";
 import fixture from "../../../fixtures/party.json";
+import type { PartyAddress } from "@/lib/addresses";
 
 // Cenário visual baseado na fixture compartilhada, com os nomes do Figma.
 export function getMockParty(): PartySnapshot {
@@ -27,14 +28,8 @@ export function getMockPartySession(inviteCode: string | null = null) {
 }
 
 // Modelo de apresentação provisório: não é um contrato de endereço da API.
-export interface MockAddress {
-  id: string;
-  label: string;
-  street: string;
-  region: string;
-}
-
-export function getMockAddresses(): MockAddress[] {
+// Ver `lib/addresses.ts` — o mesmo tipo serve para os endereços reais do iFood.
+export function getMockAddresses(): PartyAddress[] {
   return [
     { id: "home", label: "Casa", street: "Rua das Figueiras, 120 · ap. 42", region: "Vila Aurora · São Paulo, SP" },
     { id: "work", label: "Trabalho", street: "Av. Horizonte, 850 · sala 12", region: "Bela Vista · São Paulo, SP" },

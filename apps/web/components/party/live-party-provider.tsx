@@ -9,9 +9,9 @@
  * intacto como referência/fallback) para as telas não precisarem mudar, além do import. Cada
  * tela de pergunta recebe as opções de `useParty()` em vez de ler `lib/mock-questionnaire.ts`
  * direto; se `GET /questionnaire` falhar, essas opções caem para o catálogo fixo do Figma, e
- * `usingLiveCatalog: false` avisa o resto do app que está no modo simulado. Endereço continua
- * modelo visual local — a resolução real do iFood acontece depois, em `/options` (ver
- * docs/handoff-colucci.md, §"Ainda NÃO existe").
+ * `usingLiveCatalog: false` avisa o resto do app que está no modo simulado. Os endereços vêm
+ * de `GET /parties/:id/addresses` quando a conta do iFood está conectada; sem conexão
+ * (`409 MCP_NOT_CONNECTED`) a tela mantém a lista de exemplo, sinalizada como simulada.
  */
 import {
   createContext,
@@ -23,6 +23,8 @@ import {
   type ReactNode,
 } from "react";
 import type {
+  AddressResolutionResponse,
+  CreateParticipantAddressRequest,
   PartySnapshot,
   QuestionnaireDefinition,
   QuestionnaireQuestionOption,
@@ -30,6 +32,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { describeError, liveApi, LiveApiError } from "@/lib/api-client";
+import { fromParticipantAddress, pickDefaultAddress, type PartyAddress } from "@/lib/addresses";
 import { buildQuestionnaireAnswers } from "@/lib/live-answers";
 import { getMockAddresses } from "@/lib/mock-party";
 import {
@@ -103,9 +106,17 @@ interface LivePartyValue {
   startParty: () => void;
   /** `false` quando `GET /questionnaire` falhou e as telas usam o catálogo fixo do Figma. */
   usingLiveCatalog: boolean;
-  addresses: ReturnType<typeof getMockAddresses>;
+  addresses: PartyAddress[];
+  /** `true` quando a lista veio do iFood; `false` quando são exemplos locais. */
+  addressesLive: boolean;
+  addressesLoading: boolean;
+  addressesError: string | null;
   selectedAddressId: string | null;
   setSelectedAddressId: (id: string | null) => void;
+  /** Busca candidatos no iFood para um endereço digitado (tela de novo endereço). */
+  findAddressCandidates: (address: string) => Promise<AddressResolutionResponse>;
+  /** Salva o candidato escolhido, atualiza a lista e o seleciona. */
+  saveAddress: (input: CreateParticipantAddressRequest) => Promise<boolean>;
   restrictionOptions: readonly Option[];
   restrictions: string[];
   toggleRestriction: (id: string) => void;
@@ -160,8 +171,11 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
   const [restoring, setRestoring] = useState(() => loadStoredSession() !== null);
   const [connectingMcp, setConnectingMcp] = useState(false);
 
-  const [addresses] = useState(getMockAddresses);
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(addresses[0]?.id ?? null);
+  const [addresses, setAddresses] = useState<PartyAddress[]>(getMockAddresses);
+  const [addressesLive, setAddressesLive] = useState(false);
+  const [addressesResolvedKey, setAddressesResolvedKey] = useState<string | null>(null);
+  const [addressesError, setAddressesError] = useState<string | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(() => getMockAddresses()[0]?.id ?? null);
   const [restrictions, setRestrictions] = useState<string[]>([]);
   const [otherRestriction, setOtherRestriction] = useState("");
   const [budgetOptionId, setBudgetOptionId] = useState<string | null>(null);
@@ -239,6 +253,52 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     };
   }, [session]);
 
+  // Endereços reais do iFood: recarrega quando a conexão MCP muda de estado (o polling
+  // atualiza o snapshot). Sem conta conectada a API responde 409 e a tela mantém os
+  // exemplos, deixando claro que são simulados.
+  const participantMcpStatus =
+    snapshot?.participants.find((participant) => participant.id === session?.participantId)
+      ?.mcpConnectionStatus ?? "not_connected";
+  // Chave da última busca: `addressesLoading` é derivado (nunca um `setState` síncrono
+  // dentro do efeito) e muda quando a Party ou a conexão MCP mudam.
+  const addressesRequestKey = session
+    ? `${session.partyId}:${session.participantId}:${participantMcpStatus}`
+    : null;
+  const addressesLoading =
+    addressesRequestKey !== null && addressesResolvedKey !== addressesRequestKey;
+
+  useEffect(() => {
+    if (!session || addressesRequestKey === null) return;
+    let alive = true;
+    liveApi
+      .getAddresses(session.partyId, session.token)
+      .then((result) => {
+        if (!alive) return;
+        const next = result.addresses.map(fromParticipantAddress);
+        setAddressesLive(true);
+        setAddressesError(null);
+        setAddresses(next);
+        setSelectedAddressId((current) => pickDefaultAddress(next, current));
+      })
+      .catch((cause: unknown) => {
+        if (!alive) return;
+        const notConnected = cause instanceof LiveApiError && cause.code === "MCP_NOT_CONNECTED";
+        setAddressesLive(false);
+        setAddressesError(notConnected ? null : describeError(cause));
+        if (notConnected) {
+          const fallback = getMockAddresses();
+          setAddresses(fallback);
+          setSelectedAddressId((current) => pickDefaultAddress(fallback, current));
+        }
+      })
+      .finally(() => {
+        if (alive) setAddressesResolvedKey(addressesRequestKey);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [session, addressesRequestKey]);
+
   const startParty = useCallback(() => {
     if (!session || !snapshot || !canStartLiveParty(snapshot, session.participantId)) return;
     setActionError(null);
@@ -266,13 +326,43 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     setConnectingMcp(true);
     try {
       const result = await liveApi.authorizeMcp(session.partyId, session.token);
-      window.open(result.authorizationUrl, "_blank", "noopener,noreferrer");
+      // Navega a própria aba: `window.open` depois do `await` cai no bloqueio de popup
+      // (o gesto do clique já terminou) e falha em silêncio. O backend devolve a pessoa
+      // para `FRONTEND_URL`, a sessão continua no `sessionStorage` e o polling reconecta.
+      window.location.assign(result.authorizationUrl);
     } catch (cause) {
       setActionError(describeError(cause));
-    } finally {
       setConnectingMcp(false);
     }
   }, [session]);
+
+  const findAddressCandidates = useCallback(
+    async (address: string): Promise<AddressResolutionResponse> => {
+      if (!session) throw new Error("Sessão da Party não encontrada.");
+      return liveApi.resolveAddress(session.partyId, session.token, { address });
+    },
+    [session],
+  );
+
+  const saveAddress = useCallback(
+    async (input: CreateParticipantAddressRequest): Promise<boolean> => {
+      if (!session) return false;
+      setActionError(null);
+      try {
+        const result = await liveApi.createAddress(session.partyId, session.token, input);
+        const saved = fromParticipantAddress(result.address);
+        setAddresses((current) => [...current.filter((entry) => entry.id !== saved.id), saved]);
+        setAddressesLive(true);
+        setAddressesError(null);
+        setSelectedAddressId(saved.id);
+        return true;
+      } catch (cause) {
+        setActionError(describeError(cause));
+        return false;
+      }
+    },
+    [session],
+  );
 
   function toggleRestriction(id: string) {
     setRestrictions((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
@@ -346,13 +436,13 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
       setActionError(describeError(cause));
       return false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     session,
     canCompleteQuestionnaire,
     questionnaire,
     usingLiveCatalog,
     selectedAddressId,
+    addresses,
     restrictions,
     otherRestriction,
     budgetOptionId,
@@ -405,8 +495,13 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
         startParty,
         usingLiveCatalog,
         addresses,
+        addressesLive,
+        addressesLoading,
+        addressesError,
         selectedAddressId,
         setSelectedAddressId,
+        findAddressCandidates,
+        saveAddress,
         restrictionOptions,
         restrictions,
         toggleRestriction,

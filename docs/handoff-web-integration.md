@@ -1,0 +1,82 @@
+# Handoff — integração real do front com o backend
+
+> De: Maeda. 18/10/2026. Para: Otávio (dono de `apps/web`) e quem pegar o próximo ajuste.
+> Resumo de alto nível em [`como-funciona.md`](como-funciona.md); status de marcos em
+> [`marcos.md`](marcos.md).
+
+## O que entrou
+
+Troquei o `MockPartyProvider` por um novo `LivePartyProvider`
+(`apps/web/components/party/live-party-provider.tsx`), que fala com a API de verdade. O
+`mock-party-provider.tsx` continua intacto, sem uso — serve de referência/fallback.
+
+- **Lobby**: criar/entrar vira `POST /parties` ou `POST /parties/:code/join` de verdade (tela
+  de entrada provisória, sem desenho do Júlio — só nome da Party e nome da pessoa). Sessão
+  persiste em `sessionStorage` (`ifood-party-live-session`); `GET /parties/:id` em polling a
+  cada 1,5s; "Iniciar party" chama `POST /parties/:id/close`.
+- **Questionário**: busca `GET /questionnaire` uma vez por sessão. Se der certo, as telas de
+  restrições/orçamento/energia/formato do pedido/desejos/exclusões passam a mostrar as opções
+  **reais** da API; se falhar, caem pro catálogo fixo do Figma (`usingLiveCatalog: false`) e
+  ficam assim a sessão inteira — nunca troca de catálogo no meio. O envio final vira
+  `POST /parties/:id/answers`.
+- **Revelar resultado**: chama `POST /parties/:id/reveal` antes de navegar pra
+  `/party/preparing` (a tela de animação do Otávio).
+- **Conectar iFood**: botão novo, provisório, no lobby (sem desenho — ver bug abaixo).
+
+Arquivos novos: `live-party-provider.tsx`, `lib/live-answers.ts` (tradução dos ids do catálogo
+mock pros ids reais, só usada quando `usingLiveCatalog` é falso), `lib/api-client.ts` (promovido
+de `app/test/live-api.ts`, agora compartilhado).
+
+## ✅ Corrigido — "Conectar iFood" não fazia nada
+
+**Sintoma:** clicar no botão não abria login nenhum, sem erro visível.
+
+**Causa:** `connectMcp` (em `live-party-provider.tsx`) chamava `liveApi.authorizeMcp(...)` (uma
+requisição `await`) e só depois chamava `window.open(url, "_blank")`. Navegador bloqueia popup
+aberto fora do gesto síncrono do clique — como o `window.open` rodava só depois do `await`, o
+bloqueio era silencioso. Era bug de popup-blocker, não da API.
+
+**Correção aplicada:** a própria aba navega para a URL de autorização.
+
+```ts
+const result = await liveApi.authorizeMcp(session.partyId, session.token);
+window.location.assign(result.authorizationUrl);
+```
+
+Isso combina com o fluxo desenhado: depois do login o backend redireciona para `FRONTEND_URL`
+(hoje a raiz do Workers) e a sessão volta do `sessionStorage`, então o app reabre no mesmo
+lobby sozinho. Os parâmetros `?partyId=...&mcp=connected` continuam ignorados; o status chega
+pelo polling de `GET /parties/:id`.
+
+## Endereço real (entrou depois deste handoff)
+
+`/party/address` deixou de ser 100% mock:
+
+- `GET /parties/:id/addresses` alimenta a lista quando a conta do iFood está conectada. O
+  polling só refaz a busca quando o `mcpConnectionStatus` muda (`session` + status formam a
+  chave da requisição).
+- Sem conexão a API responde `409 MCP_NOT_CONNECTED`; a tela mantém os **endereços de
+  exemplo** e avisa explicitamente que não vêm do iFood (nunca simula sucesso).
+- O item escolhido guarda o `addressId` real (`ParticipantAddress.addressId`), que é o que
+  `POST /parties/:id/options` espera em `addressId`.
+- "Adicionar novo endereço" (`/party/pending/new-address`) agora funciona de verdade, com
+  apresentação provisória: `POST /addresses/resolve` → escolher candidato → `POST /addresses`
+  → volta para `/party/address` com o endereço novo selecionado.
+
+Ainda falta o desenho do Júlio para essa tela e para o detalhe do endereço (complemento,
+apelido, referência). O envio ficou só com `address` + `candidateId` + `neighborhood`.
+
+
+## O que ainda fica fora (sem desenho do Júlio)
+
+- **Detalhe do endereço**: a tela de adicionar endereço funciona, mas só envia `address`,
+  `candidateId` e `neighborhood`; complemento, apelido e referência ainda não têm campo.
+- **Opções, carrinho, pedido**: não existem telas. `POST /parties/:id/options`,
+  `/cart`, `/order`, `/order/:id`, `GET /parties/:id/retrospective` já existem no backend.
+- **Vouchers**: backend só lê o total com cupom, não aplica (`D3` em `marcos.md`).
+
+## Verificação
+
+Depois da correção do botão e da ligação do endereço: `typecheck:web`, `lint:web`, `build:web`
+(produção, 18 rotas) e `npm test` na raiz limpos. O clique do "Conectar iFood" ainda precisa ser
+conferido no navegador de verdade — redirecionamento de aba não aparece em tipo, lint ou build.
