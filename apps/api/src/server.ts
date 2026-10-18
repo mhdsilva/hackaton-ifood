@@ -18,6 +18,7 @@ import type { LocalOption } from "./agent/types.js";
 import { CheckoutError } from "./ifood/checkout.js";
 import { IfoodMcpError } from "./ifood/client.js";
 import { createIfoodProvider, loadIfoodConfig } from "./ifood/index.js";
+import { loadOpenCodeConfig, OpenCodeClient } from "./llm/index.js";
 import { DemoMcpOAuthProvider } from "./mcp/demo-oauth-provider.js";
 import { McpOAuthError, McpOAuthFlow } from "./mcp/oauth-flow.js";
 import type { McpOAuthMode, McpOAuthProvider } from "./ifood/provider.js";
@@ -537,8 +538,14 @@ if (isEntrypoint) {
     oauthMode === "ifood" ? createIfoodProvider(env) : new DemoMcpOAuthProvider(publicApiUrl);
   const oauth = new McpOAuthFlow(provider, sessions);
   const ifoodConfig = oauthMode === "ifood" ? loadIfoodConfig(env) : undefined;
+  const llmConfig = oauthMode === "ifood" ? loadOpenCodeConfig(env) : undefined;
   const agent = ifoodConfig
-    ? createIfoodIntegration({ sessions, provider, mcpUrl: ifoodConfig.mcpUrl })
+    ? createIfoodIntegration({
+        sessions,
+        provider,
+        mcpUrl: ifoodConfig.mcpUrl,
+        ...(llmConfig ? { llm: { client: new OpenCodeClient({ config: llmConfig }) } } : {}),
+      })
     : createDemoIntegration();
   const callbackPath = ifoodConfig
     ? new URL(ifoodConfig.redirectUri).pathname
@@ -557,6 +564,12 @@ if (isEntrypoint) {
     if (oauthMode === "demo") {
       console.warn(
         "MCP OAuth em MODO DEMONSTRAÇÃO: os tokens são sintéticos e nenhuma conta real do iFood é conectada.",
+      );
+    } else {
+      console.log(
+        llmConfig
+          ? `Planner LLM ligado (modelo ${llmConfig.model}).`
+          : "Planner LLM desligado (sem OPENCODE_API_KEY): usando o pipeline determinístico.",
       );
     }
   });

@@ -19,6 +19,21 @@ export class AgentError extends Error {
   }
 }
 
+/**
+ * Erros que exigem ação do participante (endereço, conexão): não podem ser mascarados pelo
+ * fallback nem pela fixture. Mesma regra do ADR 0001.
+ */
+export const ACTIONABLE_AGENT_CODES = new Set<AgentError["code"]>([
+  "NO_ADDRESS",
+  "ADDRESS_SELECTION_REQUIRED",
+  "ADDRESS_NOT_FOUND",
+  "MCP_NOT_CONNECTED",
+]);
+
+export function isActionableAgentError(error: unknown): boolean {
+  return error instanceof AgentError && ACTIONABLE_AGENT_CODES.has(error.code);
+}
+
 /** Rótulo seguro para mostrar ao participante: alias, ou bairro e cidade. */
 export function addressLabel(address: IfoodAddress): string {
   if (address.alias) return address.alias;

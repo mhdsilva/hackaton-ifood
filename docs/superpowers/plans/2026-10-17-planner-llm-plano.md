@@ -141,8 +141,8 @@ decidir qual das duas entra no pitch.
 | ✅ P1 | Montar as mensagens iniciais (tema, orçamento, restrições, endereços sanitizados) | `agent/planner-context.ts` | feito: `planner-context.test.ts` |
 | ✅ P2 | Tool de finalização `proposeOptions` + whitelist dos IDs vistos | `agent/planner.ts` | feito: ID inventado é descartado (`planner.test.ts`) |
 | ✅ P3 | Traduzir a proposta em `LocalOption[]` reusando `getItem` + `buildOption` | `agent/planner-options.ts` | feito: proposta vira até 3 opções no orçamento (`planner-options.test.ts`) |
-| P4 | Ligar na integração: com config → planner; alguns erros → determinístico | `agent/integration.ts` | teste: sem chave = caminho de hoje; com fake = planner |
-| P5 | Timeout/limite e degradação sem quebrar os outros participantes | `agent/integration.ts` | teste: planner travado não derruba o participante B |
+| ✅ P4 | Ligar na integração: com config → planner; alguns erros → determinístico | `agent/integration.ts`, `server.ts` | feito: sem chave = caminho de hoje; com `ChatClient` = planner (`fallback.test.ts`) |
+| ✅ P5 | Timeout/limite e degradação sem quebrar os outros participantes | `agent/fallback.ts` | feito: planner travado degrada pro determinístico (`fallback.test.ts`) |
 | P6 | Tools próprias: `themeFromAnswers`, `proposeSubstitutes`, `describeOption`, `rankOptions` | `agent/planner-tools.ts` (novo) | teste: substituto só aponta para o que existe |
 | P7 | Negociação de grupo sobre `PartyOptionsResult[]` | `agent/negotiate.ts` (novo) | teste: endereço sem o tema migra para um tema comum |
 | P8 | Config no deploy e pin da demo | `compose.yaml`, `.env.example`, `docs/*` | `OPENCODE_*` documentado; plano "pinado" para o ensaio |
@@ -151,9 +151,10 @@ decidir qual das duas entra no pitch.
 > `OPENCODE_BASE_URL` (vieram no `b8bb662`, e o compose também recebeu `IFOOD_*`).
 > Só falta o código consumir `loadOpenCodeConfig`.
 
-**P1–P3 entregues e testados, mas ainda não ligados ao fluxo**: `resolveOptionsWithPlanner`
-existe e tem teste ponta a ponta, mas nada chama — falta o **P4** (integração escolher o planner
-quando há `OPENCODE_API_KEY` e cair no determinístico quando não há).
+**P1–P5 entregues e testados.** O agente agora está **ligado e opt-in**: em `MCP_OAUTH_MODE=ifood`,
+se `loadOpenCodeConfig()` achar `OPENCODE_API_KEY` o `server.ts` injeta um `OpenCodeClient` na
+integração; sem a chave, o comportamento é exatamente o de antes (determinístico + fixture). Faltam
+**P6** (tools do sistema) e **P7** (negociação de grupo).
 
 ## 6. Como testar e como ensaiar a demo
 
