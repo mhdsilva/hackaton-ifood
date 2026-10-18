@@ -102,8 +102,9 @@ Aponte o DNS do domínio para o IP da instância e, no Coolify, crie um recurso 
 `PUBLIC_API_URL` é obrigatório no deploy: é a base do callback OAuth e precisa ser a URL HTTPS
 pública da API (não `localhost`), alcançável pelo navegador do participante. `MCP_OAUTH_MODE` tem
 padrão `demo`; em `ifood`, o container precisa das credenciais do agente e a redirect usada deve
-estar cadastrada no portal do iFood. O `compose.yaml` ainda não repassa `IFOOD_*` ao serviço `api`;
-ao publicar em `ifood`, acrescente essas variáveis no Coolify (ou no compose).
+estar cadastrada no portal do iFood. O `compose.yaml` repassa `IFOOD_CLIENT_ID`,
+`IFOOD_CLIENT_SECRET` e `IFOOD_REDIRECT_URI` (opcional) ao serviço `api`; cadastre os valores como
+variáveis/segredos no Coolify, nunca no arquivo.
 
 A porta 3333 não é publicada no host. O proxy do Coolify alcança o contêiner `api` pela rede do recurso.
 
