@@ -31,17 +31,23 @@ invocation` no navegador (passa nos testes do Node).
 
 Estados: `OPEN` → `COLLECTING_ANSWERS` → `READY_FOR_THEME`.
 
-### 2. Questionário (wizard "Pergunta X de X")
+### 2. Questionário (wizard "Etapa X de 8")
 
 - `GET /questionnaire` → `{ version, title, introduction?, questions[] }`. Renderizar a partir
   daqui; não fixar campos.
 - Cada questão: `id`, `type` (`text`, `address`, `single_choice`, `multi_choice`, `scale`),
-  `label`, `required` e, quando couber, `options` / `min` / `max` / `helpText`.
-- `POST /parties/:id/answers` (Bearer) `{ questionnaireVersion, answers, completed: true }`.
+  `label`, `required` e, quando couber, `options` / `min` / `max` / `helpText` / `maxSelections` /
+  `allowOther` + `otherOptionId` + `otherInput` (campo "Outro") / `customInput` ("Outro valor").
+- Convenções do "Outro": texto em `answers["<questionId>__other"]`; valor digitado em
+  `answers["<questionId>__value"]`.
+- `POST /parties/:id/answers` (Bearer) `{ questionnaireVersion, answers, completed }`. `completed:
+  false` salva um rascunho (progresso incremental por etapa); `true` conclui.
 - Erros: `QUESTIONNAIRE_VERSION_UNKNOWN` e `INVALID_ANSWERS`
-  (`details.issues = [{ questionId, reason }]`).
+  (`details.issues = [{ questionId, reason }]`; `reason`: `required`, `invalid_option`,
+  `too_many_selections`, `other_required`, `custom_value_required`, `out_of_range`, ...).
 - A definição é provisória; as perguntas finais são do Júlio.
-- Cada participante tem `questionnaireResponse` (ou `null`) no snapshot — dá para mostrar progresso.
+- Cada participante tem `questionnaireResponse` (ou `null`) e `answeredCount` no snapshot — usa
+  para a tela "Etapa X de 8" e para o host ver `Pronto`/`Aguardando`.
 - Quando todos enviam `completed: true`, a Party vira `READY_FOR_THEME` sozinha.
 
 ### 3. Reconexão

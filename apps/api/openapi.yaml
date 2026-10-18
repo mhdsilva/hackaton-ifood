@@ -443,6 +443,23 @@ components:
       properties:
         id: { type: string }
         label: { type: string }
+        value:
+          type: number
+          description: "Significado numérico da opção (ex.: faixa de orçamento)."
+    QuestionnaireTextInput:
+      type: object
+      required: [label, placeholder]
+      properties:
+        label: { type: string }
+        placeholder: { type: string }
+    QuestionnaireCustomInput:
+      type: object
+      required: [label, placeholder, min, max]
+      properties:
+        label: { type: string }
+        placeholder: { type: string }
+        min: { type: number }
+        max: { type: number }
     QuestionnaireQuestion:
       type: object
       required: [id, type, label, required]
@@ -459,6 +476,24 @@ components:
           items: { $ref: "#/components/schemas/QuestionnaireQuestionOption" }
         min: { type: number }
         max: { type: number }
+        maxSelections:
+          type: integer
+          minimum: 1
+          description: '`multi_choice`: teto de seleções (ex.: Etapa 6 = 2).'
+        allowOther:
+          type: boolean
+          description: Abre um campo de texto quando a opção `otherOptionId` é escolhida.
+        otherOptionId:
+          type: string
+          description: Id da opção "Outro"; padrão `outro`.
+        otherInput: { $ref: "#/components/schemas/QuestionnaireTextInput" }
+        customInput:
+          allOf:
+            - $ref: "#/components/schemas/QuestionnaireCustomInput"
+          description: '`single_choice`: "Outro valor" digitado, validado por faixa.'
+      description: |
+        O texto do "Outro" vai em `answers["<questionId>__other"]` (string) e o
+        valor do "Outro valor" em `answers["<questionId>__value"]` (number).
     QuestionnaireDefinition:
       type: object
       required: [version, title, questions]
@@ -490,7 +525,9 @@ components:
       properties:
         questionnaireVersion: { type: string, minLength: 1 }
         answers: { type: object, additionalProperties: true }
-        completed: { const: true }
+        completed:
+          type: boolean
+          description: '`true` conclui; `false` salva um rascunho (progresso incremental).'
     QuestionnaireResponse:
       type: object
       additionalProperties: false
@@ -498,7 +535,7 @@ components:
       properties:
         questionnaireVersion: { type: string, minLength: 1 }
         answers: { type: object, additionalProperties: true }
-        completed: { const: true }
+        completed: { type: boolean }
         submittedAt: { type: string, format: date-time }
     Participant:
       type: object
@@ -511,6 +548,10 @@ components:
             - $ref: "#/components/schemas/QuestionnaireResponse"
             - type: "null"
         mcpConnectionStatus: { $ref: "#/components/schemas/McpConnectionStatus" }
+        answeredCount:
+          type: integer
+          minimum: 0
+          description: Quantas perguntas da definição o participante já respondeu.
     PartySnapshot:
       type: object
       required: [party, participants]

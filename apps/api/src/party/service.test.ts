@@ -176,3 +176,59 @@ test("rejects unknown versions and invalid answers", () => {
     { address: "casa", restrictions: ["vegetariano"] },
   );
 });
+
+test("accepts a draft without advancing and tracks progress", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  const guest = service.join(host.party.party.id, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  service.closeMembership(host.party.party.id, host.participantToken);
+  const partyId = host.party.party.id;
+
+  const emptyDraft = service.submitAnswers(partyId, host.participantToken, {
+    questionnaireVersion: "v1",
+    answers: {},
+    completed: false,
+  });
+  assert.equal(emptyDraft.party.status, "COLLECTING_ANSWERS");
+  assert.equal(
+    emptyDraft.participants.find((participant) => participant.id === "ana")
+      ?.questionnaireResponse?.completed,
+    false,
+  );
+  assert.equal(
+    emptyDraft.participants.find((participant) => participant.id === "ana")
+      ?.answeredCount,
+    0,
+  );
+
+  const partial = service.submitAnswers(partyId, host.participantToken, {
+    questionnaireVersion: "v1",
+    answers: { address: "casa" },
+    completed: false,
+  });
+  assert.equal(
+    partial.participants.find((participant) => participant.id === "ana")
+      ?.answeredCount,
+    1,
+  );
+  assert.equal(partial.party.status, "COLLECTING_ANSWERS");
+
+  const guestDone = service.submitAnswers(
+    partyId,
+    guest.participantToken,
+    answers("pizza"),
+  );
+  assert.equal(guestDone.party.status, "COLLECTING_ANSWERS");
+
+  const hostDone = service.submitAnswers(
+    partyId,
+    host.participantToken,
+    answers("massa"),
+  );
+  assert.equal(hostDone.party.status, "READY_FOR_THEME");
+});

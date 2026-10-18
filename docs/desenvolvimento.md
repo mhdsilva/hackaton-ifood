@@ -33,17 +33,23 @@ Consultar `GET /parties/:id` a cada 1–2 segundos. Parar o polling ao desmontar
 
 **Validar a sessão ao carregar:** `GET /parties/:id/session` (Bearer) devolve `{ participant }`. Como o estado é em memória, um restart da API invalida os tokens; use esta rota para tratar "sessão expirada, entrar de novo" antes de montar a tela.
 
-**Renderizar o formulário dinamicamente:** `GET /questionnaire` devolve a definição atual (`{ version, title, introduction?, questions[] }`). Cada questão tem `id`, `type` (`text`, `address`, `single_choice`, `multi_choice`, `scale`), `label`, `required` e, quando couber, `options`/`min`/`max`/`helpText`. A questão `address` não tem `options` — as opções vêm do iFood (`listAddresses`). As perguntas ainda são provisórias; a tela não deve fixar campos. Envie as respostas neste envelope, usando o `version` recebido:
+**Renderizar o formulário dinamicamente:** `GET /questionnaire` devolve a definição atual (`{ version, title, introduction?, questions[] }`). Cada questão tem `id`, `type` (`text`, `address`, `single_choice`, `multi_choice`, `scale`), `label`, `required` e, quando couber, `options`/`min`/`max`/`helpText`. Questões de múltipla escolha podem ter `maxSelections` (ex.: "até 2"); opções podem ter `value` (número, ex.: faixa de orçamento); e uma questão pode ter `allowOther`/`otherOptionId`/`otherInput` (campo "Outro") ou `customInput` ("Outro valor" digitado). A questão `address` não tem `options` — as opções vêm do iFood (`listAddresses`). As perguntas ainda são provisórias; a tela não deve fixar campos.
+
+Envie cada etapa incrementalmente (rascunho) ou tudo no fim, usando o `version` recebido:
 
 ```ts
 type SubmitAnswersRequest = {
   questionnaireVersion: string
   answers: Record<string, unknown>
-  completed: true
+  completed: boolean   // false = rascunho; true = conclui a Etapa 8
 }
 ```
 
-O backend valida as respostas contra a definição. Erros possíveis em `POST /parties/:id/answers`: `QUESTIONNAIRE_VERSION_UNKNOWN` (versão inexistente) e `INVALID_ANSWERS` (faltou obrigatório ou tipo inválido; o corpo traz `details.issues` com `{ questionId, reason }`).
+Convenções do "Outro": o texto livre vai em `answers["<questionId>__other"]` (string) e o valor digitado do "Outro valor" em `answers["<questionId>__value"]` (number).
+
+O backend valida as respostas contra a definição (`requireComplete` só quando `completed: true`). Erros em `POST /parties/:id/answers`: `QUESTIONNAIRE_VERSION_UNKNOWN` e `INVALID_ANSWERS` (com `details.issues = [{ questionId, reason }]`; `reason` pode ser `required`, `invalid_option`, `too_many_selections`, `other_required`, `custom_value_required`, `out_of_range`, `invalid_text`/`invalid_address`).
+
+Cada `participant` no snapshot traz `answeredCount` (quantas perguntas já respondeu) e `questionnaireResponse.completed` — use para a tela "Etapa X de 8" e para o host ver `Pronto`/`Aguardando`. A Party vira `READY_FOR_THEME` quando **todos** enviam `completed: true`.
 
 ## Conexão MCP (OAuth por participante)
 

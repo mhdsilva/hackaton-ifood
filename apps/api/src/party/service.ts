@@ -11,7 +11,7 @@ import type {
 } from "@sidequest/contracts";
 
 import { ParticipantAccessStore, type ParticipantActor } from "./access.js";
-import { getQuestionnaire, validateAnswers } from "./questionnaire.js";
+import { countAnswered, getQuestionnaire, validateAnswers } from "./questionnaire.js";
 import { PartyStore } from "./store.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -43,6 +43,7 @@ function newParticipant(id: string, name: string): Participant {
     name,
     questionnaireResponse: null,
     mcpConnectionStatus: "not_connected",
+    answeredCount: 0,
   };
 }
 
@@ -160,12 +161,19 @@ export class PartyService {
       !input?.answers ||
       typeof input.answers !== "object" ||
       Array.isArray(input.answers) ||
-      input.completed !== true
+      typeof input.completed !== "boolean"
     ) {
-      throw new PartyError(400, "INVALID_INPUT", "A complete answers object is required");
+      throw new PartyError(
+        400,
+        "INVALID_INPUT",
+        "An answers object and a boolean completed flag are required",
+      );
     }
 
-    const issues = validateAnswers(definition, input.answers as Record<string, unknown>);
+    const answers = input.answers as Record<string, unknown>;
+    const issues = validateAnswers(definition, answers, {
+      requireComplete: input.completed,
+    });
     if (issues.length > 0) {
       throw new PartyError(
         400,
@@ -184,10 +192,11 @@ export class PartyService {
 
     participant.questionnaireResponse = {
       questionnaireVersion,
-      answers: structuredClone(input.answers),
-      completed: true,
+      answers: structuredClone(answers),
+      completed: input.completed,
       submittedAt: new Date().toISOString(),
     };
+    participant.answeredCount = countAnswered(definition, answers);
     this.reconcileStatus(snapshot);
     return this.store.save(snapshot);
   }

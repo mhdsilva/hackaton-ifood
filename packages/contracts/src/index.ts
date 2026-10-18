@@ -18,7 +18,7 @@ export type McpConnectionStatus = (typeof MCP_CONNECTION_STATUSES)[number];
 export interface QuestionnaireResponse {
   questionnaireVersion: string;
   answers: Record<string, unknown>;
-  completed: true;
+  completed: boolean;
   submittedAt: string;
 }
 
@@ -27,6 +27,11 @@ export interface Participant {
   name: string;
   questionnaireResponse: QuestionnaireResponse | null;
   mcpConnectionStatus: McpConnectionStatus;
+  /**
+   * Quantas perguntas da definição o participante já respondeu (progresso da
+   * Etapa X de 8). O servidor sempre envia; opcional para dados legados/mocks.
+   */
+  answeredCount?: number;
 }
 
 export interface PartyInfo {
@@ -61,7 +66,8 @@ export interface JoinPartyRequest {
 export interface SubmitAnswersRequest {
   questionnaireVersion: string;
   answers: Record<string, unknown>;
-  completed: true;
+  /** `true` conclui o questionário; `false` salva um rascunho (progresso incremental). */
+  completed: boolean;
 }
 
 export interface PartySessionResponse {
@@ -85,6 +91,20 @@ export type QuestionnaireQuestionType =
 export interface QuestionnaireQuestionOption {
   id: string;
   label: string;
+  /** Significado numérico da opção (ex.: faixa de orçamento `ate-25` → 25). */
+  value?: number;
+}
+
+export interface QuestionnaireTextInput {
+  label: string;
+  placeholder: string;
+}
+
+export interface QuestionnaireCustomInput {
+  label: string;
+  placeholder: string;
+  min: number;
+  max: number;
 }
 
 export interface QuestionnaireQuestion {
@@ -96,6 +116,16 @@ export interface QuestionnaireQuestion {
   options?: QuestionnaireQuestionOption[];
   min?: number;
   max?: number;
+  /** `multi_choice`: teto de seleções (ex.: Etapa 6 = 2). */
+  maxSelections?: number;
+  /** Abre um campo de texto quando a opção `otherOptionId` é escolhida. */
+  allowOther?: boolean;
+  /** Id da opção "Outro"; padrão `outro`. */
+  otherOptionId?: string;
+  /** Rótulo e placeholder do campo de texto do "Outro". */
+  otherInput?: QuestionnaireTextInput;
+  /** `single_choice`: "Outro valor" digitado, validado por faixa. */
+  customInput?: QuestionnaireCustomInput;
 }
 
 export interface QuestionnaireDefinition {
