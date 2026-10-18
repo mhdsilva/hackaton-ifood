@@ -215,7 +215,7 @@ Só começa com A, B e T prontos. Cada task usa o token do **próprio** particip
 | D3 | Vouchers opcionais: `listVouchers`, `setVoucher` | `ifood/checkout.ts` | D2 | P | cupom aplicado quando existir |
 | D4 ✅ | `submitOrder` **só** com `userConsent: true` do próprio participante | `ifood/checkout.ts` | D2 | M | teste recusa sem consentimento |
 | D5 ✅ | `trackOrder` com a cadência de `agentHints.retryMessage` e parada em `pollingStop` | `ifood/checkout.ts` | D4 | M | estado resumido sem dados pessoais |
-| D6 | Expor retrospectiva factual agregada, sem feedback | `GET /parties/:id/retrospective` | D5, T | libera tema, participantes, unidades, estabelecimentos e maior distância aproximada entre endereços depois de todos os pedidos `CONCLUDED` |
+| D6 ✅ | Expor retrospectiva factual agregada, sem feedback | `GET /parties/:id/retrospective` | D5, T | feito — libera tema, participantes, unidades, estabelecimentos e maior distância aproximada entre endereços depois de todos os pedidos `CONCLUDED` |
 | D7 | Decidir o modo da demo: pedido real com Pix não pago, só carrinho ou simulado | `docs/marcos.md` | grupo | P | decisão registrada |
 
 > D1, D2, D4 e D5 foram consolidados em **`ifood/checkout.ts`** (não há `cart.ts`, `cart-checkout.ts`,
@@ -228,8 +228,8 @@ Só começa com A, B e T prontos. Cada task usa o token do **próprio** particip
 
 | ID | Task | Arquivos | Depende | Tam. | Pronto quando |
 | --- | --- | --- | --- | --- | --- |
-| E1 | Cadastrar a redirect URL pública da Oracle no agente | portal iFood | domínio HTTPS | P | login completa fora de `localhost` |
-| E2 | Regenerar o Client Secret e atualizar os ambientes | portal, `.env` | E1 | P | secret antigo não funciona mais |
+| E1 ✅ | Cadastrar a redirect URL pública da Oracle no agente | portal iFood | domínio HTTPS | P | feito (18/10) — `https://api-ifood.kairootech.com.br/mcp-connection/callback` cadastrada e logando de verdade em produção |
+| E2 ✅ | Regenerar o Client Secret e atualizar os ambientes | portal, `.env` | E1 | P | feito (18/10) — secret novo gerado e confirmado funcionando na Coolify (`OAUTH_EXCHANGE_FAILED` resolvido) |
 | E3 | Ensaio com três contas ou duas reais e uma simulada | — | A, B, D | M | fluxo roda duas vezes seguidas |
 | E4 | Checklist: sem tokens em logs, fixtures ou erros; `.env`, `docs/SECRET` e `opencode.json` fora do git | — | E3 | P | `git grep` não acha segredo |
 
@@ -288,12 +288,24 @@ Saída: dois dispositivos conectam contas diferentes e `getUser` devolve o dono 
 | A8 | segunda conta autenticada | Maeda |
 | Etapa 4 com dados reais | tema, orçamento e restrições por participante | Júlio |
 
+## Fora do radar anterior (chegou depois de 17/10)
+
+Não estava neste documento; registrando pra não sumir:
+
+- **Endereço real do participante**: `GET/POST /parties/:id/addresses` e
+  `POST /parties/:id/addresses/resolve` já existem no backend (commit "add participant address
+  flow"). O front (`/party/address`) ainda usa a lista mock — é a próxima integração óbvia.
+- **Planner LLM**: absorveu o B11 por inteiro (`agent/planner.ts`, `negotiate.ts`, `sanitize.ts`,
+  `llm/client.ts`). Com `OPENCODE_API_KEY` configurado usa o modelo para montar/negociar as
+  opções; sem a chave, cai no determinístico. `OPENCODE_BASE_URL` aponta pro endpoint
+  `/inference/go` da própria opencode (Zen/Go), não um servidor nosso.
+
 ## Decisões pendentes
 
 | Decisão | Quem decide | Bloqueia |
 | --- | --- | --- |
-| Quantas contas de teste o portal permite | Maeda | A8 |
-| Domínio HTTPS e redirect URL pública | Matheus, Maeda | A9, E1 |
+| Quantas contas de teste o portal permite | Maeda | A8 (3ª conta) |
 | Perguntas, tema e votação | Júlio | T, B com dados reais |
-| Demo com pedido real, carrinho ou simulado | grupo | D, E |
+| Demo com pedido real, carrinho ou simulado | grupo | D7, E3 |
 | ~~Aprovar `ResolveOptions*` em `contracts`~~ ✅ feito (tipos já em `packages/contracts`) | Matheus | — |
+| ~~Domínio HTTPS e redirect URL pública~~ ✅ feito (E1) | Matheus, Maeda | — |
