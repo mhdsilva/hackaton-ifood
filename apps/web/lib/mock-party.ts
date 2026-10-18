@@ -14,6 +14,18 @@ export function getMockParty(): PartySnapshot {
   };
 }
 
+// Entrada simulada: o código da URL não autentica um participante real.
+export function getMockPartySession(inviteCode: string | null = null) {
+  const snapshot = getMockParty();
+  if (inviteCode) snapshot.party.code = inviteCode;
+  const guest = snapshot.participants.find((participant) => participant.id !== snapshot.party.hostParticipantId);
+  return {
+    snapshot,
+    inviteCode,
+    currentParticipantId: inviteCode && guest ? guest.id : snapshot.party.hostParticipantId,
+  };
+}
+
 // Modelo de apresentação provisório: não é um contrato de endereço da API.
 export interface MockAddress {
   id: string;

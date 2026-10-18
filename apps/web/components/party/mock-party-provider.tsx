@@ -1,29 +1,35 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
-import { canStartMockParty, getMockAddresses, getMockParty } from "@/lib/mock-party";
+import { createContext, useCallback, useContext, useState } from "react";
+import { canStartMockParty, getMockAddresses, getMockPartySession } from "@/lib/mock-party";
 import type { BudgetOptionId, RestrictionId } from "@/lib/mock-questionnaire";
 
 function useMockPartyState() {
-  const [snapshot, setSnapshot] = useState(getMockParty);
+  const [session, setSession] = useState(getMockPartySession);
+  const { snapshot, currentParticipantId, inviteCode } = session;
   const [addresses] = useState(getMockAddresses);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(addresses[0]?.id ?? null);
-  const currentParticipantId = snapshot.party.hostParticipantId;
   const [restrictions, setRestrictions] = useState<RestrictionId[]>([]);
   const [otherRestriction, setOtherRestriction] = useState("");
   const [budgetOptionId, setBudgetOptionId] = useState<BudgetOptionId | null>(null);
   const [customBudget, setCustomBudget] = useState("");
+
+  const enterParty = useCallback((code: string | null) => {
+    setSession((current) => current.inviteCode === code ? current : getMockPartySession(code));
+  }, []);
 
   function toggleRestriction(id: RestrictionId) {
     setRestrictions((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   }
 
   function startParty() {
-    if (!canStartMockParty(snapshot, currentParticipantId)) return;
-    setSnapshot({ ...snapshot, party: { ...snapshot.party, status: "COLLECTING_ANSWERS", membershipLocked: true } });
+    setSession((current) => {
+      if (!canStartMockParty(current.snapshot, current.currentParticipantId)) return current;
+      return { ...current, snapshot: { ...current.snapshot, party: { ...current.snapshot.party, status: "COLLECTING_ANSWERS", membershipLocked: true } } };
+    });
   }
 
-  return { snapshot, currentParticipantId, addresses, selectedAddressId, setSelectedAddressId, startParty,
+  return { snapshot, currentParticipantId, inviteCode, enterParty, addresses, selectedAddressId, setSelectedAddressId, startParty,
     restrictions, toggleRestriction, otherRestriction, setOtherRestriction,
     budgetOptionId, setBudgetOptionId, customBudget, setCustomBudget };
 }
