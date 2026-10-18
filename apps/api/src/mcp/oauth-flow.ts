@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import type { McpOAuthMode, McpOAuthProvider } from "../ifood/provider.js";
+import { IfoodOAuthError } from "../ifood/oauth-errors.js";
 import { McpSessionRegistry } from "./session-registry.js";
 
 export interface OAuthActor {
@@ -150,10 +151,16 @@ export class McpOAuthFlow {
           : {}),
         ...(tokens.scopes ? { scopes: [...tokens.scopes] } : {}),
       });
-    } catch {
+    } catch (error) {
+      // `IfoodOAuthError` já nasce com mensagem sanitizada (nunca carrega code,
+      // verifier, secret ou token). Repassá-la separa "credencial recusada"
+      // (`INVALID_CLIENT`) de "código/redirect/verifier" (`INVALID_GRANT`), que
+      // é o que permite diagnosticar o callback.
       throw new McpOAuthError(
         "OAUTH_EXCHANGE_FAILED",
-        "The iFood authorization could not be completed",
+        error instanceof IfoodOAuthError
+          ? error.message
+          : "The iFood authorization could not be completed",
         actor,
       );
     }
