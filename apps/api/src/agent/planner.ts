@@ -9,6 +9,7 @@
 
 import type { ChatClient, ChatMessage, ChatTool } from "../llm/client.js";
 import { pickAddress } from "./pick-address.js";
+import { itemKey, systemTools } from "./planner-tools.js";
 import { sanitizeAddress, stripPersonalData } from "./sanitize.js";
 import type { IfoodAddress, IfoodCoordinates, IfoodItemDetail, IfoodSearchItem, ToolCaller } from "./types.js";
 
@@ -291,17 +292,11 @@ export interface PlannerToolbox {
 
 const DEFAULT_MAX_PROPOSED = 3;
 
-function itemKey(merchantId: unknown, itemId: unknown): string | undefined {
-  if (typeof merchantId !== "string" || typeof itemId !== "string") return undefined;
-  const merchant = merchantId.trim();
-  const item = itemId.trim();
-  return merchant && item ? `${merchant}\u0000${item}` : undefined;
-}
-
 /**
- * Allowlist do iFood + `proposeOptions`: a tool que o modelo chama para finalizar. Ela só aceita
- * IDs que apareceram nas respostas do MCP (`seen`); o resto volta como `rejected` e o modelo pode
- * corrigir. É o invariante "nunca ID inventado" da spec, sem depender do bom comportamento do LLM.
+ * Allowlist do iFood + as tools do sistema + `proposeOptions`: a tool que o modelo chama para
+ * finalizar. Ela só aceita IDs que apareceram nas respostas do MCP (`seen`); o resto volta como
+ * `rejected` e o modelo pode corrigir. É o invariante "nunca ID inventado" da spec, sem depender
+ * do bom comportamento do LLM.
  */
 export function plannerToolbox(
   caller: ToolCaller,
@@ -318,7 +313,18 @@ export function plannerToolbox(
     }
   };
 
-  const toolbox = baseIfoodTools(caller, settings, record);
+  const toolbox: ToolBox = {
+    ...baseIfoodTools(caller, settings, record),
+    ...systemTools({
+      caller,
+      seen,
+      record,
+      resolveLocation: (addressId) => resolveCoordinates(caller, addressId),
+      ...(settings.maxSearchResults !== undefined
+        ? { searchPageSize: settings.maxSearchResults }
+        : {}),
+    }),
+  };
   toolbox.proposeOptions = {
     description:
       "Finaliza a busca propondo as opções escolhidas. Só aceita itens que apareceram nas respostas das tools.",

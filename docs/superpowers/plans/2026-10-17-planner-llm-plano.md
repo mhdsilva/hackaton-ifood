@@ -143,8 +143,8 @@ decidir qual das duas entra no pitch.
 | ✅ P3 | Traduzir a proposta em `LocalOption[]` reusando `getItem` + `buildOption` | `agent/planner-options.ts` | feito: proposta vira até 3 opções no orçamento (`planner-options.test.ts`) |
 | ✅ P4 | Ligar na integração: com config → planner; alguns erros → determinístico | `agent/integration.ts`, `server.ts` | feito: sem chave = caminho de hoje; com `ChatClient` = planner (`fallback.test.ts`) |
 | ✅ P5 | Timeout/limite e degradação sem quebrar os outros participantes | `agent/fallback.ts` | feito: planner travado degrada pro determinístico (`fallback.test.ts`) |
-| P6 | Tools próprias: `themeFromAnswers`, `proposeSubstitutes`, `describeOption`, `rankOptions` | `agent/planner-tools.ts` (novo) | teste: substituto só aponta para o que existe |
-| P7 | Negociação de grupo sobre `PartyOptionsResult[]` | `agent/negotiate.ts` (novo) | teste: endereço sem o tema migra para um tema comum |
+| ✅ P6 | Tools próprias: `themeFromAnswers`, `proposeSubstitutes`, `describeOption`, `rankOptions` | `agent/planner-tools.ts` | feito: substituto só aponta para o que existe (`planner-tools.test.ts`) |
+| ✅ P7 | Negociação de grupo sobre `PartyOptionsResult[]` | `agent/negotiate.ts` | feito: endereço sem o tema migra para um tema comum (`negotiate.test.ts`) |
 | P8 | Config no deploy e pin da demo | `compose.yaml`, `.env.example`, `docs/*` | `OPENCODE_*` documentado; plano "pinado" para o ensaio |
 
 > `compose.yaml` e `.env.example` **já** têm `OPENCODE_API_KEY`, `OPENCODE_MODEL` e
@@ -153,8 +153,13 @@ decidir qual das duas entra no pitch.
 
 **P1–P5 entregues e testados.** O agente agora está **ligado e opt-in**: em `MCP_OAUTH_MODE=ifood`,
 se `loadOpenCodeConfig()` achar `OPENCODE_API_KEY` o `server.ts` injeta um `OpenCodeClient` na
-integração; sem a chave, o comportamento é exatamente o de antes (determinístico + fixture). Faltam
-**P6** (tools do sistema) e **P7** (negociação de grupo).
+integração; sem a chave, o comportamento é exatamente o de antes (determinístico + fixture).
+
+**P6–P7 também entregues**: as tools do sistema (`planner-tools.ts`) e a negociação de grupo
+(`negotiate.ts`). A negociação é **determinística** (tenta os temas conhecidos e re-resolve todos);
+um orquestrador com LLM pode injetar a lista `alternatives` vinda do modelo. Falta **ligar P6/P7 no
+fluxo**: hoje a `integration` só usa o planner por participante; a negociação precisa ser chamada
+por quem orquestra a revelação do tema (área do Matheus, junto com o `deriveTheme`).
 
 ## 6. Como testar e como ensaiar a demo
 

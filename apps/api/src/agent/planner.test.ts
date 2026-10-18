@@ -317,3 +317,27 @@ test("plannerToolbox keeps the proposal empty when every id is invented", async 
   await planner.toolbox.proposeOptions.run({ items: [{ merchantId: "m9", itemId: "i9" }] });
   assert.equal(planner.proposal(), undefined);
 });
+
+test("plannerToolbox exposes the system tools alongside the iFood tools", () => {
+  const caller: ToolCaller = {
+    async callTool<T>(): Promise<T> {
+      return { results: [] } as T;
+    },
+  };
+
+  const names = Object.keys(plannerToolbox(caller).toolbox);
+  for (const name of [
+    "listAddresses",
+    "getUserProfile",
+    "getRecommendations",
+    "searchOffers",
+    "getItem",
+    "themeFromAnswers",
+    "proposeSubstitutes",
+    "describeOption",
+    "rankOptions",
+    "proposeOptions",
+  ]) {
+    assert.ok(names.includes(name), `faltou a tool ${name}`);
+  }
+});

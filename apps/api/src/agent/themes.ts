@@ -25,3 +25,8 @@ export function themeQueries(theme: string): string[] {
   const key = normalize(theme);
   return THEME_QUERIES[key] ?? (key ? [theme.trim()] : []);
 }
+
+/** Temas conhecidos; base para a negociação de grupo propor alternativas. */
+export function knownThemes(): string[] {
+  return Object.keys(THEME_QUERIES);
+}
