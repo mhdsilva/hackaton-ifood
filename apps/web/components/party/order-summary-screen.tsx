@@ -1,14 +1,23 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { OrderDetailCard } from "@/components/party/order-detail-card";
 import { PartyShell } from "@/components/party/party-shell";
+import { useParty } from "@/components/party/party-provider";
 import { getMockRevealedOrder } from "@/lib/mock-reveal";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export function OrderSummaryScreen() {
-  const order = getMockRevealedOrder();
+  const { snapshot, currentParticipantId } = useParty();
+  const variant = Math.max(
+    snapshot.participants.findIndex((participant) => participant.id === currentParticipantId),
+    0,
+  );
+  // O pedido ainda é um cenário visual, mas segue o tema da Party e varia por participante.
+  const order = getMockRevealedOrder(snapshot.party.theme, variant);
   return (
     <PartyShell brandTone="light" contentClassName="gap-4 pt-3" footerClassName="space-y-2 pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={<>
       <Button asChild size="party" className="w-full"><Link href="/party/confirmed">Confirmar e pagar</Link></Button>
