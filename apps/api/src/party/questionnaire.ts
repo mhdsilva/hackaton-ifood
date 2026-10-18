@@ -1,4 +1,7 @@
-import type { QuestionnaireDefinition } from "@sidequest/contracts";
+import type {
+  QuestionnaireDefinition,
+  QuestionnaireQuestion,
+} from "@sidequest/contracts";
 
 /**
  * Definição temporária do questionário, alinhada ao fluxo do Figma. O Júlio ainda
@@ -52,6 +55,25 @@ export interface AnswerIssue {
   reason: string;
 }
 
+/**
+ * Texto livre do "Outro" e valor digitado do "Outro valor" ficam em chaves
+ * companheiras, para manter `answers` como mapa plano:
+ *   answers[`${questionId}__other`] -> string
+ *   answers[`${questionId}__value`] -> number
+ */
+export const OTHER_ANSWER_SUFFIX = "__other";
+export const VALUE_ANSWER_SUFFIX = "__value";
+
+export function otherAnswerKey(questionId: string): string {
+  return `${questionId}${OTHER_ANSWER_SUFFIX}`;
+}
+
+export function valueAnswerKey(questionId: string): string {
+  return `${questionId}${VALUE_ANSWER_SUFFIX}`;
+}
+
+const DEFAULT_OTHER_OPTION_ID = "outro";
+
 function isBlank(value: unknown): boolean {
   return (
     value === undefined ||
@@ -61,20 +83,72 @@ function isBlank(value: unknown): boolean {
   );
 }
 
+function otherOptionId(question: QuestionnaireQuestion): string {
+  return question.otherOptionId ?? DEFAULT_OTHER_OPTION_ID;
+}
+
+function selectedIncludes(value: unknown, optionId: string): boolean {
+  return Array.isArray(value) ? value.includes(optionId) : value === optionId;
+}
+
+export interface ValidateAnswersOptions {
+  /** `true` (padrão) cobra as obrigatórias; `false` valida só o que veio (rascunho). */
+  requireComplete?: boolean;
+}
+
+function checkOtherText(
+  question: QuestionnaireQuestion,
+  value: unknown,
+  answers: Record<string, unknown>,
+  issues: AnswerIssue[],
+): void {
+  if (!question.allowOther) return;
+  if (!selectedIncludes(value, otherOptionId(question))) return;
+  const text = answers[otherAnswerKey(question.id)];
+  if (typeof text !== "string" || text.trim() === "") {
+    issues.push({ questionId: question.id, reason: "other_required" });
+  }
+}
+
+function checkCustomValue(
+  question: QuestionnaireQuestion,
+  value: unknown,
+  answers: Record<string, unknown>,
+  issues: AnswerIssue[],
+): void {
+  const custom = question.customInput;
+  if (!custom) return;
+  if (value !== otherOptionId(question)) return;
+  const raw = answers[valueAnswerKey(question.id)];
+  if (
+    typeof raw !== "number" ||
+    Number.isNaN(raw) ||
+    raw < custom.min ||
+    raw > custom.max
+  ) {
+    issues.push({ questionId: question.id, reason: "custom_value_required" });
+  }
+}
+
 /**
  * Valida as respostas contra a definição da versão. Ignora chaves que não
- * pertencem à definição; cobra os obrigatórios e checa o tipo de cada resposta.
+ * pertencem à definição; cobra as obrigatórias (quando `requireComplete`) e
+ * checa tipo, teto de seleções, "Outro" com texto e "Outro valor" digitado.
  */
 export function validateAnswers(
   definition: QuestionnaireDefinition,
   answers: Record<string, unknown>,
+  options: ValidateAnswersOptions = {},
 ): AnswerIssue[] {
+  const requireComplete = options.requireComplete ?? true;
   const issues: AnswerIssue[] = [];
 
   for (const question of definition.questions) {
     const value = answers[question.id];
     if (isBlank(value)) {
-      if (question.required) issues.push({ questionId: question.id, reason: "required" });
+      if (requireComplete && question.required) {
+        issues.push({ questionId: question.id, reason: "required" });
+      }
       continue;
     }
 
@@ -95,7 +169,10 @@ export function validateAnswers(
           !question.options?.some((option) => option.id === value)
         ) {
           issues.push({ questionId: question.id, reason: "invalid_option" });
+          break;
         }
+        checkOtherText(question, value, answers, issues);
+        checkCustomValue(question, value, answers, issues);
         break;
       case "multi_choice":
         if (
@@ -107,7 +184,15 @@ export function validateAnswers(
           )
         ) {
           issues.push({ questionId: question.id, reason: "invalid_option" });
+          break;
         }
+        if (
+          question.maxSelections !== undefined &&
+          value.length > question.maxSelections
+        ) {
+          issues.push({ questionId: question.id, reason: "too_many_selections" });
+        }
+        checkOtherText(question, value, answers, issues);
         break;
       case "scale":
         if (
@@ -123,4 +208,13 @@ export function validateAnswers(
   }
 
   return issues;
+}
+
+/** Quantas perguntas da definição têm resposta (progresso "Etapa X de Y"). */
+export function countAnswered(
+  definition: QuestionnaireDefinition,
+  answers: Record<string, unknown>,
+): number {
+  return definition.questions.filter((question) => !isBlank(answers[question.id]))
+    .length;
 }

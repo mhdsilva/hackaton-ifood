@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 
 import type { McpConnectionStatus } from "@sidequest/contracts";
 
+import type { ChatClient } from "../llm/client.js";
 import {
   prepareCart,
   submitOrder,
@@ -19,8 +20,14 @@ import { IfoodMcpClient } from "../ifood/client.js";
 import type { McpOAuthProvider } from "../ifood/provider.js";
 import { validateConnection } from "../ifood/validate-connection.js";
 import type { McpSessionRegistry } from "../mcp/session-registry.js";
-import { fixtureCaller, loadDiscoveryFixture, resolveOptionsWithFallback } from "./fallback.js";
+import {
+  fixtureCaller,
+  loadDiscoveryFixture,
+  resolveOptionsPreferringPlanner,
+  resolveOptionsWithFallback,
+} from "./fallback.js";
 import { AgentError, pickAddress } from "./pick-address.js";
+import type { PlannerOptionsSettings } from "./planner-options.js";
 import { resolveOptions } from "./resolve-options.js";
 import type {
   IfoodAddress,
@@ -58,6 +65,8 @@ export function createIfoodIntegration(deps: {
   sessions: McpSessionRegistry;
   provider: McpOAuthProvider;
   mcpUrl?: string;
+  /** Planner LLM opcional: sem ele, a integração fica no caminho determinístico. */
+  llm?: { client: ChatClient; settings?: PlannerOptionsSettings };
 }): PartyAgentIntegration {
   const clientFor = (actor: ParticipantRef): IfoodMcpClient => {
     const session = deps.sessions.get(actor.partyId, actor.participantId);
@@ -83,10 +92,11 @@ export function createIfoodIntegration(deps: {
       }
     },
     resolveOptions(actor, input) {
-      return resolveOptionsWithFallback(
-        { ...input, participantId: actor.participantId },
-        clientFor(actor),
-      );
+      const fullInput = { ...input, participantId: actor.participantId };
+      const caller = clientFor(actor);
+      return deps.llm
+        ? resolveOptionsPreferringPlanner(fullInput, caller, deps.llm.client, deps.llm.settings ?? {})
+        : resolveOptionsWithFallback(fullInput, caller);
     },
     async prepareCart(actor, input) {
       const client = clientFor(actor);

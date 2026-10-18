@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 
-import { AgentError } from "./pick-address.js";
-import { resolveOptions, type ResolveOptionsSettings } from "./resolve-options.js";
+import type { ChatClient } from "../llm/client.js";
+import { isActionableAgentError } from "./pick-address.js";
+import { resolveOptionsWithPlanner, type PlannerOptionsSettings } from "./planner-options.js";
+import { resolveOptions, withTimeout, type ResolveOptionsSettings } from "./resolve-options.js";
 import type {
   IfoodItemDetail,
   IfoodSearchItem,
@@ -66,15 +68,7 @@ export async function resolveOptionsWithFallback(
   try {
     return await resolveOptions(input, caller, settings);
   } catch (error) {
-    if (
-      error instanceof AgentError &&
-      [
-        "NO_ADDRESS",
-        "ADDRESS_SELECTION_REQUIRED",
-        "ADDRESS_NOT_FOUND",
-        "MCP_NOT_CONNECTED",
-      ].includes(error.code)
-    ) {
+    if (isActionableAgentError(error)) {
       throw error;
     }
     const data = typeof fixture === "function" ? await fixture() : fixture;
@@ -88,5 +82,30 @@ export async function resolveOptionsWithFallback(
       source: "simulated",
       warnings: [...simulated.warnings, "Opções de demonstração: o iFood não respondeu a tempo"],
     };
+  }
+}
+
+/** Teto de tempo do caminho do planner; estourou, cai no determinístico. */
+const PLANNER_TIMEOUT_MS = 25_000;
+
+/**
+ * Prefere o planner LLM; qualquer falha que não exija ação do participante cai no determinístico
+ * (que por sua vez já tem a contingência da fixture). O agente é opt-in: sem `ChatClient` este
+ * caminho nem é escolhido, e um provedor fora do ar não muda o contrato da Party.
+ */
+export async function resolveOptionsPreferringPlanner(
+  input: ResolveOptionsInput,
+  caller: ToolCaller,
+  client: ChatClient,
+  settings: PlannerOptionsSettings = {},
+): Promise<ResolveOptionsOutput> {
+  try {
+    return await withTimeout(
+      resolveOptionsWithPlanner(input, caller, client, settings),
+      settings.timeoutMs ?? PLANNER_TIMEOUT_MS,
+    );
+  } catch (error) {
+    if (isActionableAgentError(error)) throw error;
+    return resolveOptionsWithFallback(input, caller);
   }
 }

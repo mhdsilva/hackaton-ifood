@@ -134,6 +134,23 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/reveal:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: revealPartyResult
+      security:
+        - participantToken: []
+      description: |
+        O host revela o resultado a partir de `READY_FOR_THEME`, levando a Party a
+        `THEME_REVEALED`. Só o host pode executar; outro participante recebe `403`.
+        Fora de `READY_FOR_THEME` (inclusive uma segunda revelação) recebe `409`.
+      responses:
+        "200": { $ref: "#/components/responses/PartyResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
   /parties/{partyId}/mcp-connection/authorize:
     parameters:
       - $ref: "#/components/parameters/PartyId"
@@ -205,6 +222,10 @@ paths:
         Troca o code pelos tokens, valida a conexão com uma leitura no iFood (modo `ifood`) e
         redireciona ao frontend com `mcp=connected` ou `mcp=error`. Não exige Bearer porque é
         chamado pelo redirecionamento do servidor de autorização.
+
+        Em modo `ifood`, a API atende no **caminho** da `IFOOD_REDIRECT_URI` cadastrada
+        (`server.callbackPath = new URL(IFOOD_REDIRECT_URI).pathname`), que pode diferir de
+        `/mcp-connection/callback`; este caminho só é o padrão em modo demo.
       parameters:
         - name: code
           in: query
@@ -433,7 +454,7 @@ components:
   schemas:
     PartyStatus:
       type: string
-      enum: [OPEN, COLLECTING_ANSWERS, READY_FOR_THEME]
+      enum: [OPEN, COLLECTING_ANSWERS, READY_FOR_THEME, THEME_REVEALED]
     McpConnectionStatus:
       type: string
       enum: [not_connected, validating, connected, error]
@@ -443,6 +464,23 @@ components:
       properties:
         id: { type: string }
         label: { type: string }
+        value:
+          type: number
+          description: "Significado numérico da opção (ex.: faixa de orçamento)."
+    QuestionnaireTextInput:
+      type: object
+      required: [label, placeholder]
+      properties:
+        label: { type: string }
+        placeholder: { type: string }
+    QuestionnaireCustomInput:
+      type: object
+      required: [label, placeholder, min, max]
+      properties:
+        label: { type: string }
+        placeholder: { type: string }
+        min: { type: number }
+        max: { type: number }
     QuestionnaireQuestion:
       type: object
       required: [id, type, label, required]
@@ -459,6 +497,24 @@ components:
           items: { $ref: "#/components/schemas/QuestionnaireQuestionOption" }
         min: { type: number }
         max: { type: number }
+        maxSelections:
+          type: integer
+          minimum: 1
+          description: '`multi_choice`: teto de seleções (ex.: Etapa 6 = 2).'
+        allowOther:
+          type: boolean
+          description: Abre um campo de texto quando a opção `otherOptionId` é escolhida.
+        otherOptionId:
+          type: string
+          description: Id da opção "Outro"; padrão `outro`.
+        otherInput: { $ref: "#/components/schemas/QuestionnaireTextInput" }
+        customInput:
+          allOf:
+            - $ref: "#/components/schemas/QuestionnaireCustomInput"
+          description: '`single_choice`: "Outro valor" digitado, validado por faixa.'
+      description: |
+        O texto do "Outro" vai em `answers["<questionId>__other"]` (string) e o
+        valor do "Outro valor" em `answers["<questionId>__value"]` (number).
     QuestionnaireDefinition:
       type: object
       required: [version, title, questions]
@@ -490,7 +546,9 @@ components:
       properties:
         questionnaireVersion: { type: string, minLength: 1 }
         answers: { type: object, additionalProperties: true }
-        completed: { const: true }
+        completed:
+          type: boolean
+          description: '`true` conclui; `false` salva um rascunho (progresso incremental).'
     QuestionnaireResponse:
       type: object
       additionalProperties: false
@@ -498,7 +556,7 @@ components:
       properties:
         questionnaireVersion: { type: string, minLength: 1 }
         answers: { type: object, additionalProperties: true }
-        completed: { const: true }
+        completed: { type: boolean }
         submittedAt: { type: string, format: date-time }
     Participant:
       type: object
@@ -511,6 +569,20 @@ components:
             - $ref: "#/components/schemas/QuestionnaireResponse"
             - type: "null"
         mcpConnectionStatus: { $ref: "#/components/schemas/McpConnectionStatus" }
+        answeredCount:
+          type: integer
+          minimum: 0
+          description: Quantas perguntas da definição o participante já respondeu.
+        orderStage:
+          type: string
+          enum: [none, options_ready, cart_created, order_submitted, delivered]
+          description: "Estágio do participante depois de READY_FOR_THEME (opções, carrinho, pedido, entrega)."
+        orderId:
+          type: string
+          description: Id do pedido do participante, quando já submetido.
+        orderStatus:
+          type: string
+          description: Último status.code do trackOrder do iFood, quando houver.
     PartySnapshot:
       type: object
       required: [party, participants]
@@ -526,6 +598,9 @@ components:
             hostParticipantId: { type: string }
             membershipLocked: { type: boolean }
             createdAt: { type: string, format: date-time }
+            theme:
+              type: string
+              description: Tema comum, gravado quando o host revela o resultado (POST /parties/{partyId}/reveal).
         participants:
           type: array
           minItems: 1

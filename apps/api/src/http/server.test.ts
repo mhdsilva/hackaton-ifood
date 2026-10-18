@@ -813,3 +813,106 @@ test("rejects invalid questionnaire answers over HTTP", async () => {
   assert.equal(unknown.statusCode, 400);
   assert.equal(unknown.json().error.code, "QUESTIONNAIRE_VERSION_UNKNOWN");
 });
+
+test("reveals the result over HTTP with host-only access", async () => {
+  const api = createApi();
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const partyId = host.party.party.id;
+  const guest = (
+    await request(api, "POST", `/parties/${partyId}/join`, {
+      participant: { id: "bruno", name: "Bruno" },
+    })
+  ).json();
+  await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
+  await request(
+    api,
+    "POST",
+    `/parties/${partyId}/answers`,
+    { questionnaireVersion: "v1", answers: { address: "casa" }, completed: true },
+    host.participantToken,
+  );
+  await request(
+    api,
+    "POST",
+    `/parties/${partyId}/answers`,
+    { questionnaireVersion: "v1", answers: { address: "casa" }, completed: true },
+    guest.participantToken,
+  );
+
+  const denied = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/reveal`,
+    {},
+    guest.participantToken,
+  );
+  assert.equal(denied.statusCode, 403);
+  assert.equal(denied.json().error.code, "HOST_ONLY");
+
+  const revealed = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/reveal`,
+    {},
+    host.participantToken,
+  );
+  assert.equal(revealed.statusCode, 200);
+  assert.equal(revealed.json().party.status, "THEME_REVEALED");
+  assert.equal(revealed.json().party.theme, "italiano");
+
+  const missing = await request(api, "POST", `/parties/${partyId}/reveal`, {});
+  assert.equal(missing.statusCode, 401);
+});
+
+test("reflects the participant order stage in the public snapshot", async () => {
+  let now = Date.parse("2026-10-17T20:00:00Z");
+  const api: TestApi = { ...createApi(), agent: createDemoIntegration(() => now) };
+  const { host } = await createHostAndAuthorize(api);
+  const partyId = host.party.party.id;
+  const token = host.participantToken;
+  const participant = async () => {
+    const snapshot = (await request(api, "GET", `/parties/${partyId}`)).json();
+    return snapshot.participants.find((entry: any) => entry.id === "ana");
+  };
+
+  assert.equal((await participant()).orderStage, undefined);
+
+  const options = (
+    await request(api, "POST", `/parties/${partyId}/options`, { theme: "italiano", budget: 60 }, token)
+  ).json();
+  assert.equal((await participant()).orderStage, "options_ready");
+
+  const cart = (
+    await request(api, "POST", `/parties/${partyId}/cart`, { option: options.options[0] }, token)
+  ).json();
+  assert.equal((await participant()).orderStage, "cart_created");
+
+  const order = (
+    await request(
+      api,
+      "POST",
+      `/parties/${partyId}/order`,
+      { cartId: cart.cartId, userConsent: true },
+      token,
+    )
+  ).json();
+  const afterOrder = await participant();
+  assert.equal(afterOrder.orderStage, "order_submitted");
+  assert.equal(afterOrder.orderId, order.orderId);
+
+  await request(api, "GET", `/parties/${partyId}/order/${order.orderId}`, undefined, token);
+  const afterStatus = await participant();
+  assert.equal(afterStatus.orderStatus, "CONFIRMED");
+  assert.equal(afterStatus.orderStage, "order_submitted");
+
+  now += 61_000;
+  await request(api, "GET", `/parties/${partyId}/order/${order.orderId}`, undefined, token);
+  const afterDelivered = await participant();
+  assert.equal(afterDelivered.orderStatus, "CONCLUDED");
+  assert.equal(afterDelivered.orderStage, "delivered");
+});

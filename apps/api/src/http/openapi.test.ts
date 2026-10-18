@@ -173,3 +173,12 @@ test("documents the participant session endpoint as Bearer-protected", () => {
   const operation = document.paths["/parties/{partyId}/session"]?.get;
   assert.deepEqual(operation?.security, [{ participantToken: [] }]);
 });
+
+test("documents the host reveal action", () => {
+  const operation = document.paths["/parties/{partyId}/reveal"]?.post;
+  assert.deepEqual(operation?.security, [{ participantToken: [] }]);
+  assert.equal(
+    document.components.schemas.PartyStatus.enum.includes("THEME_REVEALED"),
+    true,
+  );
+});

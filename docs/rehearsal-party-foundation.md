@@ -2,7 +2,8 @@
 
 Este ensaio valida somente criação, entrada, fechamento do grupo, respostas, polling e o registro privado da conexão MCP. Tema, cardápios e pedidos ficam fora deste checkpoint.
 
-> O passo 3 usa o placeholder de `apiKey` do recorte atual. O iFood MCP real conecta por OAuth 2.1 por participante — ver [`docs/ifood-mcp.md`](ifood-mcp.md). Quando o adaptador OAuth entrar, o passo 3 vira um redirecionamento de autorização.
+> O passo 3 usa o fluxo OAuth por participante já implementado. No modo `demo` (padrão) não há
+> login real; no modo `ifood`, cada pessoa entra na própria conta. Ver [`docs/ifood-mcp.md`](ifood-mcp.md).
 
 ## Antes do ensaio
 
@@ -56,28 +57,28 @@ Conferir nos três dispositivos, após no máximo dois segundos:
 - cada navegador possui seu próprio token;
 - nenhum token aparece em `GET /parties/:id`.
 
-## 3. Registrar três conexões MCP de ensaio (placeholder)
+## 3. Conectar o iFood (OAuth por participante)
 
-Placeholder do recorte: cada dispositivo chama a rota de conexão com uma `apiKey` fictícia.
+Cada dispositivo pede o link de autorização com o próprio Bearer token:
 
 ```http
-POST /parties/:id/mcp-connection
+POST /parties/:id/mcp-connection/authorize
 Authorization: Bearer <token-do-dispositivo>
-Content-Type: application/json
-
-{ "apiKey": "chave-de-ensaio-distinta" }
 ```
+
+A resposta traz `{ authorizationUrl, status: "validating", mode }`. Abra `authorizationUrl` no
+navegador do dispositivo. No modo `demo` (padrão) não há login real: o callback volta sozinho e
+marca `connected`. No modo `ifood`, cada pessoa entra na própria conta do iFood e autoriza.
 
 Conferir:
 
-- resposta `{ "status": "validating" }`;
-- o polling mostra `validating` apenas para aquele participante;
-- a chave não aparece na resposta nem no polling;
+- o polling mostra `validating` e depois `connected` (ou `error`) apenas para aquele participante;
+- nenhum `client_secret`, `access_token`, `refresh_token` ou `code` aparece na resposta, no polling,
+  nos logs ou no DevTools compartilhado;
 - uma requisição com token de outra Party retorna `403 ACCESS_DENIED`.
 
-Use chaves falsas neste primeiro ensaio. Na versão correta, o participante autoriza a conta por
-OAuth 2.1 (`POST .../mcp-connection/authorize` → navegador → `GET .../mcp-connection/callback`) e
-o backend guarda os tokens, nunca uma chave colada.
+O backend guarda os tokens no registro privado, indexado por `partyId + participantId`; nunca há
+chave colada nem `apiKey`. O modelo completo está em [`docs/ifood-mcp.md`](ifood-mcp.md).
 
 ## 4. Fechar o grupo
 

@@ -18,6 +18,7 @@ import type { LocalOption } from "./agent/types.js";
 import { CheckoutError } from "./ifood/checkout.js";
 import { IfoodMcpError } from "./ifood/client.js";
 import { createIfoodProvider, loadIfoodConfig } from "./ifood/index.js";
+import { loadOpenCodeConfig, OpenCodeClient } from "./llm/index.js";
 import { DemoMcpOAuthProvider } from "./mcp/demo-oauth-provider.js";
 import { McpOAuthError, McpOAuthFlow } from "./mcp/oauth-flow.js";
 import type { McpOAuthMode, McpOAuthProvider } from "./ifood/provider.js";
@@ -294,12 +295,11 @@ async function routeRequest(
     }
     const input = parseOptionsRequest(await readJson<Record<string, unknown>>(request));
     const agent = options.agent;
-    sendJson(
-      response,
-      200,
-      await runAgent(() => agent.resolveOptions(actor, input)),
-      allowedOrigin,
-    );
+    const output = await runAgent(() => agent.resolveOptions(actor, input));
+    service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+      orderStage: "options_ready",
+    });
+    sendJson(response, 200, output, allowedOrigin);
     return;
   }
 
@@ -323,6 +323,9 @@ async function routeRequest(
           ...(typeof body.addressId === "string" ? { addressId: body.addressId } : {}),
         }),
       );
+      service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+        orderStage: "cart_created",
+      });
       sendJson(response, 200, cart, allowedOrigin);
       return;
     }
@@ -336,13 +339,23 @@ async function routeRequest(
       const order = await runAgent(() =>
         submit(actor, { cartId: body.cartId as string, userConsent: body.userConsent === true }),
       );
+      service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+        orderStage: "order_submitted",
+        orderId: order.orderId,
+      });
       sendJson(response, 201, order, allowedOrigin);
       return;
     }
 
     if (resource === "order" && method === "GET" && orderId) {
       const track = requireAgent(options.agent, "trackOrder");
-      sendJson(response, 200, await runAgent(() => track(actor, orderId)), allowedOrigin);
+      const tracking = await runAgent(() => track(actor, orderId));
+      service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+        orderId: tracking.orderId,
+        orderStatus: tracking.statusCode,
+        ...(tracking.terminal ? { orderStage: "delivered" as const } : {}),
+      });
+      sendJson(response, 200, tracking, allowedOrigin);
       return;
     }
 
@@ -375,7 +388,7 @@ async function routeRequest(
   }
 
   const route = url.pathname.match(
-    /^\/parties\/([^/]+)(?:\/(join|close|answers))?$/,
+    /^\/parties\/([^/]+)(?:\/(join|close|answers|reveal))?$/,
   );
   if (!route) {
     throw new PartyError(404, "ROUTE_NOT_FOUND", "Route not found");
@@ -417,6 +430,14 @@ async function routeRequest(
           bearerToken(request),
           await readJson<SubmitAnswersRequest>(request),
         ),
+        allowedOrigin,
+      );
+      return;
+    case "reveal":
+      sendJson(
+        response,
+        200,
+        service.revealTheme(partyId, bearerToken(request)),
         allowedOrigin,
       );
       return;
@@ -517,8 +538,14 @@ if (isEntrypoint) {
     oauthMode === "ifood" ? createIfoodProvider(env) : new DemoMcpOAuthProvider(publicApiUrl);
   const oauth = new McpOAuthFlow(provider, sessions);
   const ifoodConfig = oauthMode === "ifood" ? loadIfoodConfig(env) : undefined;
+  const llmConfig = oauthMode === "ifood" ? loadOpenCodeConfig(env) : undefined;
   const agent = ifoodConfig
-    ? createIfoodIntegration({ sessions, provider, mcpUrl: ifoodConfig.mcpUrl })
+    ? createIfoodIntegration({
+        sessions,
+        provider,
+        mcpUrl: ifoodConfig.mcpUrl,
+        ...(llmConfig ? { llm: { client: new OpenCodeClient({ config: llmConfig }) } } : {}),
+      })
     : createDemoIntegration();
   const callbackPath = ifoodConfig
     ? new URL(ifoodConfig.redirectUri).pathname
@@ -537,6 +564,12 @@ if (isEntrypoint) {
     if (oauthMode === "demo") {
       console.warn(
         "MCP OAuth em MODO DEMONSTRAÇÃO: os tokens são sintéticos e nenhuma conta real do iFood é conectada.",
+      );
+    } else {
+      console.log(
+        llmConfig
+          ? `Planner LLM ligado (modelo ${llmConfig.model}).`
+          : "Planner LLM desligado (sem OPENCODE_API_KEY): usando o pipeline determinístico.",
       );
     }
   });

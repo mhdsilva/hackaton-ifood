@@ -5,14 +5,16 @@ import type {
   JoinPartyRequest,
   McpConnectionStatus,
   Participant,
+  PartyOrderStage,
   PartySessionResponse,
   PartySnapshot,
   SubmitAnswersRequest,
 } from "@sidequest/contracts";
 
 import { ParticipantAccessStore, type ParticipantActor } from "./access.js";
-import { getQuestionnaire, validateAnswers } from "./questionnaire.js";
+import { countAnswered, getQuestionnaire, validateAnswers } from "./questionnaire.js";
 import { PartyStore } from "./store.js";
+import { deriveTheme } from "./theme.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MIN_PARTICIPANTS = 2;
@@ -43,6 +45,7 @@ function newParticipant(id: string, name: string): Participant {
     name,
     questionnaireResponse: null,
     mcpConnectionStatus: "not_connected",
+    answeredCount: 0,
   };
 }
 
@@ -133,6 +136,31 @@ export class PartyService {
     return this.store.save(snapshot);
   }
 
+  revealTheme(idOrCode: string, actorToken: string): PartySnapshot {
+    const snapshot = this.get(idOrCode);
+    const actor = this.authorizeParticipant(idOrCode, actorToken);
+    if (actor.participantId !== snapshot.party.hostParticipantId) {
+      throw new PartyError(403, "HOST_ONLY", "Only the host can reveal the result");
+    }
+    if (snapshot.party.status !== "READY_FOR_THEME") {
+      throw new PartyError(
+        409,
+        "NOT_READY_FOR_REVEAL",
+        "Party is not ready for the reveal yet",
+      );
+    }
+
+    snapshot.party.status = "THEME_REVEALED";
+    const answers: Record<string, unknown> = {};
+    for (const participant of snapshot.participants) {
+      if (participant.questionnaireResponse) {
+        Object.assign(answers, participant.questionnaireResponse.answers);
+      }
+    }
+    snapshot.party.theme = deriveTheme(answers);
+    return this.store.save(snapshot);
+  }
+
   submitAnswers(
     idOrCode: string,
     actorToken: string,
@@ -160,12 +188,19 @@ export class PartyService {
       !input?.answers ||
       typeof input.answers !== "object" ||
       Array.isArray(input.answers) ||
-      input.completed !== true
+      typeof input.completed !== "boolean"
     ) {
-      throw new PartyError(400, "INVALID_INPUT", "A complete answers object is required");
+      throw new PartyError(
+        400,
+        "INVALID_INPUT",
+        "An answers object and a boolean completed flag are required",
+      );
     }
 
-    const issues = validateAnswers(definition, input.answers as Record<string, unknown>);
+    const answers = input.answers as Record<string, unknown>;
+    const issues = validateAnswers(definition, answers, {
+      requireComplete: input.completed,
+    });
     if (issues.length > 0) {
       throw new PartyError(
         400,
@@ -184,10 +219,11 @@ export class PartyService {
 
     participant.questionnaireResponse = {
       questionnaireVersion,
-      answers: structuredClone(input.answers),
-      completed: true,
+      answers: structuredClone(answers),
+      completed: input.completed,
       submittedAt: new Date().toISOString(),
     };
+    participant.answeredCount = countAnswered(definition, answers);
     this.reconcileStatus(snapshot);
     return this.store.save(snapshot);
   }
@@ -256,6 +292,25 @@ export class PartyService {
     }
 
     participant.mcpConnectionStatus = status;
+    return this.store.save(snapshot);
+  }
+
+  setOrderProgressForParticipant(
+    idOrCode: string,
+    participantId: string,
+    patch: { orderStage?: PartyOrderStage; orderId?: string; orderStatus?: string },
+  ): PartySnapshot {
+    const snapshot = this.get(idOrCode);
+    const participant = snapshot.participants.find(
+      (candidate) => candidate.id === participantId,
+    );
+    if (!participant) {
+      throw new PartyError(404, "PARTICIPANT_NOT_FOUND", "Participant not found");
+    }
+
+    if (patch.orderStage !== undefined) participant.orderStage = patch.orderStage;
+    if (patch.orderId !== undefined) participant.orderId = patch.orderId;
+    if (patch.orderStatus !== undefined) participant.orderStatus = patch.orderStatus;
     return this.store.save(snapshot);
   }
 

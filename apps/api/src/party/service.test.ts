@@ -176,3 +176,134 @@ test("rejects unknown versions and invalid answers", () => {
     { address: "casa", restrictions: ["vegetariano"] },
   );
 });
+
+test("accepts a draft without advancing and tracks progress", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  const guest = service.join(host.party.party.id, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  service.closeMembership(host.party.party.id, host.participantToken);
+  const partyId = host.party.party.id;
+
+  const emptyDraft = service.submitAnswers(partyId, host.participantToken, {
+    questionnaireVersion: "v1",
+    answers: {},
+    completed: false,
+  });
+  assert.equal(emptyDraft.party.status, "COLLECTING_ANSWERS");
+  assert.equal(
+    emptyDraft.participants.find((participant) => participant.id === "ana")
+      ?.questionnaireResponse?.completed,
+    false,
+  );
+  assert.equal(
+    emptyDraft.participants.find((participant) => participant.id === "ana")
+      ?.answeredCount,
+    0,
+  );
+
+  const partial = service.submitAnswers(partyId, host.participantToken, {
+    questionnaireVersion: "v1",
+    answers: { address: "casa" },
+    completed: false,
+  });
+  assert.equal(
+    partial.participants.find((participant) => participant.id === "ana")
+      ?.answeredCount,
+    1,
+  );
+  assert.equal(partial.party.status, "COLLECTING_ANSWERS");
+
+  const guestDone = service.submitAnswers(
+    partyId,
+    guest.participantToken,
+    answers("pizza"),
+  );
+  assert.equal(guestDone.party.status, "COLLECTING_ANSWERS");
+
+  const hostDone = service.submitAnswers(
+    partyId,
+    host.participantToken,
+    answers("massa"),
+  );
+  assert.equal(hostDone.party.status, "READY_FOR_THEME");
+});
+
+test("the host reveals the result only from READY_FOR_THEME", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  const guest = service.join(host.party.party.id, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  const partyId = host.party.party.id;
+  service.closeMembership(partyId, host.participantToken);
+
+  assert.throws(
+    () => service.revealTheme(partyId, host.participantToken),
+    (error: unknown) =>
+      error instanceof PartyError && error.code === "NOT_READY_FOR_REVEAL",
+  );
+
+  service.submitAnswers(partyId, host.participantToken, answers("massa"));
+  const ready = service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
+  assert.equal(ready.party.status, "READY_FOR_THEME");
+
+  assert.throws(
+    () => service.revealTheme(partyId, guest.participantToken),
+    (error: unknown) => error instanceof PartyError && error.code === "HOST_ONLY",
+  );
+
+  const revealed = service.revealTheme(partyId, host.participantToken);
+  assert.equal(revealed.party.status, "THEME_REVEALED");
+  assert.equal(revealed.party.theme, "italiano");
+
+  assert.throws(
+    () => service.revealTheme(partyId, host.participantToken),
+    (error: unknown) =>
+      error instanceof PartyError && error.code === "NOT_READY_FOR_REVEAL",
+  );
+});
+
+test("tracks each participant's order progress", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  const partyId = host.party.party.id;
+
+  const afterOptions = service.setOrderProgressForParticipant(partyId, "ana", {
+    orderStage: "options_ready",
+  });
+  assert.equal(afterOptions.participants[0]?.orderStage, "options_ready");
+
+  const afterOrder = service.setOrderProgressForParticipant(partyId, "ana", {
+    orderStage: "order_submitted",
+    orderId: "order-1",
+  });
+  assert.equal(afterOrder.participants[0]?.orderStage, "order_submitted");
+  assert.equal(afterOrder.participants[0]?.orderId, "order-1");
+
+  const afterTrack = service.setOrderProgressForParticipant(partyId, "ana", {
+    orderStage: "delivered",
+    orderStatus: "CONCLUDED",
+  });
+  assert.equal(afterTrack.participants[0]?.orderStage, "delivered");
+  assert.equal(afterTrack.participants[0]?.orderStatus, "CONCLUDED");
+
+  assert.throws(
+    () =>
+      service.setOrderProgressForParticipant(partyId, "ghost", {
+        orderStage: "none",
+      }),
+    (error: unknown) =>
+      error instanceof PartyError && error.code === "PARTICIPANT_NOT_FOUND",
+  );
+});

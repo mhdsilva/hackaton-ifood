@@ -150,16 +150,18 @@ A interface `McpOAuthProvider` **não muda**: a `redirect_uri` fica na configura
 
 | ID | Task | Arquivos | Depende | Tam. | Pronto quando |
 | --- | --- | --- | --- | --- | --- |
-| A1 | Ler config do ambiente: `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET`, `IFOOD_AUTH_BASE_URL` (padrão `id.ifood.com.br`), `IFOOD_REDIRECT_URI` ou `PUBLIC_API_URL`; falhar com mensagem clara se faltar | `ifood/config.ts` | — | P | teste cobre variável ausente, presente e redirect derivado |
-| A2 | Montar a URL de autorização (PKCE, `state`, `resource`, escopos MCP) | `ifood/oauth-provider.ts` | A1 | P | teste confere cada parâmetro da URL |
-| A3 | Trocar `code` por tokens com `client_secret_basic` | `ifood/oauth-provider.ts` | A2 | M | teste com servidor falso devolve `OAuthTokenResponse` |
-| A4 | Renovar token com `refresh_token` | `ifood/token-refresh.ts` | A3 | P | teste: token a menos de 5 min do fim é renovado |
-| A5 | Classificar erros do `/token` (`invalid_client`, `invalid_grant`) sem vazar secret | `ifood/oauth-errors.ts` | A3 | P | teste: nenhuma mensagem contém o secret |
-| A6 | Cliente MCP por participante com `Authorization: Bearer` por instância | `ifood/client.ts` | A4 | M | `getUser` real devolve o dono do token |
-| A7 | Validar conexão com `getUser` antes de marcar `connected` | `ifood/validate-connection.ts` | A6 | P | token inválido resulta em `error`, válido em `connected` |
-| A8 ✅ | Spike de múltiplas sessões: 2 a 3 clientes, chamadas intercaladas, sem vazamento | `ifood/spike-sessions.ts` (script) | A6 + 2ª conta | M | feito em 17/10/2026 com 2 contas: 2 `sub` distintos, 0 vazamentos. Falta só tentar com 3 |
-| A9 | Exportar `createIfoodProvider(env)`; `→ Matheus` liga `MCP_OAUTH_MODE=ifood` em `server.ts` (após o callback único) | `ifood/index.ts` | A3, A7 | P | modo `ifood` sobe e `demo` continua funcionando |
-| A10 | Corrigir `docs/ifood-mcp.md` com os fatos acima | `docs/ifood-mcp.md` | — | P | tabela do documento bate com a observada |
+| A1 ✅ | Ler config do ambiente: `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET`, `IFOOD_AUTH_BASE_URL` (padrão `id.ifood.com.br`), `IFOOD_REDIRECT_URI` ou `PUBLIC_API_URL`; falhar com mensagem clara se faltar | `ifood/config.ts` | — | P | teste cobre variável ausente, presente e redirect derivado |
+| A2 ✅ | Montar a URL de autorização (PKCE, `state`, `resource`, escopos MCP) | `ifood/oauth-provider.ts` | A1 | P | teste confere cada parâmetro da URL |
+| A3 ✅ | Trocar `code` por tokens com `client_secret_basic` | `ifood/oauth-provider.ts` | A2 | M | teste com servidor falso devolve `OAuthTokenResponse` |
+| A4 ✅ | Renovar token com `refresh_token` | `ifood/token-refresh.ts` | A3 | P | teste: token a menos de 5 min do fim é renovado |
+| A5 ✅ | Classificar erros do `/token` (`invalid_client`, `invalid_grant`) sem vazar secret | `ifood/oauth-errors.ts` | A3 | P | teste: nenhuma mensagem contém o secret |
+| A6 ✅ | Cliente MCP por participante com `Authorization: Bearer` por instância | `ifood/client.ts` | A4 | M | `getUser` real devolve o dono do token |
+| A7 ✅ | Validar conexão com `getUser` antes de marcar `connected` | `ifood/validate-connection.ts` | A6 | P | token inválido resulta em `error`, válido em `connected` |
+| A8 ◐ | Spike de múltiplas sessões: 2 a 3 clientes, chamadas intercaladas, sem vazamento | `ifood/spike-sessions.ts` (script) | A6 + 2ª conta | M | feito em 17/10/2026 com 2 contas: 2 `sub` distintos, 0 vazamentos. Falta só tentar com 3 |
+| A9 ✅ | Exportar `createIfoodProvider(env)`; `→ Matheus` liga `MCP_OAUTH_MODE=ifood` em `server.ts` (após o callback único) | `ifood/index.ts` | A3, A7 | P | modo `ifood` sobe e `demo` continua funcionando |
+| A10 ✅ | Corrigir `docs/ifood-mcp.md` com os fatos acima | `docs/ifood-mcp.md` | — | P | tabela do documento bate com a observada |
+
+Legenda: ✅ feito, ◐ parcial (falta o item descrito em "pronto quando"), sem marca = aberto.
 
 Pronto quando o marco fecha: dois dispositivos conectam contas diferentes e `getUser` devolve o
 dono certo em chamadas alternadas (A6 + A8).
@@ -173,17 +175,17 @@ Roda com **token manual** da minha conta até A9 existir, então não espera o m
 
 | ID | Task | Arquivos | Depende | Tam. | Pronto quando |
 | --- | --- | --- | --- | --- | --- |
-| B1 | Capturar e **sanitizar** respostas reais (endereços só com cidade e bairro; sem rua, CEP, `addressId`, e-mail, telefone) | `fixtures/ifood-addresses.json`, `fixtures/ifood-discovery-results.json` | A6 ou token manual | P | revisão manual: nenhum dado pessoal |
-| B2 | Escolher endereço: um salvo, usar; vários, exigir `addressId` vindo da Party (não inferir em silêncio) | `agent/pick-address.ts` | C | P | testes para 0, 1 e N endereços |
-| B3 | Buscar itens do tema: `searchOffers` com `onlyOpen`, `itemRestrictions`, `maxItemPrice` | `agent/search-theme.ts` | B1, C | M | devolve itens abertos para `italiano` |
-| B4 | Mapear restrições da Party (`vegetarian`, etc.) para `itemRestrictions` do iFood | `agent/restrictions.ts` | C | P | tabela de mapeamento testada |
-| B5 | Agrupar por estabelecimento e detalhar com `getMerchant` e `getItem` | `agent/merchant-detail.ts` | B3 | M | cada opção traz `optionGroups` e prazo |
-| B6 | Montar combinação dentro do orçamento, incluindo frete e pedido mínimo | `agent/build-option.ts` | B5 | M | testes: orçamento justo, estourado, abaixo do mínimo |
-| B7 | `resolveOptions(input)` compondo B2 a B6, com paralelismo e limite de tempo | `agent/resolve-options.ts` | B2, B4, B6 | M | retorna `ResolveOptionsOutput` com `source: "live"` |
-| B8 | Falha isolada: erro de um participante não derruba os outros; nova tentativa individual | `agent/resolve-options.ts` | B7 | P | teste com um resolver falhando |
-| B9 | Contingência: usar fixture quando o MCP falhar, com `source: "simulated"` | `agent/fallback.ts`, `fixtures/options-*.json` | B7 | P | desligar a rede devolve opções simuladas |
-| B10 | Entregar `resolveOptions` ao servidor: `→ Matheus` expõe a rota | nota ao Matheus | B7 | P | rota responde para dois participantes |
-| B11 | (opcional) LLM só para ranquear ou descrever opções, nunca para escolher IDs | `agent/rank.ts` | B7 | M | com e sem LLM o resultado é válido |
+| B1 ◐ | Capturar e **sanitizar** respostas reais (endereços só com cidade e bairro; sem rua, CEP, `addressId`, e-mail, telefone) | `fixtures/ifood-addresses.json`, `fixtures/ifood-discovery-results.json` | A6 ou token manual | P | já existem `fixtures/ifood-discovery-italiano.json` e `ifood-cart-italiano.json`, sanitizados; faltam os dois arquivos nomeados (endereços e discovery genérico) |
+| B2 ✅ | Escolher endereço: um salvo, usar; vários, exigir `addressId` vindo da Party (não inferir em silêncio) | `agent/pick-address.ts` | C | P | testes para 0, 1 e N endereços |
+| B3 ✅ | Buscar itens do tema: `searchOffers` com `onlyOpen`, `itemRestrictions`, `maxItemPrice` | `agent/resolve-options.ts` (não há `search-theme.ts` separado) | B1, C | M | devolve itens abertos para `italiano` |
+| B4 ✅ | Mapear restrições da Party (`vegetarian`, etc.) para `itemRestrictions` do iFood | `agent/restrictions.ts` | C | P | tabela de mapeamento testada |
+| B5 ✅ | Agrupar por estabelecimento e detalhar com `getMerchant` e `getItem` | `agent/resolve-options.ts` (consolidado, sem `merchant-detail.ts`) | B3 | M | cada opção traz `optionGroups` e prazo |
+| B6 ✅ | Montar combinação dentro do orçamento, incluindo frete e pedido mínimo | `agent/build-option.ts` | B5 | M | testes: orçamento justo, estourado, abaixo do mínimo |
+| B7 ✅ | `resolveOptions(input)` compondo B2 a B6, com paralelismo e limite de tempo | `agent/resolve-options.ts` | B2, B4, B6 | M | retorna `ResolveOptionsOutput` com `source: "live"` |
+| B8 ✅ | Falha isolada: erro de um participante não derruba os outros; nova tentativa individual | `agent/resolve-options.ts` | B7 | P | `resolveOptionsForParty` isola a falha de cada participante |
+| B9 ✅ | Contingência: usar fixture quando o MCP falhar, com `source: "simulated"` | `agent/fallback.ts`, `fixtures/options-italiano.json` | B7 | P | desligar a rede devolve opções simuladas |
+| B10 ✅ | Entregar `resolveOptions` ao servidor: `→ Matheus` expõe a rota | `apps/api/src/server.ts` (`POST /parties/:id/options`) | B7 | P | rota responde para dois participantes |
+| B11 | (opcional) LLM só para ranquear ou descrever opções, nunca para escolher IDs | `agent/rank.ts` (a criar) | B7 | M | com e sem LLM o resultado é válido |
 
 Pronto quando o marco fecha: para dois participantes com endereços diferentes e o mesmo tema, a
 API devolve opções reais e distintas, dentro do orçamento de cada um, em poucos segundos.
@@ -197,13 +199,17 @@ Só começa com A, B e T prontos. Cada task usa o token do **próprio** particip
 
 | ID | Task | Arquivos | Depende | Tam. | Pronto quando |
 | --- | --- | --- | --- | --- | --- |
-| D1 | `createCart` e `addItemToCart` a partir de uma opção escolhida | `ifood/cart.ts` | B7 | M | carrinho criado na conta de teste |
-| D2 | Entrega e pagamento: `getCartDeliveryMethods`, `setCartDelivery`, `listPaymentMethods`, `setCartPayment` | `ifood/cart-checkout.ts` | D1 | M | carrinho com entrega e pagamento definidos |
-| D3 | Vouchers opcionais: `listVouchers`, `setVoucher` | `ifood/vouchers.ts` | D2 | P | cupom aplicado quando existir |
-| D4 | `submitOrder` **só** com `userConsent: true` do próprio participante | `ifood/submit-order.ts` | D2 | M | teste recusa sem consentimento |
-| D5 | `trackOrder` com a cadência de `agentHints.retryMessage` e parada em `pollingStop` | `ifood/track-order.ts` | D4 | M | estado resumido sem dados pessoais |
-| D6 | Reduzir o estado para o `PartySnapshot` (`→ Matheus` integra) | `ifood/order-summary.ts` | D5, T | P | resumo contém só status e prazo |
+| D1 ✅ | `createCart` e `addItemToCart` a partir de uma opção escolhida | `ifood/checkout.ts` | B7 | M | carrinho criado na conta de teste |
+| D2 ✅ | Entrega e pagamento: `getCartDeliveryMethods`, `setCartDelivery`, `listPaymentMethods`, `setCartPayment` | `ifood/checkout.ts` | D1 | M | carrinho com entrega e pagamento definidos |
+| D3 | Vouchers opcionais: `listVouchers`, `setVoucher` | `ifood/checkout.ts` | D2 | P | cupom aplicado quando existir |
+| D4 ✅ | `submitOrder` **só** com `userConsent: true` do próprio participante | `ifood/checkout.ts` | D2 | M | teste recusa sem consentimento |
+| D5 ✅ | `trackOrder` com a cadência de `agentHints.retryMessage` e parada em `pollingStop` | `ifood/checkout.ts` | D4 | M | estado resumido sem dados pessoais |
+| D6 | Reduzir o estado para o `PartySnapshot` (`→ Matheus` integra) | `ifood/order-summary.ts` (a criar) | D5, T | P | resumo contém só status e prazo |
 | D7 | Decidir o modo da demo: pedido real com Pix não pago, só carrinho ou simulado | `docs/marcos.md` | grupo | P | decisão registrada |
+
+> D1, D2, D4 e D5 foram consolidados em **`ifood/checkout.ts`** (não há `cart.ts`, `cart-checkout.ts`,
+> `submit-order.ts` nem `track-order.ts` separados). D3 só lê `voucherTotalAmount` do breakdown; não
+> aplica cupom. D6 depende do Matheus mudar o `PartySnapshot`.
 
 **Risco:** pedido real em conta pessoal pode gerar cobrança; preferir a test account.
 

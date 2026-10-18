@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "test": "npm run build && node --test dist/party/service.test.js dist/http/server.test.js dist/http/openapi.test.js dist/mcp/session-registry.test.js dist/mcp/oauth-flow.test.js dist/ifood/config.test.js dist/ifood/oauth-provider.test.js dist/ifood/client.test.js dist/ifood/checkout.test.js dist/ifood/login-cli.test.js dist/agent/agent.test.js"
+    "test": "npm run build && node --test dist/party/service.test.js dist/party/questionnaire.test.js dist/party/theme.test.js dist/http/server.test.js dist/http/openapi.test.js dist/mcp/session-registry.test.js dist/mcp/oauth-flow.test.js dist/ifood/config.test.js dist/ifood/oauth-provider.test.js dist/ifood/client.test.js dist/ifood/checkout.test.js dist/ifood/login-cli.test.js dist/agent/agent.test.js dist/agent/fallback.test.js dist/agent/negotiate.test.js dist/agent/planner.test.js dist/agent/planner-context.test.js dist/agent/planner-options.test.js dist/agent/planner-tools.test.js dist/agent/sanitize.test.js dist/llm/config.test.js dist/llm/client.test.js"
   },
   "dependencies": {
     "@sidequest/contracts": "0.1.0"
