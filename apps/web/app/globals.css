@@ -2,10 +2,13 @@
 @import "@fontsource-variable/dm-sans";
 @import "@fontsource-variable/dm-sans/standard-italic.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource/fira-sans-condensed/700.css";
 
 @theme inline {
   --font-sans: "DM Sans Variable", Arial, sans-serif;
   --font-heading: "Inter Variable", Arial, sans-serif;
+  --font-preparation: "Fira Sans Condensed", Arial, sans-serif;
+  --color-preparation-caption: #fff3d9;
   --color-host-badge: #ffedea;
   --color-invitation: var(--background);
   --color-invitation-foreground: var(--foreground);

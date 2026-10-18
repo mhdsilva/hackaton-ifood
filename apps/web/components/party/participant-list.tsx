@@ -1,8 +1,19 @@
 import type { Participant } from "@sidequest/contracts";
+import { cn } from "@/lib/utils";
 
-export function ParticipantAvatar({ name, isHost }: { name: string; isHost: boolean }) {
+export function ParticipantAvatar({ name, isHost, variant = "default", className }: {
+  name: string;
+  isHost: boolean;
+  variant?: "default" | "orbit" | "connected";
+  className?: string;
+}) {
+  const colors = variant === "orbit"
+    ? (isHost ? "bg-foreground text-primary" : "bg-secondary text-foreground")
+    : variant === "connected"
+      ? (isHost ? "bg-primary text-primary-foreground" : "bg-foreground text-background")
+      : (isHost ? "bg-primary text-primary-foreground" : "bg-foreground text-primary");
   return (
-    <span aria-hidden="true" className={`flex size-10 shrink-0 items-center justify-center rounded-full font-bold ${isHost ? "bg-primary text-primary-foreground" : "bg-foreground text-primary"}`}>
+    <span aria-hidden="true" className={cn("flex size-10 shrink-0 items-center justify-center rounded-full font-bold", colors, className)}>
       {name.slice(0, 1).toLocaleUpperCase("pt-BR")}
     </span>
   );

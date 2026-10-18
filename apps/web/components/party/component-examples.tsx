@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { AddressOption } from "@/components/party/address-option";
-import { ParticipantList } from "@/components/party/participant-list";
+import Link from "next/link";
+import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
+import { getMockPreparationGroup } from "@/lib/mock-preparation";
 import { QuestionProgress } from "@/components/party/question-progress";
 import { RestrictionChoices } from "@/components/party/restriction-choices";
 import { BudgetChoices } from "@/components/party/budget-choices";
@@ -12,6 +14,7 @@ import { getMockDesireOptions, getMockPreferenceQuestion, MAX_MOCK_DESIRES, MOCK
 
 export function PartyComponentExamples() {
   const [snapshot] = useState(getMockParty);
+  const [preparationGroup] = useState(getMockPreparationGroup);
   const [addresses] = useState(getMockAddresses);
   const [selectedId, setSelectedId] = useState(addresses[0]?.id ?? "");
   const [restrictions, setRestrictions] = useState<RestrictionId[]>([]);
@@ -42,6 +45,18 @@ export function PartyComponentExamples() {
         <div className="space-y-2">
           <h3 className="font-bold">Conclusão individual · simulação</h3>
           <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={snapshot.party.hostParticipantId} readyParticipantIds={[snapshot.party.hostParticipantId]} />
+        </div>
+        <div className="space-y-4">
+          <h3 className="font-bold">Preparação · participantes simulados</h3>
+          {(["orbit", "connected"] as const).map((variant) => <div key={variant} className="space-y-2">
+            <p className="text-sm text-muted-foreground">{variant === "orbit" ? "Ao redor da ilustração" : "Conectados"}</p>
+            <ul className="flex flex-wrap gap-[10px]">
+              {preparationGroup.participants.map((participant) => <li key={participant.id} aria-label={participant.name}>
+                <ParticipantAvatar name={participant.name} isHost={participant.id === preparationGroup.hostId} variant={variant} className="size-[42px] text-[16.8px]" />
+              </li>)}
+            </ul>
+          </div>)}
+          <Link href="/party/preparing" className="inline-block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar as três etapas de preparação</Link>
         </div>
       </div>
     </section>

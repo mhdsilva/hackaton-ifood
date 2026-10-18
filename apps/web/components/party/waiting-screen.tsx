@@ -12,10 +12,9 @@ export function WaitingScreen() {
   const router = useRouter();
   const readyIds = completedParticipantIds.filter((id) => id !== currentParticipantId || canCompleteQuestionnaire);
   const allReady = snapshot.participants.length > 0 && snapshot.participants.every((participant) => readyIds.includes(participant.id));
-  const canReveal = allReady && snapshot.party.hostParticipantId === currentParticipantId;
 
   return (
-    <PartyShell backHref="/party/avoid" footer={<Button size="party" className="w-full" disabled={!canReveal} onClick={() => { if (canReveal) router.push("/party/pending/reveal"); }}>Revelar resultado</Button>}>
+    <PartyShell backHref="/party/avoid" footer={<Button size="party" className="w-full" onClick={() => router.push("/party/preparing")}>Revelar resultado</Button>}>
       <QuestionIntroduction id="waiting-title" step={8} title={!readyIds.includes(currentParticipantId) ? "Conclua suas respostas para continuar." : allReady ? "Tudo pronto!" : "Tudo pronto! Aguarde os outros participantes..."} />
       <section aria-labelledby="ready-participants-title" className="space-y-2" aria-live="polite">
         <h2 id="ready-participants-title" className="text-base leading-6 font-bold">Participantes da Party</h2>
