@@ -11,7 +11,7 @@ import type {
   ResolveOptionsOutput,
   ToolCaller,
 } from "./types.js";
-import type { RequiredPersonalization } from "./personalization.js";
+import type { Personalization } from "./personalization.js";
 
 export interface DiscoveryFixture {
   searchOffers: Record<string, { results: IfoodSearchItem[] }>;
@@ -65,7 +65,7 @@ export async function resolveOptionsWithFallback(
   caller: ToolCaller,
   fixture: DiscoveryFixture | (() => Promise<DiscoveryFixture>) = loadDiscoveryFixture,
   settings: ResolveOptionsSettings = {},
-  personalization?: RequiredPersonalization,
+  personalization?: Personalization,
 ): Promise<ResolveOptionsOutput> {
   try {
     return await resolveOptions(input, caller, settings, personalization);
@@ -100,7 +100,7 @@ export async function resolveOptionsPreferringPlanner(
   caller: ToolCaller,
   client: ChatClient,
   settings: PlannerOptionsSettings = {},
-  personalization?: RequiredPersonalization,
+  personalization?: Personalization,
 ): Promise<ResolveOptionsOutput> {
   try {
     return await withTimeout(

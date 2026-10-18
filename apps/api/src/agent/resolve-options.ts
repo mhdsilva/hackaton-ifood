@@ -11,7 +11,7 @@ import type {
   ResolveOptionsOutput,
   ToolCaller,
 } from "./types.js";
-import type { RequiredPersonalization } from "./personalization.js";
+import type { Personalization } from "./personalization.js";
 
 const DEFAULT_MAX_OPTIONS = 3;
 const CANDIDATES_PER_MERCHANT = 2;
@@ -41,7 +41,7 @@ export function resolveOptions(
   input: ResolveOptionsInput,
   caller: ToolCaller,
   settings: ResolveOptionsSettings = {},
-  personalization?: RequiredPersonalization,
+  personalization?: Personalization,
 ): Promise<ResolveOptionsOutput> {
   return withTimeout(
     resolve(input, caller, personalization),
@@ -52,7 +52,7 @@ export function resolveOptions(
 async function resolve(
   input: ResolveOptionsInput,
   caller: ToolCaller,
-  personalization?: RequiredPersonalization,
+  personalization?: Personalization,
 ): Promise<ResolveOptionsOutput> {
   const maxOptions = input.maxOptions ?? DEFAULT_MAX_OPTIONS;
   const warnings: string[] = [];

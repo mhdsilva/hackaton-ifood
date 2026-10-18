@@ -39,7 +39,7 @@ import { AgentError, pickAddress } from "./pick-address.js";
 import type { PlannerOptionsSettings } from "./planner-options.js";
 import { resolveOptions } from "./resolve-options.js";
 import { sanitizeAddress } from "./sanitize.js";
-import { loadRequiredPersonalization } from "./personalization.js";
+import { loadPersonalization } from "./personalization.js";
 import type {
   IfoodCoordinates,
   IfoodAddress,
@@ -142,8 +142,8 @@ export function createIfoodIntegration(deps: {
     async resolveOptions(actor, input) {
       const fullInput = { ...input, participantId: actor.participantId };
       const caller = clientFor(actor);
-      // Fail closed before planner/deterministic/fixture fallbacks: both MCP calls are required.
-      const personalization = await loadRequiredPersonalization(fullInput, caller);
+      // Personalization enriches discovery when available; it must not block real MCP searches.
+      const personalization = await loadPersonalization(fullInput, caller);
       return deps.llm
         ? resolveOptionsPreferringPlanner(
             fullInput,

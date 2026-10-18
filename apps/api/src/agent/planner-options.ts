@@ -24,7 +24,7 @@ import type {
   ResolveOptionsOutput,
   ToolCaller,
 } from "./types.js";
-import type { RequiredPersonalization } from "./personalization.js";
+import type { Personalization } from "./personalization.js";
 
 const DEFAULT_MAX_OPTIONS = 3;
 
@@ -79,7 +79,7 @@ export async function resolveOptionsWithPlanner(
   caller: ToolCaller,
   client: ChatClient,
   settings: PlannerOptionsSettings = {},
-  personalization?: RequiredPersonalization,
+  personalization?: Personalization,
 ): Promise<ResolveOptionsOutput> {
   const maxOptions = input.maxOptions ?? DEFAULT_MAX_OPTIONS;
 
