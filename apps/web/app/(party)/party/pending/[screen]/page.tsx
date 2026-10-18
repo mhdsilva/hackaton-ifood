@@ -12,6 +12,7 @@ const screens: Record<string, { name: string; backHref: string }> = {
   "checkout": { name: "Confirmação e pagamento", backHref: "/party/order" },
   "alternative": { name: "Gerar outra opção", backHref: "/party/order" },
   "payment-method": { name: "Trocar método de pagamento", backHref: "/party/order" },
+  "delivery": { name: "Acompanhar entrega", backHref: "/party/confirmed" },
 };
 
 export const metadata = { title: "Tela pendente | iFood Party" };

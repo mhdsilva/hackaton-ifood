@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useQuestionRouter } from "@/components/party/question-navigation";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ export function PartyHeader({ backHref, brandTone = "primary" }: { backHref?: st
   );
 }
 
-export function PartyShell({ children, footer, backHref, tone = "default", brandTone = "primary", contentClassName, footerClassName }: {
+export function PartyShell({ children, footer, backHref, tone = "default", brandTone = "primary", contentClassName, footerClassName, backdrop }: {
   children: React.ReactNode;
   footer: React.ReactNode;
   backHref?: string;
@@ -34,9 +35,11 @@ export function PartyShell({ children, footer, backHref, tone = "default", brand
   brandTone?: BrandTone;
   contentClassName?: string;
   footerClassName?: string;
+  backdrop?: ReactNode;
 }) {
   return (
-    <div className={cn("flex h-dvh w-full flex-col overflow-hidden pt-[env(safe-area-inset-top)]", tone === "celebration" && "bg-primary text-primary-foreground")}>
+    <div className={cn("flex h-dvh w-full flex-col overflow-hidden pt-[env(safe-area-inset-top)]", backdrop && "relative isolate bg-background", tone === "celebration" && "bg-primary text-primary-foreground")}>
+      {backdrop && <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">{backdrop}</div>}
       <PartyHeader backHref={backHref} brandTone={brandTone} />
       <main id="main-content" className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain scroll-pt-5 scroll-pb-5">
         <div className={cn("party-content mx-auto flex w-full max-w-md flex-col gap-8 px-5 py-5", contentClassName)}>{children}</div>

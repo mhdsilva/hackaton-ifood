@@ -11,7 +11,7 @@ export function OrderSummaryScreen() {
   const order = getMockRevealedOrder();
   return (
     <PartyShell brandTone="light" contentClassName="gap-4 pt-3" footerClassName="space-y-2 pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={<>
-      <Button asChild size="party" className="w-full"><Link href="/party/pending/checkout">Confirmar e pagar</Link></Button>
+      <Button asChild size="party" className="w-full"><Link href="/party/confirmed">Confirmar e pagar</Link></Button>
       <Button asChild variant="secondary" size="party" className="w-full text-primary"><Link href="/party/pending/alternative">Gerar outra opção</Link></Button>
     </>}>
       <section aria-labelledby="order-title" className="space-y-1">

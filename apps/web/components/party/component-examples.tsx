@@ -70,6 +70,7 @@ export function PartyComponentExamples() {
           <Link href="/party/reveal" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar a revelação da temática</Link>
           <Link href="/party/unboxing" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar as duas chacoalhadas da sacola</Link>
           <Link href="/party/order" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar o resumo do pedido simulado</Link>
+          <Link href="/party/confirmed" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar a confirmação simulada do pedido</Link>
           <OrderDetailCard icon="/figma/order-motorbike.svg" title="Entrega hoje" detail="Hoje, 35 - 45 min" />
         </div>
         <div className="space-y-4 text-center">
