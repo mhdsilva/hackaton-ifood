@@ -8,6 +8,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        inverse: "bg-foreground text-primary hover:bg-foreground/90",
         chip: "border border-input bg-transparent text-subtle hover:bg-accent aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground",
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:

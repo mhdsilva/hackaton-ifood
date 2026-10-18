@@ -19,7 +19,7 @@ export function CountdownScreen() {
     if (!splashComplete) return;
     const timer = window.setTimeout(() => {
       if (count > 1) setCount((current) => current - 1);
-      else router.replace("/party/pending/reveal");
+      else router.replace("/party/reveal");
     }, 1000);
     return () => window.clearTimeout(timer);
   }, [count, splashComplete, router]);

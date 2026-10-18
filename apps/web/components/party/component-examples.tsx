@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipDigit } from "@/components/party/flip-digit";
+import { OrderDetailCard } from "@/components/party/order-detail-card";
 import { AddressOption } from "@/components/party/address-option";
 import Link from "next/link";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
@@ -66,6 +67,10 @@ export function PartyComponentExamples() {
           </div>)}
           <Link href="/party/preparing" className="inline-block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar as três etapas de preparação</Link>
           <Link href="/party/countdown" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar a contagem 3 → 2 → 1</Link>
+          <Link href="/party/reveal" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar a revelação da temática</Link>
+          <Link href="/party/unboxing" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar as duas chacoalhadas da sacola</Link>
+          <Link href="/party/order" className="block rounded-sm text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Testar o resumo do pedido simulado</Link>
+          <OrderDetailCard icon="/figma/order-motorbike.svg" title="Entrega hoje" detail="Hoje, 35 - 45 min" />
         </div>
         <div className="space-y-4 text-center">
           <h3 className="font-bold">Contagem · split-flap</h3>
