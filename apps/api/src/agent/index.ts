@@ -6,6 +6,9 @@ export {
 } from "./fallback.js";
 export type { DiscoveryFixture } from "./fallback.js";
 export { AgentError, addressLabel, pickAddress } from "./pick-address.js";
+export { ifoodToolbox, runPlanner } from "./planner.js";
+export type { IfoodToolboxSettings, PlannerOutcome, PlannerSettings, PlannerStep, ToolBox, ToolSpec } from "./planner.js";
+export { sanitizeAddress, stripPersonalData } from "./sanitize.js";
 export {
   resolveOptions,
   resolveOptionsForParty,

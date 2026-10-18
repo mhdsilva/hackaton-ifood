@@ -5,6 +5,9 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required}
       PUBLIC_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
       MCP_OAUTH_MODE: ${MCP_OAUTH_MODE:-demo}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+      OPENCODE_MODEL: ${OPENCODE_MODEL:-}
+      OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-}
       PORT: 3333
     expose:
       - "3333"
