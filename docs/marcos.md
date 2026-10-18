@@ -157,7 +157,7 @@ A interface `McpOAuthProvider` **não muda**: a `redirect_uri` fica na configura
 | A5 | Classificar erros do `/token` (`invalid_client`, `invalid_grant`) sem vazar secret | `ifood/oauth-errors.ts` | A3 | P | teste: nenhuma mensagem contém o secret |
 | A6 | Cliente MCP por participante com `Authorization: Bearer` por instância | `ifood/client.ts` | A4 | M | `getUser` real devolve o dono do token |
 | A7 | Validar conexão com `getUser` antes de marcar `connected` | `ifood/validate-connection.ts` | A6 | P | token inválido resulta em `error`, válido em `connected` |
-| A8 | Spike de múltiplas sessões: 2 a 3 clientes, chamadas intercaladas, sem vazamento | `ifood/spike-sessions.ts` (script) | A6 + 2ª conta | M | relatório com limites e erros observados |
+| A8 ✅ | Spike de múltiplas sessões: 2 a 3 clientes, chamadas intercaladas, sem vazamento | `ifood/spike-sessions.ts` (script) | A6 + 2ª conta | M | feito em 17/10/2026 com 2 contas: 2 `sub` distintos, 0 vazamentos. Falta só tentar com 3 |
 | A9 | Exportar `createIfoodProvider(env)`; `→ Matheus` liga `MCP_OAUTH_MODE=ifood` em `server.ts` (após o callback único) | `ifood/index.ts` | A3, A7 | P | modo `ifood` sobe e `demo` continua funcionando |
 | A10 | Corrigir `docs/ifood-mcp.md` com os fatos acima | `docs/ifood-mcp.md` | — | P | tabela do documento bate com a observada |
 
