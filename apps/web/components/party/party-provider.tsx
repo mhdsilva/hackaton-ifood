@@ -69,6 +69,9 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
     revealTheme: async () => true,
     connectMcp: async () => {},
     connectingMcp: false,
+    resolveOrderOptions: async () => {
+      throw new Error("A busca de pedido usa o iFood; indisponível na prévia mockada.");
+    },
   };
 
   if (mock.inviteCode !== code) return <PartyLoading />;

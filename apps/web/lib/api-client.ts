@@ -78,6 +78,7 @@ export interface OptionsInput {
   theme?: string;
   restrictions?: string[];
   addressId?: string;
+  maxOptions?: number;
 }
 
 export const liveApi = {

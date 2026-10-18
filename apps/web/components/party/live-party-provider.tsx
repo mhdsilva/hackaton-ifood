@@ -29,12 +29,13 @@ import type {
   PartySnapshot,
   QuestionnaireDefinition,
   QuestionnaireQuestionOption,
+  LocalOption,
 } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { describeError, liveApi, LiveApiError } from "@/lib/api-client";
 import { fromParticipantAddress, pickDefaultAddress, type PartyAddress } from "@/lib/addresses";
-import { buildQuestionnaireAnswers } from "@/lib/live-answers";
+import { buildQuestionnaireAnswers, budgetFromAnswers } from "@/lib/live-answers";
 import { getMockAddresses } from "@/lib/mock-party";
 import { partyFlowTarget } from "@/lib/party-flow";
 import {
@@ -153,6 +154,11 @@ export interface LivePartyValue {
   /** Pede a URL de login do iFood e abre numa aba nova; o status chega pelo polling. */
   connectMcp: () => Promise<void>;
   connectingMcp: boolean;
+  /**
+   * Busca no iFood (via agente/MCP) opções reais para o participante atual, com o tema da
+   * Party, o orçamento, as restrições e o endereço das respostas dele.
+   */
+  resolveOrderOptions: () => Promise<LocalOption[]>;
 }
 
 const LivePartyContext = createContext<LivePartyValue | null>(null);
@@ -359,6 +365,41 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     }
   }, [session]);
 
+  const resolveOrderOptions = useCallback(async (): Promise<LocalOption[]> => {
+    if (!session || !snapshot) throw new Error("Sessão da Party indisponível.");
+    const me = snapshot.participants.find((participant) => participant.id === session.participantId);
+    const answers = me?.questionnaireResponse?.answers ?? {};
+    const budget = budgetFromAnswers(questionnaire, answers);
+    if (budget === null) {
+      throw new Error("Responda o orçamento antes de buscar o pedido.");
+    }
+    const restrictions = Array.isArray(answers.restrictions)
+      ? answers.restrictions.filter(
+          (value): value is string => typeof value === "string" && value !== "outro",
+        )
+      : [];
+    // O endereço escolhido fica na resposta pelo rótulo; no snapshot não há o id do iFood.
+    const chosenLabel = typeof answers.address === "string" ? answers.address : null;
+    const chosenAddress = chosenLabel
+      ? addresses.find((address) => address.label === chosenLabel)
+      : undefined;
+    const addressId = addressesLive
+      ? chosenAddress?.id ?? selectedAddressId ?? undefined
+      : undefined;
+    const result = await liveApi.getOptions(session.partyId, session.token, {
+      budget,
+      restrictions,
+      maxOptions: 3,
+      ...(addressId ? { addressId } : {}),
+    });
+    if (result.options.length === 0) {
+      throw new Error(
+        "Nenhuma loja atendeu ao tema e ao orçamento agora. Ajuste o valor ou tente de novo.",
+      );
+    }
+    return result.options;
+  }, [session, snapshot, questionnaire, addresses, addressesLive, selectedAddressId]);
+
   const findAddressCandidates = useCallback(
     async (address: string): Promise<AddressResolutionResponse> => {
       if (!session) throw new Error("Sessão da Party não encontrada.");
@@ -563,6 +604,7 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
         revealTheme,
         connectMcp,
         connectingMcp,
+        resolveOrderOptions,
       }}
     >
       {actionError && (

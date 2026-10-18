@@ -9,7 +9,7 @@ import type { PartyInfo } from "@sidequest/contracts";
  */
 const PLACEHOLDER_IMAGE = "/figma/theme-italian.png";
 
-export interface ThemeCopy {
+interface ThemeCopy {
   /** Primeira linha, em peso normal (ex.: "Noite"). */
   introduction: string;
   /** Segunda linha, em destaque (ex.: "Italiana"). */
@@ -36,8 +36,7 @@ export interface RevealTheme extends ThemeCopy {
   image: string;
 }
 
-/** Minúsculas, sem acentos e sem espaços nas pontas — a chave canônica do tema. */
-export function normalizeTheme(theme: string): string {
+function normalize(theme: string): string {
   return theme
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -45,18 +44,18 @@ export function normalizeTheme(theme: string): string {
     .toLowerCase();
 }
 
-/** As duas linhas do título para qualquer tema (inclusive a "vibe" do dia). */
-export function themeCopy(theme?: string): ThemeCopy {
-  const raw = theme?.trim();
-  const key = raw ? normalizeTheme(raw) : "";
-  if (!key) return NO_THEME_COPY;
-  if (key.endsWith("a distancia")) return VIBE_COPY;
-  return THEME_COPY[key] ?? { introduction: "Tema", emphasis: raw ?? "" };
-}
-
 export function revealTheme(party: Pick<PartyInfo, "theme" | "themeReason">): RevealTheme {
-  const copy = themeCopy(party.theme);
+  const raw = party.theme?.trim();
+  const key = raw ? normalize(raw) : "";
+
+  const copy = !key
+    ? NO_THEME_COPY
+    : key.endsWith("a distancia")
+      ? VIBE_COPY
+      : (THEME_COPY[key] ?? { introduction: "Tema", emphasis: raw ?? "" });
+
   // A frase do agente explica a escolha do grupo; sem ela, fica a descrição genérica.
   const description = party.themeReason?.trim() || DEFAULT_DESCRIPTION;
+
   return { ...copy, description, image: PLACEHOLDER_IMAGE };
 }
