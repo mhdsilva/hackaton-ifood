@@ -157,8 +157,10 @@ O backend (`PartyService.create`, em `src/party/service.ts`):
 { "participant": { "id": "bruno", "name": "Bruno" } }
 ```
 
-- Recusa se a Party estiver fechada (`PARTY_CLOSED`), cheia — máximo de **4** — (`PARTY_FULL`) ou
-  se o `id` já existir.
+- Recusa quando o resultado já está pronto (`READY_FOR_THEME`) ou revelado (`THEME_REVEALED`) —
+  `PARTY_CLOSED` —, quando a Party está cheia — máximo de **4** — (`PARTY_FULL`) ou se o `id` já
+  existir. Durante `COLLECTING_ANSWERS` ainda dá para entrar: quem chega atrasado responde como
+  os outros.
 - Devolve o próprio `participantToken` do convidado.
 
 **O token de participante**

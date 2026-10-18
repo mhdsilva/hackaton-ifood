@@ -87,7 +87,8 @@ No dispositivo A, o anfitrião chama `POST /parties/:id/close` com seu Bearer to
 Conferir:
 
 - estado muda para `COLLECTING_ANSWERS` nos três dispositivos;
-- uma nova tentativa de entrada recebe `409 PARTY_CLOSED`;
+- uma nova tentativa de entrada continua valendo durante `COLLECTING_ANSWERS` (quem chega
+  atrasado entra e responde); `409 PARTY_CLOSED` só aparece depois de `READY_FOR_THEME`;
 - a mesma chamada feita por B ou C recebe `403 HOST_ONLY`.
 
 ## 5. Responder em cada dispositivo
