@@ -11,6 +11,13 @@ const screens: Record<string, { name: string; backHref: string }> = {
 
 export const metadata = { title: "Tela pendente | iFood Party" };
 
+// Required for `output: "export"`: only these screens exist.
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return Object.keys(screens).map((screen) => ({ screen }));
+}
+
 export default async function PendingPage({ params }: { params: Promise<{ screen: string }> }) {
   const { screen } = await params;
   const destination = Object.hasOwn(screens, screen) ? screens[screen] : undefined;

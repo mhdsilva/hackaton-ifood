@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "next dev --webpack --hostname 0.0.0.0 --port 5173",
     "build": "next build",
+    "build:cf": "NEXT_OUTPUT=export next build",
+    "preview:cf": "npm run build:cf && wrangler dev",
+    "deploy:cf": "npm run build:cf && wrangler deploy",
     "start": "next start --hostname 0.0.0.0 --port 5173",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit"
@@ -28,6 +31,7 @@
     "@types/react-dom": "19.3.0",
     "eslint": "10.13.0",
     "eslint-config-next": "16.4.2",
-    "tailwindcss": "4.3.3"
+    "tailwindcss": "4.3.3",
+    "wrangler": "4.151.1"
   }
 }
