@@ -1,0 +1,64 @@
+"use client";
+
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useMockParty } from "@/components/party/mock-party-provider";
+import { ParticipantList } from "@/components/party/participant-list";
+import { PartyShell } from "@/components/party/party-shell";
+import { canStartMockParty } from "@/lib/mock-party";
+
+export function LobbyScreen() {
+  const { snapshot, currentParticipantId, startParty } = useMockParty();
+  const router = useRouter();
+  const [copyStatus, setCopyStatus] = useState("");
+  const [copying, setCopying] = useState(false);
+  const hasStarted = snapshot.party.status === "COLLECTING_ANSWERS";
+  const canContinue = hasStarted || canStartMockParty(snapshot, currentParticipantId);
+
+  async function copyInvitation() {
+    setCopying(true);
+    try {
+      const url = new URL("/party/pending/invite", window.location.origin);
+      url.searchParams.set("code", snapshot.party.code);
+      await navigator.clipboard.writeText(url.toString());
+      setCopyStatus("Link da prévia copiado!");
+    } catch {
+      setCopyStatus("Não foi possível copiar. Tente novamente.");
+    } finally {
+      setCopying(false);
+    }
+  }
+
+  return (
+    <PartyShell footer={<>
+      <Button size="party" className="w-full" disabled={!canContinue} onClick={() => {
+        if (!hasStarted) startParty();
+        router.push("/party/address");
+      }}>{hasStarted ? "Continuar party" : "Iniciar party"}</Button>
+      {!canContinue && <p className="text-sm text-muted-foreground">Aguarde pelo menos duas pessoas. Somente o host pode iniciar.</p>}
+    </>}>
+      <section aria-labelledby="party-title" className="relative isolate overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground">
+        <Image src="/figma/banner-logo.svg" alt="" width={286} height={155} className="pointer-events-none absolute top-7 left-[101px] -z-10 max-w-none" />
+        <p className="text-xs leading-[normal] font-bold">CRIAR PARTY</p>
+        <h1 id="party-title" className="mt-2 text-4xl leading-[1.12] font-bold">{snapshot.party.name}</h1>
+        <div className="mt-6 flex items-center gap-3 rounded-lg bg-invitation p-4 text-invitation-foreground">
+          <Image src="/figma/share.svg" alt="" width={20} height={20} className="shrink-0" />
+          <p className="min-w-0 flex-1 text-xs leading-[normal]">Envie para seus amigos <strong>participarem!</strong></p>
+          <Button size="invite" disabled={copying} onClick={copyInvitation}>Copiar link</Button>
+        </div>
+        <p role="status" className="sr-only">{copyStatus}</p>
+        {copyStatus && <p className="mt-3 text-xs" aria-hidden="true">{copyStatus}</p>}
+      </section>
+      <section aria-labelledby="experience-title" className="space-y-4">
+        <h2 id="experience-title" className="text-2xl leading-[1.12] font-bold">Cada um no seu canto. Todo mundo na mesma vibe.</h2>
+        <p className="text-sm leading-5 text-secondary-foreground">Vocês respondem juntos e descobrem uma temática. Cada pessoa recebe opções locais, adaptadas ao próprio endereço.</p>
+      </section>
+      <section aria-labelledby="participants-title" className="space-y-2">
+        <h2 id="participants-title" className="text-base leading-6 font-bold">Participantes da Party</h2>
+        <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={currentParticipantId} />
+      </section>
+    </PartyShell>
+  );
+}

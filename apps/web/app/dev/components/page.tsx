@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { PartyComponentExamples } from "@/components/party/component-examples";
 
 export const metadata = { title: "Componentes | iFood Party" };
 
@@ -11,7 +12,7 @@ export default function ComponentsPage() {
         <p className="text-sm font-medium text-muted-foreground">iFood Party · Desenvolvimento</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">Vitrine de componentes</h1>
         <p className="max-w-2xl leading-relaxed text-muted-foreground">
-          Referência dos componentes compartilhados disponíveis. A apresentação é provisória e será adaptada ao design do Figma. Os exemplos são demonstrativos.
+          Referência dos componentes compartilhados disponíveis, com o tema das primeiras telas do Figma. Os exemplos e os dados são demonstrativos.
         </p>
       </header>
 
@@ -34,6 +35,8 @@ export default function ComponentsPage() {
           <Button type="button" size="sm">Pequeno</Button>
           <Button type="button">Padrão</Button>
           <Button type="button" size="lg">Grande</Button>
+          <Button type="button" size="party">Ação da Party</Button>
+          <Button type="button" size="invite">Copiar link</Button>
         </div>
         <p className="mt-6 text-sm text-muted-foreground">Botões somente com ícone têm um nome acessível.</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -58,6 +61,7 @@ export default function ComponentsPage() {
           <Button type="button" variant="outline" disabled>Contorno indisponível</Button>
         </div>
       </section>
+      <PartyComponentExamples />
     </main>
   );
 }
