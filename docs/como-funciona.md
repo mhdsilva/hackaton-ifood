@@ -29,9 +29,10 @@
 ### Visão geral
 
 Amigos em lugares diferentes entram na mesma **Party**, cada um pelo próprio celular. Cada pessoa
-**conecta a própria conta do iFood**. O grupo escolhe um **tema** comum (por exemplo, italiano) e
-o **agente** busca, para cada pessoa, restaurantes reais do tema perto do endereço dela, dentro do
-orçamento dela. Cada um confirma o **próprio pedido**. A experiência é compartilhada; conta,
+**conecta a própria conta do iFood**. O grupo responde o questionário e **o tema sai como resultado**
+das respostas — **não há pergunta de tema** (ex.: energia "quente e confortável" → italiano; sem
+sinal claro, vale a vibe do dia). A partir do tema, o **agente** busca, para cada pessoa, restaurantes
+reais perto do endereço dela, dentro do orçamento dela. Cada um confirma o **próprio pedido**. A experiência é compartilhada; conta,
 endereço, carrinho e pagamento continuam individuais.
 
 ### Em detalhe
@@ -342,8 +343,11 @@ listAddresses → escolher endereço → searchOffers (1 por termo do tema)
 Rota: `POST /parties/:id/options` (Bearer)
 
 ```json
-{ "theme": "italiano", "budget": 60, "restrictions": ["vegetariano"], "addressId": "opcional" }
+{ "budget": 60, "restrictions": ["vegetariano"], "addressId": "opcional" }
 ```
+
+O `theme` do corpo é **opcional** (fallback): em geral o valor vem de `party.theme`, derivado no
+`reveal` (ver "Revelar resultado"). Se o corpo trouxer `theme`, o da Party vence.
 
 `resolveOptions` (`src/agent/resolve-options.ts`) segue estes passos:
 

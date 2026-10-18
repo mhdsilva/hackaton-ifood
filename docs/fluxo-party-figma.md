@@ -382,17 +382,26 @@ from READY_FOR_THEME* (estado + `POST /parties/:id/reveal`, `403 HOST_ONLY` / `4
 NOT_READY_FOR_REVEAL`), conforme o [ADR 0002](adr/0002-revelacao-do-resultado-da-party.md).
 
 Pendentes: item 3 (`GET /parties/:id/addresses`, depende do `listAddresses` sanitizado do Maeda);
-item 4 (mover `ResolveOptions*` para `packages/contracts`); item 5 (drift OpenAPI ↔ `.env.example`).
-Item 7 (OAuth como etapa explícita) já está decidido e implementado na rota `.../authorize`.
+item 5 (drift OpenAPI ↔ `.env.example`). Item 4 (mover `ResolveOptions*` para `packages/contracts`)
+✅ feito. Item 7 (OAuth como etapa explícita) já está decidido e implementado na rota `.../authorize`.
+
+**Forma do questionário e derivação do tema ✅ (17/10/2026):** a definição `v2` da seção 6.3 está em
+`apps/api/src/party/questionnaire.ts` (a `v1` continua registrada para compatibilidade), e
+`party/theme.ts` deixou de ser stub: o tema sai das respostas em três níveis — **explícito → sinais
+das Etapas 4–7 (tabela provisória) → vibe do dia** (`sabadou`/`sextou à distância`). A vibe tem busca
+própria e ampla (`agent/themes.ts`, `VIBE_QUERIES`), para não virar busca literal e cair em
+`NO_OPTIONS`. O tema é o **resultado**, lido pela API: `POST /options` usa `party.theme` quando existe
+(o `theme` do corpo vira opcional / só fallback), e a negociação de grupo (`agent/negotiate.ts`) reusa
+o mesmo resolvedor e tenta a vibe como último recurso.
 
 ### 8.2 Pendentes
 
 | Decisão | Quem decide | Bloqueia |
 | --- | --- | --- |
-| Conteúdo final das 7 perguntas e ordem | Júlio | definição `v2` |
-| `Veganismo` e `Alergia a amendoim` no lugar de `Sem açúcar` | Júlio | opções da Etapa 2 |
-| Faixas de orçamento fechadas vs. valor livre | Júlio | Etapa 3 |
-| Regra que transforma respostas em tema | Júlio + sessão da API | Marco T |
+| Conteúdo final das 7 perguntas e ordem | Júlio | ◐ forma `v2` pronta; faltam conteúdo/rótulos |
+| `Veganismo` e `Alergia a amendoim` no lugar de `Sem açúcar` | Júlio | ◐ `Veganismo` e `Vegetarianismo` já mapeiam para o item do iFood; **`Alergia a amendoim` não tem equivalente no enum** e cai em `ignored` — precisa decisão (exclusão dura ou aviso), não é só mapear |
+| Faixas de orçamento fechadas vs. valor livre | Júlio | Etapa 3 (`v2` traz as duas: faixas + "Outro valor") |
+| Regra que transforma respostas em tema | Júlio + sessão da API | ◐ provisória implementada (`party/theme.ts`); trocar a tabela sinais → tema não mexe em interface |
 
 ## 9. Próximos passos sugeridos
 

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { resolveOptionsForPartyWithNegotiation } from "./negotiate.js";
+import { AgentError } from "./pick-address.js";
+import type { PartyOptionResolver } from "./resolve-options.js";
 import type { IfoodAddress, IfoodItemDetail, IfoodSearchItem, ToolCaller } from "./types.js";
 
 const address: IfoodAddress = {
@@ -114,4 +116,45 @@ test("honors an explicit empty alternatives list (nobody to negotiate)", async (
 
   assert.equal(outcome.negotiated, false);
   assert.equal(outcome.theme, "italiano");
+});
+
+test("falls back to the day's vibe when no cuisine fits everyone", async () => {
+  const ana = callerFor([candidate("ma", "ia", 30)], ["massa", "porcao"]);
+  const bruno = callerFor([candidate("mb", "ib", 25)], ["porcao"]);
+
+  const outcome = await resolveOptionsForPartyWithNegotiation(
+    [request("ana", ana), request("bruno", bruno)],
+    { now: new Date(2026, 9, 17, 12) },
+  );
+
+  assert.equal(outcome.negotiated, true);
+  assert.equal(outcome.theme, "sabadou a distancia");
+  assert.ok(outcome.results.every((result) => result.status === "ok"));
+});
+
+test("resolves through the injected resolver (planner-agnostic)", async () => {
+  const themes: string[] = [];
+  const resolve: PartyOptionResolver = async (input) => {
+    themes.push(input.theme);
+    if (input.theme !== "brasileiro") {
+      throw new AgentError("NO_OPTIONS", "nada por aqui");
+    }
+    return {
+      participantId: input.participantId,
+      source: "live",
+      theme: input.theme,
+      options: [],
+      warnings: [],
+    };
+  };
+
+  const outcome = await resolveOptionsForPartyWithNegotiation(
+    [request("ana", callerFor([], [])), request("bruno", callerFor([], []))],
+    {},
+    resolve,
+  );
+
+  assert.equal(outcome.negotiated, true);
+  assert.equal(outcome.theme, "brasileiro");
+  assert.ok(themes.includes("brasileiro"));
 });

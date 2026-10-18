@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { itemKey, rankSeenItems, systemTools, themeFromAnswers } from "./planner-tools.js";
+import { VIBE_QUERIES } from "./themes.js";
 import type { IfoodSearchItem, ToolCaller } from "./types.js";
 
 function candidate(
@@ -58,7 +59,8 @@ test("themeFromAnswers reuses the party rule and lists queries", () => {
     theme: "japones",
     queries: ["sushi", "temaki", "yakisoba"],
   });
-  assert.equal(themeFromAnswers({}).theme, "italiano");
+  // Sem contexto, cai na vibe do dia — as consultas são as mesmas em qualquer dia.
+  assert.deepEqual(themeFromAnswers({}).queries, VIBE_QUERIES);
 });
 
 test("proposeSubstitutes keeps only the terms that exist in the catalog", async () => {

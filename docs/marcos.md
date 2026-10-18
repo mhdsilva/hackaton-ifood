@@ -97,14 +97,25 @@ confirmam que conseguem codar contra eles.
 ## Marco T — Tema e questionário (Júlio, Matheus)
 
 Perguntas, regra de sugestão de tema, votação (se houver) e estados depois de `READY_FOR_THEME`.
-Saída fixa para os outros marcos: `{ theme, budget, restrictions }` por participante. Enquanto não
-fecha, B usa o tema `italiano` e valores de exemplo.
+Saída fixa para os outros marcos: `{ theme, budget, restrictions }` por participante.
+
+◐ **Forma pronta, conteúdo pendente (17/10/2026):** o questionário `v2` — as 7 etapas do Figma — já
+está em `apps/api/src/party/questionnaire.ts`; a `v1` segue registrada para compatibilidade. A
+derivação do tema (`party/theme.ts`) já funciona em três níveis: **tema explícito → sinais das
+Etapas 4–7** (tabela **provisória**) **→ vibe do dia** (`sabadou`/`sextou à distância`), que o agente
+busca em qualquer endereço (`agent/themes.ts`, `VIBE_QUERIES`). Falta o Júlio fixar a regra
+sinais → tema; trocá-la não mexe em nenhuma interface.
 
 ## Marco W — Frontend (Otávio)
 
 Tela de conexão iFood, escolha de endereço, lista de opções e andamento, usando
 `fixtures/options-*.json` do Maeda até a API real existir. Inclui o bug de `fetch` em
 [`pendencias-frontend.md`](pendencias-frontend.md).
+
+**Regra do produto (17/10/2026):** abrir a rota base **sem** `?code` **cria** a Party
+(`POST /parties`, sem autenticação) e mostra o link de convite; abrir com `?code` **entra**
+(`POST /parties/:code/join`). Cuidar da idempotência (não criar duas Parties em reload/StrictMode).
+Detalhes e o mapa das telas → chamadas em [`handoff-colucci.md`](handoff-colucci.md) §1 e §6.
 
 ## Marco E — Demonstração (todos)
 
@@ -185,7 +196,7 @@ Roda com **token manual** da minha conta até A9 existir, então não espera o m
 | B8 ✅ | Falha isolada: erro de um participante não derruba os outros; nova tentativa individual | `agent/resolve-options.ts` | B7 | P | `resolveOptionsForParty` isola a falha de cada participante |
 | B9 ✅ | Contingência: usar fixture quando o MCP falhar, com `source: "simulated"` | `agent/fallback.ts`, `fixtures/options-italiano.json` | B7 | P | desligar a rede devolve opções simuladas |
 | B10 ✅ | Entregar `resolveOptions` ao servidor: `→ Matheus` expõe a rota | `apps/api/src/server.ts` (`POST /parties/:id/options`) | B7 | P | rota responde para dois participantes |
-| B11 | (opcional) LLM só para ranquear ou descrever opções, nunca para escolher IDs | `agent/rank.ts` (a criar) | B7 | M | com e sem LLM o resultado é válido |
+| B11 ✅ | (opcional) LLM só para ranquear ou descrever opções, nunca para escolher IDs | absorvido pelo planner (`agent/planner*.ts`, [ADR 0003](adr/0003-planner-llm-sobre-ifood-mcp.md)); não há `rank.ts` | B7 | M | com e sem `OPENCODE_API_KEY` o resultado é válido |
 
 Pronto quando o marco fecha: para dois participantes com endereços diferentes e o mesmo tema, a
 API devolve opções reais e distintas, dentro do orçamento de cada um, em poucos segundos.
@@ -285,4 +296,4 @@ Saída: dois dispositivos conectam contas diferentes e `getUser` devolve o dono 
 | Domínio HTTPS e redirect URL pública | Matheus, Maeda | A9, E1 |
 | Perguntas, tema e votação | Júlio | T, B com dados reais |
 | Demo com pedido real, carrinho ou simulado | grupo | D, E |
-| Aprovar `ResolveOptions*` em `contracts` | Matheus | C, tudo que depende dele |
+| ~~Aprovar `ResolveOptions*` em `contracts`~~ ✅ feito (tipos já em `packages/contracts`) | Matheus | — |

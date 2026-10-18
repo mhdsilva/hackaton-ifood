@@ -263,9 +263,14 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [theme, budget]
+              required: [budget]
               properties:
-                theme: { type: string, minLength: 1 }
+                theme:
+                  type: string
+                  minLength: 1
+                  description: |
+                    Ignorado quando a Party já tem tema: o resultado da revelação vence.
+                    Serve só como fallback (ex.: antes de revelar, ou em teste).
                 budget:
                   type: number
                   exclusiveMinimum: 0

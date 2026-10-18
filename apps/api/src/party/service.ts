@@ -53,6 +53,8 @@ export class PartyService {
   constructor(
     private readonly store: PartyStore,
     private readonly access: ParticipantAccessStore,
+    /** Relógio injetável: a vibe do tema depende do dia da revelação. */
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   create(input: CreatePartyRequest): PartySessionResponse {
@@ -157,7 +159,7 @@ export class PartyService {
         Object.assign(answers, participant.questionnaireResponse.answers);
       }
     }
-    snapshot.party.theme = deriveTheme(answers);
+    snapshot.party.theme = deriveTheme(answers, this.now());
     return this.store.save(snapshot);
   }
 

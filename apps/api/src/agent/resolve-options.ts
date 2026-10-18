@@ -148,15 +148,25 @@ export type PartyOptionsResult =
   | { participantId: string; status: "error"; code: string; message: string; details?: unknown };
 
 /**
+ * Resolvedor de um participante, injetável: o orquestrador passa o caminho que preferir
+ * (determinístico, planner LLM...) e a negociação reusa exatamente o mesmo.
+ */
+export type PartyOptionResolver = (
+  input: ResolveOptionsInput,
+  caller: ToolCaller,
+) => Promise<ResolveOptionsOutput>;
+
+/**
  * Resolve todos os participantes em paralelo. Cada um usa o próprio `ToolCaller`
  * (a própria sessão MCP); a falha de um não cancela os outros.
  */
 export async function resolveOptionsForParty(
   requests: Array<{ input: ResolveOptionsInput; caller: ToolCaller }>,
   settings: ResolveOptionsSettings = {},
+  resolve: PartyOptionResolver = (input, caller) => resolveOptions(input, caller, settings),
 ): Promise<PartyOptionsResult[]> {
   const settled = await Promise.allSettled(
-    requests.map(({ input, caller }) => resolveOptions(input, caller, settings)),
+    requests.map(({ input, caller }) => resolve(input, caller)),
   );
   return settled.map((result, index) => {
     const participantId = requests[index].input.participantId;
