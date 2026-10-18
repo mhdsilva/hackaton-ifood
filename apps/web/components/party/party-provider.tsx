@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, Suspense, useContext, useEffect, type ReactNode } from "react";
+import { createContext, Suspense, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { LivePartyProvider, useParty as useLiveParty, type LivePartyValue } from "@/components/party/live-party-provider";
 import { MockPartyProvider, useMockParty } from "@/components/party/mock-party-provider";
 import { getMockBudgetOptions, getMockDesireOptions, getMockExclusionOptions, getMockPreferenceQuestion, getMockRestrictionOptions } from "@/lib/mock-questionnaire";
+import { getMockRetrospective } from "@/lib/mock-retrospective";
 
-type PartyValue = LivePartyValue & { isMock: boolean };
+type PartyValue = LivePartyValue;
 const PartyContext = createContext<PartyValue | null>(null);
 
 export function useParty(): PartyValue {
@@ -17,7 +18,23 @@ export function useParty(): PartyValue {
 
 function LivePartyBridge({ children }: { children: ReactNode }) {
   const value = useLiveParty();
-  return <PartyContext.Provider value={{ ...value, isMock: false }}>{children}</PartyContext.Provider>;
+  return <PartyDataBridge value={value}>{children}</PartyDataBridge>;
+}
+
+// Explicit showcase scenarios also replace data here, never the screen markup.
+function PartyDataBridge({ value, children }: { value: PartyValue; children: ReactNode }) {
+  const params = useSearchParams();
+  const preview = params.get("preview");
+  const { snapshot, loadRetrospective } = value;
+  const snapshotRef = useRef(snapshot);
+  useEffect(() => { snapshotRef.current = snapshot; }, [snapshot]);
+  const load = useCallback(() => {
+    if (preview === "waiting" || preview === "no-distance" || preview === "empty") {
+      return Promise.resolve(getMockRetrospective(snapshotRef.current, preview));
+    }
+    return loadRetrospective();
+  }, [preview, loadRetrospective]);
+  return <PartyContext.Provider value={{ ...value, loadRetrospective: load }}>{children}</PartyContext.Provider>;
 }
 
 function MockPartyBridge({ children }: { children: ReactNode }) {
@@ -37,13 +54,10 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
   const value: PartyValue = {
     ...mock,
     restartSession: () => window.location.replace("/"),
-    isMock: true,
     usingLiveCatalog: false,
-    addressesLive: false,
+    addressesLive: true,
     addressesLoading: false,
     addressesError: null,
-    findAddressCandidates: async () => { throw new Error("Cadastro de endereço indisponível na prévia mockada."); },
-    saveAddress: async () => { throw new Error("Cadastro de endereço indisponível na prévia mockada."); },
     restrictionOptions,
     budgetOptions,
     budgetCustomRange: { min: 1, max: 999 },
@@ -69,22 +83,12 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
     },
     completeQuestionnaire: async () => mock.completeQuestionnaire(),
     startParty: async () => mock.startParty(),
-    // A prévia libera a preparação sem simular respostas dos outros participantes.
-    revealTheme: async () => true,
     connectMcp: mock.connectMcp,
     connectingMcp: mock.connectingMcp,
-    resolveOrderOptions: async () => {
-      throw new Error("A busca de pedido usa o iFood; indisponível na prévia mockada.");
-    },
-    cart: null,
-    prepareOrderCart: async () => { throw new Error("Carrinho indisponível na prévia mockada."); },
-    submitPartyOrder: async () => { throw new Error("Pedido indisponível na prévia mockada."); },
-    trackPartyOrder: async () => { throw new Error("Rastreio indisponível na prévia mockada."); },
-    loadRetrospective: async () => { throw new Error("Retrospectiva indisponível na prévia mockada."); },
   };
 
   if (mock.inviteCode !== code || mock.authenticatedPreview !== authenticatedPreview) return <PartyLoading />;
-  return <PartyContext.Provider value={value}>{children}</PartyContext.Provider>;
+  return <PartyDataBridge value={value}>{children}</PartyDataBridge>;
 }
 
 function PartyLoading() {
@@ -101,5 +105,5 @@ export function PartyProvider({ children }: { children: ReactNode }) {
       </MockPartyProvider>
     );
   }
-  return <LivePartyProvider><LivePartyBridge>{children}</LivePartyBridge></LivePartyProvider>;
+  return <LivePartyProvider><Suspense fallback={<PartyLoading />}><LivePartyBridge>{children}</LivePartyBridge></Suspense></LivePartyProvider>;
 }

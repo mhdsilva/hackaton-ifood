@@ -10,7 +10,6 @@ import { OrderDetailCard } from "@/components/party/order-detail-card";
 import { PartyShell } from "@/components/party/party-shell";
 import { useParty } from "@/components/party/party-provider";
 import { describeError, LiveApiError } from "@/lib/api-client";
-import { getMockRevealedOrder } from "@/lib/mock-reveal";
 import { revealTheme } from "@/lib/reveal-theme";
 import { addressDetailLines, selectedPartyAddress } from "@/lib/addresses";
 
@@ -47,7 +46,6 @@ export function OrderSummaryScreen() {
   const {
     snapshot,
     currentParticipantId,
-    isMock,
     resolveOrderOptions,
     connectMcp,
     connectingMcp,
@@ -72,7 +70,7 @@ export function OrderSummaryScreen() {
   const themeCopy = revealTheme(snapshot.party);
 
   useEffect(() => {
-    if (isMock || addressesLoading) return;
+    if (addressesLoading) return;
     let alive = true;
     resolveRef
       .current(reloadKey > 0)
@@ -90,33 +88,7 @@ export function OrderSummaryScreen() {
     return () => {
       alive = false;
     };
-  }, [isMock, addressesLoading, currentParticipantId, theme, reloadKey]);
-
-  if (isMock) {
-    const mock = getMockRevealedOrder();
-    return (
-      <PartyShell brandTone="light" contentClassName="gap-4 pt-3" footerClassName="space-y-2 pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={<>
-        <Button asChild size="party" className="w-full"><Link href="/party/confirmed">Processar Pedido</Link></Button>
-        <Button asChild variant="secondary" size="party" className="w-full text-primary"><Link href="/party/pending/alternative">Gerar outra opção</Link></Button>
-      </>}>
-        <section aria-labelledby="order-title" className="space-y-1">
-          <p className="text-[11px] leading-[14px] font-bold text-primary">SEU PEDIDO PARA O TEMA</p>
-          <h1 id="order-title" className="font-preparation text-[40px] leading-[1.2] font-bold">{mock.theme}</h1>
-          <p className="flex items-center gap-1 text-muted-foreground"><span className="text-xs">★ {mock.rating}</span><span className="text-[13px] leading-[1.35]">{mock.merchant}</span></p>
-        </section>
-        <ul aria-label="Itens do pedido">
-          {mock.items.map((item) => <OrderItem key={item.id} name={item.name} detail={item.description} price={item.price} />)}
-        </ul>
-        <section aria-label="Total do pedido" className="space-y-2 leading-[1.35]">
-          <div className="flex items-center justify-between gap-3 text-2xl font-bold"><h2>Total do pedido</h2><p className="shrink-0">{currency.format(mock.total)}</p></div>
-          <p className="text-xs text-muted-foreground">Esse valor considera o frete, taxas e seus cupons disponíveis</p>
-        </section>
-        <OrderDetailCard icon="/figma/order-motorbike.svg" title="Entrega hoje" detail={mock.delivery} />
-        <OrderDetailCard icon="/figma/order-map-pin.svg" title={mock.address} detail={mock.complement} />
-        <OrderDetailCard icon="/figma/order-wallet.svg" title="Método de Pagamento" detail="Pix" />
-      </PartyShell>
-    );
-  }
+  }, [addressesLoading, currentParticipantId, theme, reloadKey]);
 
   if (order.status === "loading") {
     return (
@@ -190,11 +162,18 @@ export function OrderSummaryScreen() {
           setPreparingCart(false);
         }
       }}>{preparingCart ? "Processando pedido..." : "Processar Pedido"}</Button>
-      {options.length > 1 && (
-        <Button type="button" variant="secondary" size="party" className="w-full text-primary" onClick={() => setOptionIndex((index) => index + 1)}>
-          Gerar outra opção
-        </Button>
-      )}
+      <Button type="button" variant="secondary" size="party" className="w-full text-primary" disabled={preparingCart} onClick={() => {
+        setCartError(null);
+        if (options.length > 1) {
+          setOptionIndex((index) => index + 1);
+        } else {
+          setOrder({ status: "loading" });
+          setOptionIndex(0);
+          setReloadKey((value) => value + 1);
+        }
+      }}>
+        Gerar outra opção
+      </Button>
     </>}>
       <section aria-labelledby="order-title" className="space-y-1">
         <p className="text-[11px] leading-[14px] font-bold text-primary">SEU PEDIDO PARA O TEMA</p>
@@ -215,7 +194,7 @@ export function OrderSummaryScreen() {
       </ul>
       <section aria-label="Total do pedido" className="space-y-2 leading-[1.35]">
         <div className="flex items-center justify-between gap-3 text-2xl font-bold"><h2>Total do pedido</h2><p className="shrink-0">{currency.format(option.total)}</p></div>
-        <p className="text-xs text-muted-foreground">Valor estimado com frete. O checkout desta demonstração não cobra nada.</p>
+        <p className="text-xs text-muted-foreground">Esse valor considera o frete, taxas e seus cupons disponíveis</p>
       </section>
       <OrderDetailCard icon="/figma/order-motorbike.svg" title="Entrega hoje" detail={delivery} />
       <OrderDetailCard
@@ -225,7 +204,6 @@ export function OrderSummaryScreen() {
       />
       <OrderDetailCard icon="/figma/order-wallet.svg" title="Método de Pagamento" detail="Pix" />
       {cartError && <p role="alert" className="text-center text-xs text-destructive">{cartError}</p>}
-      <p className="text-center text-xs text-muted-foreground">O checkout desta demonstração é simulado. Nenhum pedido será enviado nem cobrado.</p>
     </PartyShell>
   );
 }

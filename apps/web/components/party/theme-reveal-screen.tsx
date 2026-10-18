@@ -6,13 +6,11 @@ import { Button } from "@/components/ui/button";
 import { PartyShell } from "@/components/party/party-shell";
 import { PreparationParticipants } from "@/components/party/preparation-participants";
 import { useParty } from "@/components/party/party-provider";
-import { getMockRevealTheme } from "@/lib/mock-reveal";
 import { revealTheme } from "@/lib/reveal-theme";
 
 export function ThemeRevealScreen() {
-  const { snapshot, isMock } = useParty();
-  // No modo mock o cenário visual continua italiano; no real, o tema vem do agente.
-  const theme = isMock ? getMockRevealTheme() : revealTheme(snapshot.party);
+  const { snapshot } = useParty();
+  const theme = revealTheme(snapshot.party);
   // Layout de duas linhas sem inventar texto: a primeira palavra fica normal, o resto em destaque.
   const [firstWord, ...restWords] = theme.title.split(/\s+/);
   const restOfTitle = restWords.join(" ");

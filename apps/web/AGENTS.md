@@ -8,6 +8,14 @@ Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávi
 
 ## Contexto e estado atual
 
+“Gerar outra opção” permanece visível no resumo mesmo quando a fonte retorna uma única opção. Com várias opções, alterna entre elas; com uma, refaz a consulta pela mesma camada de dados, invalidando o cache no modo real. A ação fica desabilitada durante a preparação do carrinho.
+
+A confirmação `/party/confirmed` segue o frame `36:6354` nos dois modos: “Seu pedido foi realizado!” em 40 px, sacola original de 262,069 × 280 px, participantes com legenda “conectados” e botão “Ver retrospectiva do pedido”. Não exibir nessa tela avisos de demonstração/checkout, total, pagamento nem uma segunda ação de consentimento. A tela é a confirmação visual após preparar o carrinho; esta mudança de apresentação não submete automaticamente pedidos nem efetua cobranças. Esta decisão substitui a descrição anterior da confirmação condicionada a `order_submitted`/`delivered`.
+
+As telas de produto compartilham apresentação e ações para mock e API. A seleção de fonte fica em `PartyProvider`; as telas não usam `isMock` nem uma árvore visual separada. O mock fornece opções no contrato `LocalOption`, carrinho, submissão, rastreio, cadastro de endereço e retrospectiva, sem chamadas reais. A confirmação representa o estágio retornado pelos dados nos dois modos, incluindo consentimento antes da submissão. A espera aplica a mesma regra de anfitrião e respostas completas; a fixture local conclui os demais participantes ao finalizar o questionário. Cenários explícitos `?preview=waiting|no-distance|empty` são tratados na camada de dados. Estas regras substituem as descrições históricas de diferenças entre os modos abaixo.
+
+O resumo conectado usa o mesmo texto do mock abaixo do total: “Esse valor considera o frete, taxas e seus cupons disponíveis”. O aviso adicional de checkout simulado abaixo dos cards foi removido por solicitação do usuário. `revealTheme` coloca somente a primeira letra do título em maiúscula, preservando o restante, tanto no resumo quanto na revelação.
+
 “Voltar ao início” na retrospectiva remove somente a sessão da Party do `sessionStorage` no modo real e recarrega `/`, descartando respostas, carrinho e caches locais para criar uma nova Party. No mock, recarrega `/` para reiniciar a prévia. A Party anterior continua disponível para os demais participantes.
 
 Os itens do resumo de pedido usam a mesma composição nos modos mock e real, com altura de 60 px. Sem complemento, o título fica centralizado verticalmente; o preço fica sempre centralizado verticalmente, com ou sem complemento. A Focaccia do mock não tem complemento para demonstrar esse estado.

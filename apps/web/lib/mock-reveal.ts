@@ -1,3 +1,5 @@
+import type { LocalOption } from "@sidequest/contracts";
+
 // Cenário visual do Figma: nenhum catálogo, carrinho ou pagamento real é consultado.
 export function getMockRevealTheme() {
   return {
@@ -5,6 +7,20 @@ export function getMockRevealTheme() {
     description: "Sabores diferentes, a mesma temática.",
     image: "/figma/theme-italian.png",
   };
+}
+
+export function getMockOrderOptions(): LocalOption[] {
+  const order = getMockRevealedOrder();
+  return [{
+    merchant: { id: "mock-forno", name: order.merchant, rating: 4.8, distanceKm: 1.5 },
+    items: order.items.map((item) => ({
+      itemId: item.id, name: item.name, quantity: 1, unitPrice: item.price,
+      selectedOptions: item.description ? [{ optionGroupId: "mock-detail", optionId: item.id, name: item.description, additionalPrice: 0 }] : [],
+    })),
+    subtotal: order.total - order.fees, deliveryFee: order.fees, total: order.total,
+    minimumOrderAmount: 0, deliveryMethodId: "mock-delivery",
+    estimatedDeliveryMinutes: { min: 35, max: 45 },
+  }];
 }
 
 export function getMockRevealedOrder() {

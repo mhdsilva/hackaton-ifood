@@ -57,8 +57,9 @@ function imageForTheme(party: Pick<PartyInfo, "theme" | "themeQueries">): string
 export function revealTheme(
   party: Pick<PartyInfo, "theme" | "themeQueries" | "themeReason">,
 ): RevealTheme {
+  const title = party.theme?.trim() || DEFAULT_TITLE;
   return {
-    title: party.theme?.trim() || DEFAULT_TITLE,
+    title: title.charAt(0).toLocaleUpperCase("pt-BR") + title.slice(1),
     description: party.themeReason?.trim() || DEFAULT_DESCRIPTION,
     image: imageForTheme(party),
   };

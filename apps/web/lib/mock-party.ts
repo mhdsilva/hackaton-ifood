@@ -5,7 +5,7 @@ import type { PartyAddress } from "@/lib/addresses";
 // Cenário visual baseado na fixture compartilhada, com os nomes do Figma.
 export function getMockParty(): PartySnapshot {
   return {
-    party: { ...fixture.party, name: "Sabadou à distância", status: "OPEN", membershipLocked: false },
+    party: { ...fixture.party, name: "Sabadou à distância", status: "OPEN", membershipLocked: false, theme: "Noite Italiana" },
     participants: fixture.participants.slice(0, 2).map((participant, index) => ({
       ...participant,
       name: index === 0 ? "Júlio" : "Lucas",

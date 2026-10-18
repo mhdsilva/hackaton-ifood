@@ -6,7 +6,7 @@ import type { AddressCandidate } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectionCard } from "@/components/ui/selection-card";
-import { useParty } from "@/components/party/live-party-provider";
+import { useParty } from "@/components/party/party-provider";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
 import { describeError } from "@/lib/api-client";
@@ -22,7 +22,6 @@ export function NewAddressScreen() {
   const [address, setAddress] = useState("");
   const [candidates, setCandidates] = useState<AddressCandidate[] | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-  const [simulated, setSimulated] = useState(false);
   const [busy, setBusy] = useState<"search" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +35,6 @@ export function NewAddressScreen() {
     try {
       const result = await findAddressCandidates(address.trim());
       setCandidates(result.candidates);
-      setSimulated(result.simulated);
       setSelectedCandidateId(result.matchConfidence === "SINGLE" ? result.candidates[0]?.candidateId ?? null : null);
     } catch (cause) {
       setError(describeError(cause));
@@ -96,7 +94,6 @@ export function NewAddressScreen() {
       </form>
 
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      {simulated && <p className="text-xs text-muted-foreground">Busca simulada: nenhuma conta real do iFood foi consultada.</p>}
 
       {candidates !== null && (
         <fieldset className="min-w-0 space-y-2">

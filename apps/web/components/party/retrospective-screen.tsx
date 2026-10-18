@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import type { PartyRetrospectiveResponse } from "@sidequest/contracts";
@@ -15,7 +14,7 @@ import { RetrospectiveShareDialog } from "@/components/party/retrospective-share
 import { useParty } from "@/components/party/party-provider";
 import { useSplashComplete } from "@/components/party/splash-intro";
 import { describeError } from "@/lib/api-client";
-import { getMockRetrospective, retrospectiveThemeLabel, type RetrospectivePreview } from "@/lib/mock-retrospective";
+import { retrospectiveThemeLabel } from "@/lib/mock-retrospective";
 
 const distanceFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const integerFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
@@ -23,19 +22,11 @@ const integerFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 
 const RETROSPECTIVE_POLL_MS = 3000;
 
 export function RetrospectiveScreen() {
-  const { snapshot, isMock, loadRetrospective, restartSession } = useParty();
-  const params = useSearchParams();
-  const rawPreview = params.get("preview");
-  const preview: RetrospectivePreview = rawPreview === "waiting" || rawPreview === "no-distance" || rawPreview === "empty" ? rawPreview : "ready";
-  // `?preview=` força o cenário simulado da vitrine mesmo em modo real; fora dele, o modo
-  // real busca a retrospectiva de verdade (baseada no pedido que cada um escolheu).
-  const usingPreview = isMock || rawPreview !== null;
-  const mockResponse = useMemo(() => getMockRetrospective(snapshot, preview), [snapshot, preview]);
+  const { snapshot, loadRetrospective, restartSession } = useParty();
   const [liveResponse, setLiveResponse] = useState<PartyRetrospectiveResponse | null>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (usingPreview) return;
     let alive = true;
     let timer: number | undefined;
     const tick = () => {
@@ -57,9 +48,9 @@ export function RetrospectiveScreen() {
       alive = false;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [usingPreview, loadRetrospective]);
+  }, [loadRetrospective]);
 
-  const response = usingPreview ? mockResponse : liveResponse;
+  const response = liveResponse;
   const summary = response?.summary;
   const waiting = response?.state === "waiting_for_deliveries";
   const container = useRef<HTMLDivElement>(null);
@@ -86,9 +77,9 @@ export function RetrospectiveScreen() {
       return finishNumbers;
     });
     return () => { media.revert(); finishNumbers(); };
-  }, { scope: container, dependencies: [splashComplete, preview, summary?.participantCount, summary?.completedOrderCount, summary?.itemCount, summary?.merchantCount, summary?.maxDistanceKm], revertOnUpdate: true });
+  }, { scope: container, dependencies: [splashComplete, summary?.participantCount, summary?.completedOrderCount, summary?.itemCount, summary?.merchantCount, summary?.maxDistanceKm], revertOnUpdate: true });
 
-  if (!usingPreview && liveError) {
+  if (liveError) {
     return (
       <PartyShell brandTone="light" backdrop={<BrandBackdrop />} footer={
         <Button asChild variant="ghost" className="w-full text-order-detail"><Link href="/">Voltar para a Party</Link></Button>
@@ -97,7 +88,7 @@ export function RetrospectiveScreen() {
       </PartyShell>
     );
   }
-  if (!usingPreview && response === null) {
+  if (response === null) {
     return (
       <PartyShell brandTone="light" backdrop={<BrandBackdrop />} footer={null}>
         <p role="status" className="pt-10 text-center text-muted-foreground">Carregando retrospectiva...</p>
@@ -155,7 +146,6 @@ export function RetrospectiveScreen() {
           <p className="font-preparation text-[80px] leading-none font-semibold text-primary">{waiting ? response?.pendingDeliveryCount : "—"}</p>
           <h2 className="mt-2 text-lg font-bold">{waiting ? response?.pendingDeliveryCount === 1 ? "pedido ainda em andamento" : "pedidos ainda em andamento" : "Retrospectiva indisponível"}</h2>
           <p className="mt-3 text-sm leading-6 text-order-detail">{waiting ? "Cada entrega tem seu tempo. Quando todas forem concluídas, a gente reúne os números desse encontro aqui." : "Volte para a Party para continuar. Assim que o resumo estiver disponível, ele aparece aqui."}</p>
-          {usingPreview && <p className="mt-6 text-[10px] text-muted-foreground">Dados simulados para esta prévia.</p>}
         </section>}
       </div>
     </PartyShell>

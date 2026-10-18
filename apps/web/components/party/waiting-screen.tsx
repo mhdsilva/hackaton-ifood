@@ -9,12 +9,12 @@ import { ParticipantList } from "@/components/party/participant-list";
 import { useParty } from "@/components/party/party-provider";
 
 export function WaitingScreen() {
-  const { snapshot, currentParticipantId, completedParticipantIds, canCompleteQuestionnaire, revealTheme, isMock } = useParty();
+  const { snapshot, currentParticipantId, completedParticipantIds, canCompleteQuestionnaire, revealTheme } = useParty();
   const router = useRouter();
   const [revealing, setRevealing] = useState(false);
   const readyIds = completedParticipantIds.filter((id) => id !== currentParticipantId || canCompleteQuestionnaire);
   const allReady = snapshot.participants.length > 0 && snapshot.participants.every((participant) => readyIds.includes(participant.id));
-  const canReveal = isMock || (allReady && snapshot.party.hostParticipantId === currentParticipantId);
+  const canReveal = allReady && snapshot.party.hostParticipantId === currentParticipantId;
 
   async function reveal() {
     if (!canReveal || revealing) return;

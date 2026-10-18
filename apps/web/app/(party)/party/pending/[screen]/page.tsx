@@ -27,11 +27,11 @@ export function generateStaticParams() {
 
 export default async function PendingPage({ params }: { params: Promise<{ screen: string }> }) {
   const { screen } = await params;
-  if (screen === "delivery" && process.env.NEXT_PUBLIC_PARTY_MODE !== "mock") {
+  if (screen === "delivery") {
     return <DemoOrderProgressScreen />;
   }
   // Endereço novo já tem comportamento real; o desenho definitivo ainda não existe.
-  if (screen === "new-address" && process.env.NEXT_PUBLIC_PARTY_MODE !== "mock") return <NewAddressScreen />;
+  if (screen === "new-address") return <NewAddressScreen />;
   const destination = Object.hasOwn(screens, screen) ? screens[screen] : undefined;
   if (!destination) notFound();
   return (

@@ -15,7 +15,7 @@ import { getMockPreparationStages, MOCK_PREPARATION_STAGE_MS } from "@/lib/mock-
 const preparationTitles = getMockPreparationStages().map((stage) => stage.title);
 
 export function PreparingScreen() {
-  const { snapshot, currentParticipantId, isMock, addressesLoading, resolveOrderOptions } = useParty();
+  const { snapshot, currentParticipantId, addressesLoading, resolveOrderOptions } = useParty();
   const participants = snapshot.participants;
   const [stageIndex, setStageIndex] = useState(0);
   const optionsPrefetchedFor = useRef<string | null>(null);
@@ -24,12 +24,12 @@ export function PreparingScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isMock || addressesLoading || snapshot.party.status !== "THEME_REVEALED" || !snapshot.party.theme) return;
+    if (addressesLoading || snapshot.party.status !== "THEME_REVEALED" || !snapshot.party.theme) return;
     const key = `${snapshot.party.id}:${currentParticipantId}`;
     if (optionsPrefetchedFor.current === key) return;
     optionsPrefetchedFor.current = key;
     void resolveOrderOptions().catch(() => {});
-  }, [addressesLoading, currentParticipantId, isMock, resolveOrderOptions, snapshot.party.id, snapshot.party.status, snapshot.party.theme]);
+  }, [addressesLoading, currentParticipantId, resolveOrderOptions, snapshot.party.id, snapshot.party.status, snapshot.party.theme]);
 
   useEffect(() => {
     if (!splashComplete) return;

@@ -10,7 +10,7 @@ import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
 
 export function AddressScreen() {
-  const { addresses, addressesLive, addressesLoading, addressesError, selectedAddressId, setSelectedAddressId, isMock } =
+  const { addresses, addressesLive, addressesLoading, addressesError, selectedAddressId, setSelectedAddressId } =
     useParty();
   const router = useQuestionRouter();
   const hasSelection = addresses.some((address) => address.id === selectedAddressId);
@@ -39,7 +39,7 @@ export function AddressScreen() {
             </p>
           )}
         </fieldset>
-        {!isMock && !addressesLive && !addressesLoading && (
+        {!addressesLive && !addressesLoading && (
           <p className="mt-4 rounded-lg border border-dashed p-3 text-xs leading-[normal] text-muted-foreground">
             Estes endereços não vêm do iFood. Conecte sua conta no lobby para usar os endereços reais
             da sua conta.
