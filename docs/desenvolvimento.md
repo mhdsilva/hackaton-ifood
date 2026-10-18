@@ -33,6 +33,36 @@ Consultar `GET /parties/:id` a cada 1–2 segundos. Parar o polling ao desmontar
 
 **Validar a sessão ao carregar:** `GET /parties/:id/session` (Bearer) devolve `{ participant }`. Como o estado é em memória, um restart da API invalida os tokens; use esta rota para tratar "sessão expirada, entrar de novo" antes de montar a tela.
 
+**Listar endereços do próprio participante:** `GET /parties/:id/addresses` (Bearer) devolve `{ addresses: [{ addressId, label, isLastUsedAddress }] }`. `label` usa o alias ou, sem alias, bairro e cidade. Não devolve rua, número, CEP ou coordenadas. O modo demo retorna um endereço sintético de São Carlos. Sem OAuth ativo no modo real, retorna `409 MCP_NOT_CONNECTED`.
+
+**Adicionar endereço:** primeiro chame `POST /parties/:id/addresses/resolve` com `{ address }`. A resposta `{ matchConfidence, candidates, simulated }` contém candidatos sem coordenadas; a pessoa escolhe um, confirma o endereço formatado e informa bairro se estiver vazio. Depois chame `POST /parties/:id/addresses` com `{ address, candidateId, neighborhood?, alias?, complement?, reference? }`. A chamada de confirmação é a única que persiste no iFood; pode ser repetida com segurança: primeira criação `201`, retry idempotente `200` com `alreadyExists: true`. Ambas as rotas usam o token e a sessão iFood do participante. O modo demo marca `simulated: true` e mantém endereços sintéticos somente em memória.
+
+Exemplo resumido:
+
+```http
+POST /parties/party-123/addresses/resolve
+Authorization: Bearer <participantToken>
+Content-Type: application/json
+
+{"address":"Rua Episcopal, 123, São Carlos, SP"}
+```
+
+```json
+{"matchConfidence":"SINGLE","candidates":[{"candidateId":"candidate-abc","formattedAddress":"Rua Episcopal, 123, Centro, São Carlos, SP","neighborhood":"Centro","city":"São Carlos","state":"SP"}],"simulated":false}
+```
+
+Depois de a pessoa confirmar o candidato, persista-o:
+
+```http
+POST /parties/party-123/addresses
+Authorization: Bearer <participantToken>
+Content-Type: application/json
+
+{"address":"Rua Episcopal, 123, São Carlos, SP","candidateId":"candidate-abc","neighborhood":"Centro","alias":"Casa"}
+```
+
+A resposta expõe somente o identificador e um rótulo seguro; rua completa, CEP e coordenadas não são devolvidos pela API.
+
 **Renderizar o formulário dinamicamente:** `GET /questionnaire` devolve a definição atual (`{ version, title, introduction?, questions[] }`). Cada questão tem `id`, `type` (`text`, `address`, `single_choice`, `multi_choice`, `scale`), `label`, `required` e, quando couber, `options`/`min`/`max`/`helpText`. Questões de múltipla escolha podem ter `maxSelections` (ex.: "até 2"); opções podem ter `value` (número, ex.: faixa de orçamento); e uma questão pode ter `allowOther`/`otherOptionId`/`otherInput` (campo "Outro") ou `customInput` ("Outro valor" digitado). A questão `address` não tem `options` — as opções vêm do iFood (`listAddresses`). As perguntas ainda são provisórias; a tela não deve fixar campos.
 
 Envie cada etapa incrementalmente (rascunho) ou tudo no fim, usando o `version` recebido:

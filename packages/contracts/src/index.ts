@@ -66,6 +66,46 @@ export interface PartySnapshot {
   participants: Participant[];
 }
 
+/** Endereço do participante projetado para seleção no cliente, sem coordenadas ou endereço completo. */
+export interface ParticipantAddress {
+  addressId: string;
+  label: string;
+  isLastUsedAddress: boolean;
+}
+
+export interface ParticipantAddressesResponse {
+  addresses: ParticipantAddress[];
+}
+
+export interface AddressCandidate {
+  candidateId: string;
+  formattedAddress: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+}
+
+export interface AddressResolutionResponse {
+  matchConfidence: "NONE" | "SINGLE" | "MULTIPLE";
+  candidates: AddressCandidate[];
+  simulated: boolean;
+}
+
+export interface CreateParticipantAddressRequest {
+  address: string;
+  candidateId: string;
+  neighborhood?: string;
+  alias?: string;
+  complement?: string;
+  reference?: string;
+}
+
+export interface CreateParticipantAddressResponse {
+  address: ParticipantAddress;
+  alreadyExists: boolean;
+  simulated: boolean;
+}
+
 export interface PartyRetrospectiveSummary {
   partyName: string;
   theme?: string;

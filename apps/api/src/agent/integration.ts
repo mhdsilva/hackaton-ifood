@@ -6,7 +6,14 @@
 
 import { randomUUID } from "node:crypto";
 
-import type { McpConnectionStatus } from "@sidequest/contracts";
+import type {
+  AddressCandidate,
+  AddressResolutionResponse,
+  CreateParticipantAddressRequest,
+  CreateParticipantAddressResponse,
+  McpConnectionStatus,
+  ParticipantAddress,
+} from "@sidequest/contracts";
 
 import type { ChatClient } from "../llm/client.js";
 import {
@@ -25,10 +32,12 @@ import {
   loadDiscoveryFixture,
   resolveOptionsPreferringPlanner,
   resolveOptionsWithFallback,
+  SIMULATED_ADDRESS,
 } from "./fallback.js";
 import { AgentError, pickAddress } from "./pick-address.js";
 import type { PlannerOptionsSettings } from "./planner-options.js";
 import { resolveOptions } from "./resolve-options.js";
+import { sanitizeAddress } from "./sanitize.js";
 import type {
   IfoodCoordinates,
   IfoodAddress,
@@ -46,6 +55,15 @@ export interface ParticipantRef {
 export interface PartyAgentIntegration {
   /** Ausente no modo `demo`: lá a conexão é sintética e vai direto para `connected`. */
   validateConnection?(actor: ParticipantRef): Promise<Extract<McpConnectionStatus, "connected" | "error">>;
+  listAddresses?(actor: ParticipantRef): Promise<ParticipantAddress[]>;
+  resolveNewAddress?(
+    actor: ParticipantRef,
+    input: { address: string },
+  ): Promise<AddressResolutionResponse>;
+  createParticipantAddress?(
+    actor: ParticipantRef,
+    input: CreateParticipantAddressRequest,
+  ): Promise<CreateParticipantAddressResponse>;
   resolveOptions(
     actor: ParticipantRef,
     input: Omit<ResolveOptionsInput, "participantId">,
@@ -66,6 +84,7 @@ export function createIfoodIntegration(deps: {
   sessions: McpSessionRegistry;
   provider: McpOAuthProvider;
   mcpUrl?: string;
+  fetchImpl?: typeof globalThis.fetch;
   /** Planner LLM opcional: sem ele, a integração fica no caminho determinístico. */
   llm?: { client: ChatClient; settings?: PlannerOptionsSettings };
 }): PartyAgentIntegration {
@@ -77,6 +96,7 @@ export function createIfoodIntegration(deps: {
     return new IfoodMcpClient({
       session,
       ...(deps.mcpUrl ? { mcpUrl: deps.mcpUrl } : {}),
+      ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
       ...(deps.provider.refreshTokens
         ? { refreshTokens: (token: string) => deps.provider.refreshTokens!(token) }
         : {}),
@@ -91,6 +111,16 @@ export function createIfoodIntegration(deps: {
       } catch {
         return "error";
       }
+    },
+    async listAddresses(actor) {
+      const result = await clientFor(actor).callTool<{ results?: IfoodAddress[] }>("listAddresses");
+      return (result.results ?? []).map(sanitizeAddress);
+    },
+    async resolveNewAddress(actor, input) {
+      return resolveAddressCandidates(clientFor(actor), input.address);
+    },
+    async createParticipantAddress(actor, input) {
+      return persistParticipantAddress(clientFor(actor), input);
     },
     resolveOptions(actor, input) {
       const fullInput = { ...input, participantId: actor.participantId };
@@ -122,6 +152,83 @@ async function resolveAddress(caller: ToolCaller, addressId?: string): Promise<I
   return pickAddress(addresses.results ?? [], addressId);
 }
 
+async function resolveAddressCandidates(
+  caller: ToolCaller,
+  address: string,
+): Promise<AddressResolutionResponse> {
+  await caller.callTool("listAddresses");
+  const result = await caller.callTool<Record<string, unknown>>("createAddress", { address });
+  const rawCandidates = Array.isArray(result.candidates) ? result.candidates : [];
+  const candidates = rawCandidates.flatMap((value): AddressCandidate[] => {
+    if (typeof value !== "object" || value === null) return [];
+    const candidate = value as Record<string, unknown>;
+    if (typeof candidate.candidateId !== "string" || typeof candidate.formattedAddress !== "string") {
+      return [];
+    }
+    const location =
+      typeof candidate.location === "object" && candidate.location !== null
+        ? (candidate.location as Record<string, unknown>)
+        : {};
+    return [
+      {
+        candidateId: candidate.candidateId,
+        formattedAddress: candidate.formattedAddress,
+        ...(typeof location.neighborhood === "string"
+          ? { neighborhood: location.neighborhood }
+          : {}),
+        ...(typeof location.city === "string" ? { city: location.city } : {}),
+        ...(typeof location.state === "string" ? { state: location.state } : {}),
+      },
+    ];
+  });
+  const confidence = result.matchConfidence;
+  const matchConfidence =
+    candidates.length === 0
+      ? "NONE"
+      : confidence === "MULTIPLE" || candidates.length > 1
+        ? "MULTIPLE"
+        : "SINGLE";
+  return { matchConfidence, candidates, simulated: false };
+}
+
+async function persistParticipantAddress(
+  caller: ToolCaller,
+  input: CreateParticipantAddressRequest,
+): Promise<CreateParticipantAddressResponse> {
+  await caller.callTool("listAddresses");
+  const result = await caller.callTool<Record<string, unknown>>("createAddress", {
+    address: input.address,
+    candidateId: input.candidateId,
+    ...(input.neighborhood !== undefined ? { neighborhood: input.neighborhood } : {}),
+    ...(input.alias !== undefined ? { alias: input.alias } : {}),
+    ...(input.complement !== undefined ? { complement: input.complement } : {}),
+    ...(input.reference !== undefined ? { reference: input.reference } : {}),
+  });
+  if (typeof result.addressId !== "string" || result.addressId.length === 0) {
+    throw new AgentError("ADDRESS_CREATION_FAILED", "O iFood não devolveu o endereço salvo");
+  }
+  const location =
+    typeof result.location === "object" && result.location !== null
+      ? (result.location as Record<string, unknown>)
+      : {};
+  const alias = typeof result.alias === "string" ? result.alias.trim() : "";
+  const label =
+    alias ||
+    [location.neighborhood, location.city]
+      .filter((part): part is string => typeof part === "string" && part.trim() !== "")
+      .join(", ") ||
+    "Endereço salvo";
+  const agentHints =
+    typeof result.agentHints === "object" && result.agentHints !== null
+      ? (result.agentHints as Record<string, unknown>)
+      : {};
+  return {
+    address: { addressId: result.addressId, label, isLastUsedAddress: false },
+    alreadyExists: agentHints.alreadyExists === true,
+    simulated: false,
+  };
+}
+
 const DEMO_TIMELINE: Array<{ afterSeconds: number; code: string; description: string }> = [
   { afterSeconds: 0, code: "CONFIRMED", description: "Pedido confirmado pelo restaurante" },
   { afterSeconds: 20, code: "PREPARING", description: "O restaurante está preparando o pedido" },
@@ -133,9 +240,56 @@ const DEMO_TIMELINE: Array<{ afterSeconds: number; code: string; description: st
 export function createDemoIntegration(now: () => number = Date.now): PartyAgentIntegration {
   const carts = new Map<string, { owner: string; option: LocalOption }>();
   const orders = new Map<string, { owner: string; createdAt: number }>();
+  const demoAddresses = new Map<string, ParticipantAddress[]>();
+  const demoCandidates = new Map<
+    string,
+    { owner: string; address: string; created?: ParticipantAddress }
+  >();
   const ownerKey = (actor: ParticipantRef) => `${actor.partyId}\u0000${actor.participantId}`;
 
+  const addressesFor = (owner: string) =>
+    demoAddresses.get(owner) ?? [sanitizeAddress(SIMULATED_ADDRESS)];
+
   return {
+    async listAddresses(actor) {
+      return addressesFor(ownerKey(actor));
+    },
+    async resolveNewAddress(actor, input) {
+      const owner = ownerKey(actor);
+      const candidateId = `demo-${randomUUID()}`;
+      demoCandidates.set(candidateId, { owner, address: input.address });
+      return {
+        matchConfidence: "SINGLE",
+        candidates: [
+          {
+            candidateId,
+            formattedAddress: `${input.address} (não validado; endereço simulado)`,
+            neighborhood: "Centro",
+            city: "São Carlos",
+            state: "SP",
+          },
+        ],
+        simulated: true,
+      };
+    },
+    async createParticipantAddress(actor, input) {
+      const owner = ownerKey(actor);
+      const candidate = demoCandidates.get(input.candidateId);
+      if (!candidate || candidate.owner !== owner || candidate.address !== input.address) {
+        throw new AgentError("ADDRESS_NOT_FOUND", "Candidato de endereço não encontrado");
+      }
+      if (candidate.created) {
+        return { address: candidate.created, alreadyExists: true, simulated: true };
+      }
+      const address: ParticipantAddress = {
+        addressId: `demo-${randomUUID()}`,
+        label: input.alias?.trim() || "Endereço de demonstração",
+        isLastUsedAddress: false,
+      };
+      candidate.created = address;
+      demoAddresses.set(owner, [...addressesFor(owner), address]);
+      return { address, alreadyExists: false, simulated: true };
+    },
     async resolveOptions(actor, input) {
       const output = await resolveOptions(
         { ...input, participantId: actor.participantId, addressId: undefined },

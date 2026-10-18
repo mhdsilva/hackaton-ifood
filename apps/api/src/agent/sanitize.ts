@@ -6,6 +6,8 @@
  * docs/superpowers/specs/2026-10-17-agente-llm-ifood-mcp.md.
  */
 
+import type { ParticipantAddress } from "@sidequest/contracts";
+
 import { addressLabel } from "./pick-address.js";
 import type { IfoodAddress } from "./types.js";
 
@@ -68,11 +70,7 @@ export function stripPersonalData(value: unknown): unknown {
 }
 
 /** Projeta o endereço para o que o modelo pode ver: sem coordenadas, rua, número ou CEP. */
-export function sanitizeAddress(address: IfoodAddress): {
-  addressId: string;
-  label: string;
-  isLastUsedAddress: boolean;
-} {
+export function sanitizeAddress(address: IfoodAddress): ParticipantAddress {
   return {
     addressId: address.addressId,
     label: addressLabel(address),

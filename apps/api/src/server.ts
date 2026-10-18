@@ -2,8 +2,10 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { pathToFileURL } from "node:url";
 
 import type {
+  AddressResolutionResponse,
   ApiErrorBody,
   CreatePartyRequest,
+  CreateParticipantAddressRequest,
   JoinPartyRequest,
   SubmitAnswersRequest,
 } from "@sidequest/contracts";
@@ -44,6 +46,7 @@ const AGENT_ERROR_STATUS: Record<AgentError["code"], number> = {
   NO_ADDRESS: 409,
   ADDRESS_SELECTION_REQUIRED: 409,
   ADDRESS_NOT_FOUND: 409,
+  ADDRESS_CREATION_FAILED: 502,
   MCP_NOT_CONNECTED: 409,
   NOT_FOUND: 404,
   NO_OPTIONS: 422,
@@ -70,6 +73,13 @@ async function runAgent<T>(work: () => Promise<T>): Promise<T> {
       throw new PartyError(CHECKOUT_ERROR_STATUS[error.code], error.code, error.message);
     }
     if (error instanceof IfoodMcpError && error.code === "TOOL_ERROR") {
+      const toolError = error.details as { code?: unknown } | undefined;
+      if (toolError?.code === "MISSING_NEIGHBORHOOD") {
+        throw new PartyError(422, "NEIGHBORHOOD_REQUIRED", "Informe o bairro para salvar este endereço");
+      }
+      if (toolError?.code === "CANDIDATE_ID_CONFLICT") {
+        throw new PartyError(409, "ADDRESS_CANDIDATE_CONFLICT", "Os dados não correspondem ao candidato escolhido");
+      }
       throw new PartyError(502, "IFOOD_REJECTED", error.message);
     }
     if (error instanceof IfoodMcpError && error.code === "AUTHENTICATION_REQUIRED") {
@@ -109,6 +119,53 @@ function parseOption(value: unknown): LocalOption {
     throw new PartyError(400, "INVALID_INPUT", "option must be one of the options returned by /options");
   }
   return option!;
+}
+
+function requiredText(body: Record<string, unknown>, name: string, maxLength: number): string {
+  const value = body[name];
+  if (typeof value !== "string" || value.trim().length === 0 || value.trim().length > maxLength) {
+    throw new PartyError(400, "INVALID_INPUT", `${name} must be a non-empty string of at most ${maxLength} characters`);
+  }
+  return value.trim();
+}
+
+function recordBody(value: unknown): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new PartyError(400, "INVALID_INPUT", "Request body must be a JSON object");
+  }
+  return value as Record<string, unknown>;
+}
+
+function optionalText(body: Record<string, unknown>, name: string, maxLength: number): string | undefined {
+  const value = body[name];
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim().length > maxLength) {
+    throw new PartyError(400, "INVALID_INPUT", `${name} must be a string of at most ${maxLength} characters`);
+  }
+  const normalized = value.trim();
+  return normalized === "" ? undefined : normalized;
+}
+
+function parseAddressResolutionRequest(body: Record<string, unknown>): { address: string } {
+  return { address: requiredText(body, "address", 500) };
+}
+
+function parseCreateParticipantAddressRequest(
+  body: Record<string, unknown>,
+): CreateParticipantAddressRequest {
+  const input: CreateParticipantAddressRequest = {
+    address: requiredText(body, "address", 500),
+    candidateId: requiredText(body, "candidateId", 200),
+  };
+  const neighborhood = optionalText(body, "neighborhood", 120);
+  const alias = optionalText(body, "alias", 80);
+  const complement = optionalText(body, "complement", 160);
+  const reference = optionalText(body, "reference", 200);
+  if (neighborhood !== undefined) input.neighborhood = neighborhood;
+  if (alias !== undefined) input.alias = alias;
+  if (complement !== undefined) input.complement = complement;
+  if (reference !== undefined) input.reference = reference;
+  return input;
 }
 
 function parseOptionsRequest(body: Record<string, unknown>, partyTheme?: string) {
@@ -300,6 +357,45 @@ async function routeRequest(
     const participant = service.getSession(partyId, bearerToken(request));
     sendJson(response, 200, { participant }, allowedOrigin);
     return;
+  }
+
+  const addressResolutionRoute = url.pathname.match(/^\/parties\/([^/]+)\/addresses\/resolve$/);
+  if (addressResolutionRoute) {
+    if (method !== "POST") {
+      throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+    }
+    const partyId = decodeURIComponent(addressResolutionRoute[1]);
+    const actor = service.authorizeParticipant(partyId, bearerToken(request));
+    const resolveNewAddress = requireAgent(options.agent, "resolveNewAddress");
+    const input = parseAddressResolutionRequest(recordBody(await readJson<unknown>(request)));
+    const result: AddressResolutionResponse = await runAgent(() => resolveNewAddress(actor, input));
+    sendJson(response, 200, result, allowedOrigin);
+    return;
+  }
+
+  const addressesRoute = url.pathname.match(/^\/parties\/([^/]+)\/addresses$/);
+  if (addressesRoute) {
+    if (method !== "GET" && method !== "POST") {
+      throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+    }
+    const partyId = decodeURIComponent(addressesRoute[1]);
+    const actor = service.authorizeParticipant(partyId, bearerToken(request));
+    if (method === "GET") {
+      const listAddresses = requireAgent(options.agent, "listAddresses");
+      const addresses = await runAgent(() => listAddresses(actor));
+      sendJson(response, 200, { addresses }, allowedOrigin);
+      return;
+    }
+    if (method === "POST") {
+      const createAddress = requireAgent(options.agent, "createParticipantAddress");
+      const input = parseCreateParticipantAddressRequest(
+        recordBody(await readJson<unknown>(request)),
+      );
+      const result = await runAgent(() => createAddress(actor, input));
+      sendJson(response, result.alreadyExists ? 200 : 201, result, allowedOrigin);
+      return;
+    }
+    throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
   }
 
   if (url.pathname === (options.callbackPath ?? DEFAULT_CALLBACK_PATH)) {

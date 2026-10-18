@@ -125,7 +125,7 @@ As telas já existem em `apps/web` (hoje com mock). Para integrar, cada uma troc
 | Tela (`apps/web`) | Hoje | Chamada da API |
 | --- | --- | --- |
 | `app/(party)/page.tsx` (`LobbyScreen`) | mock do host | `POST /parties` **ou** `POST /parties/:code/join` + `GET /parties/:code` (polling 1–2s) + `POST /parties/:code/close` + `POST /parties/:id/mcp-connection/authorize` |
-| `party/address/page.tsx` (`AddressScreen`) | lista mock | questão `address` do `GET /questionnaire`; responder em `POST /parties/:id/answers`. **Lista de endereços ainda não tem rota** → mockar (§"Ainda NÃO existe") |
+| `party/address/page.tsx` (`AddressScreen`) | lista mock | `GET /parties/:id/addresses` (Bearer); criar endereço por `POST /parties/:id/addresses/resolve` → confirmação em `POST /parties/:id/addresses`; responder o `addressId` escolhido em `POST /parties/:id/answers` |
 | `party/restrictions/page.tsx` (`RestrictionsScreen`) | `RestrictionId` local | questão `restrictions` do `GET /questionnaire` |
 | `party/budget/page.tsx` (`BudgetScreen`) | `BudgetOptionId` local | questão `budget` do `GET /questionnaire` |
 | `party/pending/[screen]` (`invite`, `new-address`, `next-question`) | placeholder | — (`invite` some com a regra de criar ao abrir) |
@@ -146,10 +146,10 @@ final** (visual é do Otávio).
 
 ## Ainda NÃO existe (não bloqueia)
 
-- **Endereço (pergunta 1):** sem rota para listar/adicionar endereços ainda. Vai entrar um provider
-  de demonstração + `GET /parties/:id/addresses` e `POST /parties/:id/addresses`, mesmo padrão do
-  OAuth demo. **Enquanto isso, mockar a lista no front.** A questão `type: "address"` já existe; a
-  resposta é uma string (`addressId`).
+- **Cadastro de endereço novo:** a API oferece `POST /parties/:id/addresses/resolve` para
+  geocodificar sem salvar e `POST /parties/:id/addresses` para confirmar e persistir o candidato.
+  A interface precisa apresentar a confirmação, solicitar bairro se o candidato não tiver um e
+  tratar `simulated: true` no modo demo. Consulte os contratos no OpenAPI.
 - Votação, cardápio e pedidos: dependem das decisões do Júlio. (**Tema já não é pendência** — ver §5.)
 
 ## Ordem sugerida

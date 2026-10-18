@@ -6,6 +6,7 @@ export class AgentError extends Error {
       | "NO_ADDRESS"
       | "ADDRESS_SELECTION_REQUIRED"
       | "ADDRESS_NOT_FOUND"
+      | "ADDRESS_CREATION_FAILED"
       | "NO_OPTIONS"
       | "MCP_NOT_CONNECTED"
       | "NOT_FOUND"

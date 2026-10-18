@@ -23,7 +23,7 @@ const DEFAULT_FIXTURE_URL = new URL(
 );
 
 /** Endereço sintético da contingência: nenhum dado de conta real. */
-const SIMULATED_ADDRESS = {
+export const SIMULATED_ADDRESS = {
   addressId: "00000000-0000-4000-8000-000000000000",
   alias: "Demo",
   location: { neighborhood: "Centro", city: "São Carlos", state: "SP" },

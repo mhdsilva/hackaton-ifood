@@ -969,3 +969,142 @@ test("reflects the participant order stage in the public snapshot", async () => 
   assert.equal(afterDelivered.orderStatus, "CONCLUDED");
   assert.equal(afterDelivered.orderStage, "delivered");
 });
+
+test("resolves and confirms a new address only for the authenticated participant", async () => {
+  let created = false;
+  let receivedActor: unknown;
+  let receivedInput: unknown;
+  const api = createApi();
+  api.agent = {
+    resolveOptions: async () => {
+      throw new Error("unused");
+    },
+    resolveNewAddress: async (actor: unknown, input: unknown) => {
+      receivedActor = actor;
+      receivedInput = input;
+      return {
+        matchConfidence: "MULTIPLE",
+        candidates: [
+          {
+            candidateId: "candidate-1",
+            formattedAddress: "Rua X, 44, Centro, São Carlos, SP, CEP 13560-000",
+            neighborhood: "Centro",
+            city: "São Carlos",
+            state: "SP",
+          },
+        ],
+        simulated: false,
+      };
+    },
+    createParticipantAddress: async (actor: unknown, input: unknown) => {
+      receivedActor = actor;
+      receivedInput = input;
+      const alreadyExists = created;
+      created = true;
+      return {
+        address: {
+          addressId: "address-1",
+          label: "Casa",
+          isLastUsedAddress: false,
+        },
+        alreadyExists,
+        simulated: false,
+      };
+    },
+  };
+  const { host } = await createHostAndAuthorize(api);
+  const partyId = host.party.party.id;
+  const token = host.participantToken;
+
+  const unauthorized = await request(api, "POST", `/parties/${partyId}/addresses/resolve`, {
+    address: "Rua X, 44, São Carlos, SP",
+  });
+  assert.equal(unauthorized.statusCode, 401);
+
+  const resolved = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/addresses/resolve`,
+    { address: "Rua X, 44, São Carlos, SP" },
+    token,
+  );
+  assert.equal(resolved.statusCode, 200);
+  assert.equal(resolved.json().matchConfidence, "MULTIPLE");
+  assert.equal(resolved.json().candidates[0].candidateId, "candidate-1");
+  assert.equal("coordinates" in resolved.json().candidates[0], false);
+  assert.deepEqual(receivedActor, { partyId, participantId: "ana" });
+  assert.deepEqual(receivedInput, { address: "Rua X, 44, São Carlos, SP" });
+
+  const input = {
+    address: "Rua X, 44, São Carlos, SP",
+    candidateId: "candidate-1",
+    neighborhood: "Centro",
+    alias: "Casa",
+    complement: "Apto 12",
+    reference: "Portão azul",
+  };
+  const createdResponse = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/addresses`,
+    input,
+    token,
+  );
+  assert.equal(createdResponse.statusCode, 201);
+  assert.deepEqual(createdResponse.json(), {
+    address: { addressId: "address-1", label: "Casa", isLastUsedAddress: false },
+    alreadyExists: false,
+    simulated: false,
+  });
+  assert.deepEqual(receivedInput, input);
+
+  const retry = await request(api, "POST", `/parties/${partyId}/addresses`, input, token);
+  assert.equal(retry.statusCode, 200);
+  assert.equal(retry.json().alreadyExists, true);
+});
+
+test("demo address creation stays simulated and appears in the participant's address list", async () => {
+  const api: TestApi = { ...createApi(), agent: createDemoIntegration() };
+  const { host } = await createHostAndAuthorize(api);
+  const partyId = host.party.party.id;
+  const token = host.participantToken;
+  const address = "Rua das Flores, 12, São Carlos, SP";
+
+  const resolution = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/addresses/resolve`,
+    { address },
+    token,
+  );
+  assert.equal(resolution.statusCode, 200);
+  assert.equal(resolution.json().simulated, true);
+  assert.match(resolution.json().candidates[0].formattedAddress, /não validado/);
+
+  const created = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/addresses`,
+    { address, candidateId: resolution.json().candidates[0].candidateId, alias: "Apê" },
+    token,
+  );
+  assert.equal(created.statusCode, 201);
+  assert.equal(created.json().simulated, true);
+  assert.equal(created.json().address.label, "Apê");
+
+  const addresses = await request(api, "GET", `/parties/${partyId}/addresses`, undefined, token);
+  assert.equal(addresses.statusCode, 200);
+  assert.ok(
+    addresses.json().addresses.some((entry: any) => entry.addressId === created.json().address.addressId),
+  );
+
+  const retry = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/addresses`,
+    { address, candidateId: resolution.json().candidates[0].candidateId, alias: "Apê" },
+    token,
+  );
+  assert.equal(retry.statusCode, 200);
+  assert.equal(retry.json().alreadyExists, true);
+});

@@ -363,7 +363,7 @@ Decididas pela sessão que implementa (`apps/api/**`, `packages/contracts/**`, `
 | "Outro" com texto | `allowOther` + `otherOptionId` + `otherInput`; o texto vai em `answers["<questionId>__other"]` (string plana), exigido não vazio quando a opção `otherOptionId` está marcada. |
 | Opção com valor | `QuestionnaireQuestionOption` ganha `value?: number` (`ate-25 → 25`); o "Outro valor" digitado vai em `answers["<questionId>__value"]`. Assim `/options` lê o número direto, sem tabela paralela. |
 | Progresso | **Submissão incremental.** `SubmitAnswersRequest.completed` deixa de ser `const: true` e vira `boolean`; o servidor guarda respostas parciais e expõe um derivado no `Participant` (ex.: `answeredCount`). Vira `READY_FOR_THEME` só quando **todos** enviam `completed: true`. |
-| Endereço (Etapa 1) | Resposta continua sendo o `addressId`. A lista vem de `listAddresses` (Maeda, sanitizado: alias/bairro/cidade, nunca rua/número/CEP); a sessão da API liga a rota `GET /parties/:id/addresses` (com provider de demonstração até o real plugar). |
+| Endereço (Etapa 1) | Resposta continua sendo o `addressId`. `GET /parties/:id/addresses` lista endereços sanitizados. Para novo: `POST /parties/:id/addresses/resolve` busca candidatos sem salvar; após a pessoa escolher e confirmar, `POST /parties/:id/addresses` persiste o candidato. Nenhuma rota expõe coordenadas. |
 | Revelar resultado | Ação do host + estado, `THEME_REVEALED` como nome de trabalho, host-only a partir de `READY_FOR_THEME`. O *o quê* é revelado é decisão do Júlio; a transição e o snapshot ficam garantidos. |
 | Conexão OAuth | Mantida como **etapa explícita** (rota `.../mcp-connection/authorize`); não automática no `join`. O front encaixa o botão antes/junto da Etapa 1. |
 
@@ -381,9 +381,9 @@ Item 6 (`THEME_REVEALED`) implementado no commit `87c8766` — *feat(api): revea
 from READY_FOR_THEME* (estado + `POST /parties/:id/reveal`, `403 HOST_ONLY` / `409
 NOT_READY_FOR_REVEAL`), conforme o [ADR 0002](adr/0002-revelacao-do-resultado-da-party.md).
 
-Pendentes: item 3 (`GET /parties/:id/addresses`, depende do `listAddresses` sanitizado do Maeda);
-item 5 (drift OpenAPI ↔ `.env.example`). Item 4 (mover `ResolveOptions*` para `packages/contracts`)
-✅ feito. Item 7 (OAuth como etapa explícita) já está decidido e implementado na rota `.../authorize`.
+Pendentes: item 5 (drift OpenAPI ↔ `.env.example`). Item 3 (`GET /parties/:id/addresses`) e item 4
+(mover `ResolveOptions*` para `packages/contracts`) estão implementados. Item 7 (OAuth como etapa
+explícita) já está decidido e implementado na rota `.../authorize`.
 
 **Forma do questionário e derivação do tema ✅ (17/10/2026):** a definição `v2` da seção 6.3 está em
 `apps/api/src/party/questionnaire.ts` (a `v1` continua registrada para compatibilidade), e

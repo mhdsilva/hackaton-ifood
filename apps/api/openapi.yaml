@@ -80,6 +80,96 @@ paths:
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/addresses:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    get:
+      operationId: listParticipantAddresses
+      security:
+        - participantToken: []
+      description: |
+        Lista os endereços da conta iFood conectada pelo próprio participante. Devolve somente
+        `addressId`, rótulo (alias ou bairro/cidade) e indicação de último uso; não expõe rua,
+        número, CEP ou coordenadas. No modo demo devolve o endereço sintético de São Carlos.
+      responses:
+        "200":
+          description: Endereços sanitizados disponíveis para seleção
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ParticipantAddressesResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      operationId: createParticipantAddress
+      security:
+        - participantToken: []
+      description: |
+        Confirma um candidato devolvido por `POST /parties/{partyId}/addresses/resolve` e salva
+        o endereço na conta iFood deste participante. Exige `candidateId` para nunca persistir
+        antes da confirmação. Repetir a mesma confirmação é idempotente: responde `200` com
+        `alreadyExists: true`; a primeira criação responde `201`. O corpo aceita `address`,
+        `candidateId` e, opcionalmente, `neighborhood`, `alias`, `complement` e `reference`.
+        A resposta só expõe `addressId` e rótulo; os detalhes completos não voltam ao estado Party.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateParticipantAddressRequest" }
+      responses:
+        "200":
+          description: Endereço já havia sido criado por uma tentativa idempotente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateParticipantAddressResponse" }
+        "201":
+          description: Endereço criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateParticipantAddressResponse" }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "502": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/addresses/resolve:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: resolveParticipantAddress
+      security:
+        - participantToken: []
+      description: |
+        Envia um endereço em texto livre à tool `createAddress` para geocodificação, sem persistir.
+        Retorna candidatos para a pessoa confirmar na própria tela. Não retorna coordenadas.
+        Use `candidateId` e reenvie o mesmo `address` em `POST /parties/{partyId}/addresses`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [address]
+              properties:
+                address: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "200":
+          description: Candidatos encontrados (ou lista vazia se não houver correspondência)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AddressResolutionResponse" }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "502": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
   /parties/{partyId}/join:
     parameters:
       - $ref: "#/components/parameters/PartyId"
@@ -633,6 +723,63 @@ components:
           minItems: 1
           maxItems: 4
           items: { $ref: "#/components/schemas/Participant" }
+    ParticipantAddress:
+      type: object
+      additionalProperties: false
+      required: [addressId, label, isLastUsedAddress]
+      properties:
+        addressId: { type: string }
+        label: { type: string }
+        isLastUsedAddress: { type: boolean }
+    ParticipantAddressesResponse:
+      type: object
+      additionalProperties: false
+      required: [addresses]
+      properties:
+        addresses:
+          type: array
+          items: { $ref: "#/components/schemas/ParticipantAddress" }
+    AddressCandidate:
+      type: object
+      additionalProperties: false
+      required: [candidateId, formattedAddress]
+      properties:
+        candidateId: { type: string }
+        formattedAddress: { type: string }
+        neighborhood: { type: string, description: Pode vir vazio; se vier, solicite o bairro antes de confirmar. }
+        city: { type: string }
+        state: { type: string }
+    AddressResolutionResponse:
+      type: object
+      additionalProperties: false
+      required: [matchConfidence, candidates, simulated]
+      properties:
+        matchConfidence:
+          type: string
+          enum: [NONE, SINGLE, MULTIPLE]
+        candidates:
+          type: array
+          items: { $ref: "#/components/schemas/AddressCandidate" }
+        simulated: { type: boolean }
+    CreateParticipantAddressRequest:
+      type: object
+      additionalProperties: false
+      required: [address, candidateId]
+      properties:
+        address: { type: string, minLength: 1, maxLength: 500 }
+        candidateId: { type: string, minLength: 1, maxLength: 200 }
+        neighborhood: { type: string, maxLength: 120 }
+        alias: { type: string, maxLength: 80 }
+        complement: { type: string, maxLength: 160 }
+        reference: { type: string, maxLength: 200 }
+    CreateParticipantAddressResponse:
+      type: object
+      additionalProperties: false
+      required: [address, alreadyExists, simulated]
+      properties:
+        address: { $ref: "#/components/schemas/ParticipantAddress" }
+        alreadyExists: { type: boolean }
+        simulated: { type: boolean }
     PartyRetrospectiveSummary:
       type: object
       additionalProperties: false
