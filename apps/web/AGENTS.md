@@ -8,6 +8,8 @@ O frontend usa Next.js com App Router, React, TypeScript estrito, Tailwind CSS e
 
 A navegação atual é uma prévia com dados simulados, sem API: iniciar com pelo menos duas pessoas leva ao endereço, depois às restrições (`/party/restrictions`) e ao orçamento (`/party/budget`). As novas telas seguem os nós `5:2317` e `5:2358` do Figma. Restrições permitem múltiplas escolhas ou nenhuma; selecionar “Outro” abre um detalhe obrigatório. Orçamento inicia em R$50 conforme o design; “Outro valor” abre um campo que aceita valor positivo com até duas casas decimais (vírgula ou ponto). Esses campos condicionais são provisórios e ainda não têm um visual específico entregue no Figma.
 
+A primeira visita também mostra uma splash de aproximadamente 2,7 segundos sobre a rota atual. O logo branco começa centralizado sozinho. Um recorte circular de 0,6 segundo com `power3.inOut` revela o fundo escuro sem escalar sua arte, enquanto o logo muda para vermelho e se desloca à esquerda; “Party” aparece deslizando para a direita. A arte de fundo reutiliza o SVG do logo como máscara estática. A animação usa GSAP com `@gsap/react`, respeita `prefers-reduced-motion` e desaparece antes de liberar a interação com a tela. Não há persistência entre recargas.
+
 O mock é do anfitrião e usa o contrato `PartySnapshot`, adaptado da fixture compartilhada. O estado React (endereço, restrições e orçamento) é mantido entre as rotas do grupo `(party)` e reiniciado ao recarregar a página. Endereços e respostas são modelos visuais locais, sem presumir contratos da API. O progresso foi alinhado para oito etapas conforme as novas telas do Figma, com a definição provisória em `lib/mock-questionnaire.ts`; o questionário completo e sua definição da API ainda não estão integrados.
 
 Destinos sem tela usam `/party/pending/[screen]`: `new-address`, `next-question` (etapa 4, após orçamento) e `invite`. O botão de copiar link copia o destino de convite da prévia e informa sucesso ou falha. Criar/entrar numa Party real, cadastrar endereço e enviar respostas ainda não estão implementados. A integração da API aguarda liberação do time; manter mocks até novo alinhamento, mesmo com os avanços de backend já incorporados ao repositório.
@@ -96,7 +98,7 @@ lib/                  Acesso a dados, mocks e utilitários
 ## Animações
 
 - Usar CSS/Tailwind para transições simples, como foco, hover e mudanças de cor.
-- Usar GSAP apenas pontualmente, nos locais e comportamentos indicados pelo Otávio. Instalar `gsap` e `@gsap/react` quando surgir a primeira necessidade concreta.
+- Usar GSAP apenas pontualmente, nos locais e comportamentos indicados pelo Otávio. A splash global já é o primeiro uso; `gsap` e `@gsap/react` estão instalados no workspace web.
 - Manter as animações no componente responsável, com `useGSAP`, escopo local e limpeza ao desmontar ou atualizar.
 - Respeitar `prefers-reduced-motion` e manter a interface funcional sem animação.
 - Não fazer o avanço da Party ou a conclusão de uma ação depender do término de uma animação.

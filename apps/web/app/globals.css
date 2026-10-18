@@ -65,3 +65,36 @@
     @apply bg-background font-sans text-foreground antialiased;
   }
 }
+
+[data-splash-wipe] {
+  clip-path: circle(0px at 50% 50%);
+}
+
+[data-splash-logo] {
+  filter: brightness(0) invert(1);
+}
+
+[data-splash-party] {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(-18px);
+}
+
+.splash-artwork {
+  position: absolute;
+  inset: 0;
+  max-width: 430px;
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+.splash-pattern {
+  position: absolute;
+  top: 35%;
+  left: 75%;
+  width: 132svh;
+  aspect-ratio: 54.8293 / 30.439;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  background: #262626;
+  mask: url("/figma/logo.svg") center / contain no-repeat;
+}
