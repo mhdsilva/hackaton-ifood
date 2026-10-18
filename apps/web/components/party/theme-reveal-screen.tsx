@@ -1,14 +1,18 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PartyShell } from "@/components/party/party-shell";
 import { PreparationParticipants } from "@/components/party/preparation-participants";
-import { getMockPreparationGroup } from "@/lib/mock-preparation";
+import { useParty } from "@/components/party/party-provider";
 import { getMockRevealTheme } from "@/lib/mock-reveal";
+import { revealTheme } from "@/lib/reveal-theme";
 
 export function ThemeRevealScreen() {
-  const theme = getMockRevealTheme();
-  const group = getMockPreparationGroup();
+  const { snapshot, isMock } = useParty();
+  // No modo mock o cenário visual continua italiano; no real, o tema vem do agente.
+  const theme = isMock ? getMockRevealTheme() : revealTheme(snapshot.party);
 
   return (
     <PartyShell tone="celebration" brandTone="inverse" contentClassName="pb-3" footerClassName="pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={
@@ -20,9 +24,9 @@ export function ThemeRevealScreen() {
         <p className="text-sm leading-5">{theme.description}</p>
       </section>
       <div className="relative h-[245px] overflow-hidden rounded-tl-[64px] rounded-br-[64px]">
-        <Image src={theme.image} alt="Pratos italianos com pizza, massas e salada" fill sizes="(max-width: 448px) calc(100vw - 40px), 408px" className="object-cover" priority />
+        <Image src={theme.image} alt="" fill sizes="(max-width: 448px) calc(100vw - 40px), 408px" className="object-cover" priority />
       </div>
-      <PreparationParticipants participants={group.participants} hostId={group.hostId} onPrimary />
+      <PreparationParticipants participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} onPrimary />
     </PartyShell>
   );
 }
