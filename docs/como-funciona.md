@@ -319,7 +319,8 @@ com o `fetch` nativo:
   `TOOL_ERROR`; falha de rede vira `UNAVAILABLE`.
 
 O spike `src/ifood/spike-sessions.ts` prova o isolamento: faz login de N contas e chama `getUser`
-intercalado, conferindo que cada sessão sempre devolve o próprio dono.
+intercalado, conferindo que cada sessão sempre devolve o próprio dono. Rodado com duas contas
+reais, as duas sessões coexistiram no mesmo processo sem vazamento.
 
 ---
 
@@ -689,8 +690,8 @@ O refresh token dá acesso à conta por ~30 dias: o `.env` fica só na máquina 
   `trackOrder` ficou em `PIX_CREATED`, com o Pix "copia e cola" dentro do texto do status. O
   backend separa esse código em `pixCode` e mostra "Aguardando o pagamento via Pix". Ainda não
   observamos o status de expiração do Pix nem um pedido pago.
-- **Isolamento entre contas:** provado em testes automáticos e com uma conta real; falta rodar o
-  spike com duas contas.
+- **Isolamento entre contas:** provado ao vivo com duas contas diferentes (spike de 17/10/2026:
+  2 `sub` distintos, 3 rodadas, 0 vazamentos). Ainda não testado com três contas.
 - **Redirect pública:** só `http://localhost:8080/callback` está cadastrada. A demo precisa da URL
   HTTPS da API cadastrada no agente.
 - **Estados da Party** depois de `READY_FOR_THEME` ainda não existem.

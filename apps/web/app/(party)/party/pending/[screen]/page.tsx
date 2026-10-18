@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 const screens: Record<string, { name: string; backHref: string }> = {
   "invite": { name: "Entrada pelo convite", backHref: "/" },
   "new-address": { name: "Adicionar novo endereço", backHref: "/party/address" },
-  "next-question": { name: "Próxima pergunta", backHref: "/party/address" },
+  "next-question": { name: "Etapa 4 · Próxima pergunta", backHref: "/party/budget" },
 };
 
 export const metadata = { title: "Tela pendente | iFood Party" };

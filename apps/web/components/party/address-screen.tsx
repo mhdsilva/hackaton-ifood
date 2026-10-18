@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AddressOption } from "@/components/party/address-option";
 import { useMockParty } from "@/components/party/mock-party-provider";
 import { PartyShell } from "@/components/party/party-shell";
-import { QuestionProgress } from "@/components/party/question-progress";
+import { QuestionIntroduction } from "@/components/party/question-introduction";
 
 export function AddressScreen() {
   const { addresses, selectedAddressId, setSelectedAddressId } = useMockParty();
@@ -16,14 +16,10 @@ export function AddressScreen() {
 
   return (
     <PartyShell backHref="/" footer={<Button type="submit" form="address-form" size="party" className="w-full" disabled={!hasSelection}>Continuar</Button>}>
-      <section className="space-y-4" aria-labelledby="address-title">
-        <QuestionProgress current={1} total={7} />
-        <h1 id="address-title" className="text-3xl leading-[1.12] font-bold">Onde você vai curtir a party hoje?</h1>
-        <p className="text-sm leading-5 text-secondary-foreground">Usaremos a região para encontrar opções da mesma temática perto de você, mesmo longe dos amigos.</p>
-      </section>
+      <QuestionIntroduction id="address-title" step={1} title="Onde você vai curtir a party hoje?" description="Usaremos a região para encontrar opções da mesma temática perto de você, mesmo longe dos amigos." />
       <form id="address-form" onSubmit={(event) => {
         event.preventDefault();
-        if (hasSelection) router.push("/party/pending/next-question");
+        if (hasSelection) router.push("/party/restrictions");
       }}>
         <fieldset className="min-w-0">
           <legend className="mb-4 text-base leading-6 font-bold">Seus endereços salvos</legend>

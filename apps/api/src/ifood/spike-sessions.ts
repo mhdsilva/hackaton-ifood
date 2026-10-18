@@ -26,12 +26,26 @@ function fingerprint(value: string): string {
   return createHash("sha256").update(value.toLowerCase()).digest("hex").slice(0, 8);
 }
 
+/** Impressão do `sub` do JWT: identifica a conta sem depender do e-mail do `getUser`. */
+function subjectFingerprint(accessToken: string): string {
+  try {
+    const payload = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString());
+    return fingerprint(String(payload.sub ?? ""));
+  } catch {
+    return "?";
+  }
+}
+
 const clients: IfoodMcpClient[] = [];
+const subjects: string[] = [];
 for (let index = 1; index <= accounts; index++) {
   const tokens = await interactiveLogin(config, provider, (url) =>
     console.log(`\nConta ${index}: abra no navegador e faça login\n${url}\n`),
   );
-  console.log(`Conta ${index}: tokens recebidos (escopos: ${tokens.scopes?.length ?? "?"})`);
+  subjects.push(subjectFingerprint(tokens.accessToken));
+  console.log(
+    `Conta ${index}: tokens recebidos (escopos: ${tokens.scopes?.length ?? "?"}, sub ${subjects.at(-1)})`,
+  );
   clients.push(
     new IfoodMcpClient({
       session: {
@@ -63,8 +77,9 @@ for (let round = 1; round <= 3; round++) {
 }
 
 const distinct = new Set(owners.values()).size;
+const distinctSubjects = new Set(subjects).size;
 console.log(
-  `\nResultado: ${clients.length} sessões, ${distinct} donos distintos, ${leaks} vazamentos.`,
+  `\nResultado: ${clients.length} sessões, ${distinct} donos distintos (${distinctSubjects} sub distintos), ${leaks} vazamentos.`,
 );
 if (distinct < clients.length) {
   console.log("Atenção: alguma conta foi repetida; use contas diferentes para provar o isolamento.");

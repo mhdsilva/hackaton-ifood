@@ -9,6 +9,7 @@
   --color-host-badge: #ffedea;
   --color-invitation: #f7f7f7;
   --color-invitation-foreground: #000000;
+  --color-subtle: #e0e0e0;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
