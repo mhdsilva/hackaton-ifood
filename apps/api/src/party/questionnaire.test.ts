@@ -5,6 +5,7 @@ import type { QuestionnaireDefinition } from "@sidequest/contracts";
 
 import {
   countAnswered,
+  getQuestionnaire,
   otherAnswerKey,
   validateAnswers,
   valueAnswerKey,
@@ -125,5 +126,54 @@ test("counts answered questions", () => {
   assert.equal(
     countAnswered(definition, { address: "casa", budget: "ate-25" }),
     2,
+  );
+});
+
+test("serves v2 by default and keeps v1 retrievable", () => {
+  const current = getQuestionnaire();
+  assert.equal(current?.version, "v2");
+  assert.equal(getQuestionnaire("v1")?.version, "v1");
+  assert.equal(getQuestionnaire("v9"), undefined);
+  assert.deepEqual(
+    current?.questions.map((question) => question.id),
+    ["address", "restrictions", "budget", "energy", "order-style", "cravings", "exclusions"],
+  );
+  assert.equal(
+    current?.questions.find((question) => question.id === "cravings")?.maxSelections,
+    2,
+  );
+  assert.equal(
+    current?.questions.find((question) => question.id === "restrictions")?.allowOther,
+    true,
+  );
+  assert.equal(
+    current?.questions.find((question) => question.id === "budget")?.customInput?.max,
+    999,
+  );
+});
+
+test("validates a full v2 response", () => {
+  const v2 = getQuestionnaire("v2");
+  assert.ok(v2);
+
+  const complete = {
+    address: "casa",
+    restrictions: ["veganismo"],
+    budget: "ate-50",
+    energy: "leve-refrescante",
+    "order-style": "refeicao-completa",
+    cravings: ["fresco", "crocante"],
+    exclusions: ["fritura"],
+  };
+  assert.deepEqual(validateAnswers(v2, complete), []);
+
+  assert.deepEqual(
+    validateAnswers(v2, { ...complete, cravings: ["fresco", "crocante", "cremoso"] }),
+    [{ questionId: "cravings", reason: "too_many_selections" }],
+  );
+
+  assert.deepEqual(
+    validateAnswers(v2, { address: "casa" }).map((issue) => issue.questionId),
+    ["budget", "energy", "order-style"],
   );
 });

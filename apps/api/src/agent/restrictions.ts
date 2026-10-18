@@ -6,11 +6,20 @@ export type IfoodItemRestriction =
   | "ORGANIC"
   | "GLUTEN_FREE";
 
+/**
+ * Tradução das restrições da Party para o enum de itens do iFood.
+ *
+ * Atenção: `alergia-amendoim` **não** tem equivalente no enum do iFood
+ * (`LAC_FREE`, `SUGAR_FREE`, `VEGAN`, `VEGETARIAN`, `ORGANIC`, `GLUTEN_FREE`) e por isso
+ * cai em `ignored` — quem consome precisa tratar alergia à parte, nunca só descartar.
+ */
 const MAPPING: Record<string, IfoodItemRestriction> = {
   vegetarian: "VEGETARIAN",
   vegetariano: "VEGETARIAN",
+  vegetarianismo: "VEGETARIAN",
   vegan: "VEGAN",
   vegano: "VEGAN",
+  veganismo: "VEGAN",
   lactose_free: "LAC_FREE",
   sem_lactose: "LAC_FREE",
   gluten_free: "GLUTEN_FREE",

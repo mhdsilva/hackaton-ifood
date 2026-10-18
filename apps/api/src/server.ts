@@ -111,9 +111,13 @@ function parseOption(value: unknown): LocalOption {
   return option!;
 }
 
-function parseOptionsRequest(body: Record<string, unknown>) {
+function parseOptionsRequest(body: Record<string, unknown>, partyTheme?: string) {
   const { theme, budget, restrictions = [], addressId, maxOptions } = body ?? {};
-  if (typeof theme !== "string" || theme.trim().length === 0) {
+  // O tema é o **resultado** da revelação: o da Party vence; o corpo só serve de fallback.
+  const resolvedTheme =
+    (partyTheme ?? "").trim() ||
+    (typeof theme === "string" ? theme.trim() : "");
+  if (resolvedTheme.length === 0) {
     throw new PartyError(400, "INVALID_INPUT", "theme is required");
   }
   if (typeof budget !== "number" || !Number.isFinite(budget) || budget <= 0) {
@@ -132,7 +136,7 @@ function parseOptionsRequest(body: Record<string, unknown>) {
     throw new PartyError(400, "INVALID_INPUT", "maxOptions must be an integer from 1 to 5");
   }
   return {
-    theme: theme.trim(),
+    theme: resolvedTheme,
     budget,
     restrictions: restrictions as string[],
     ...(addressId ? { addressId } : {}),
@@ -293,7 +297,10 @@ async function routeRequest(
     if (!options.agent) {
       throw new PartyError(501, "OPTIONS_UNAVAILABLE", "Local options are not configured");
     }
-    const input = parseOptionsRequest(await readJson<Record<string, unknown>>(request));
+    const input = parseOptionsRequest(
+      await readJson<Record<string, unknown>>(request),
+      service.get(partyId).party.theme,
+    );
     const agent = options.agent;
     const output = await runAgent(() => agent.resolveOptions(actor, input));
     service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {

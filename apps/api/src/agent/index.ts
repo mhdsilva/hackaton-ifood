@@ -21,9 +21,9 @@ export {
   resolveOptionsForParty,
   selectCandidates,
 } from "./resolve-options.js";
-export type { PartyOptionsResult, ResolveOptionsSettings } from "./resolve-options.js";
+export type { PartyOptionResolver, PartyOptionsResult, ResolveOptionsSettings } from "./resolve-options.js";
 export { resolveOptionsForPartyWithNegotiation } from "./negotiate.js";
 export type { NegotiationOutcome, NegotiationSettings } from "./negotiate.js";
 export { mapRestrictions } from "./restrictions.js";
-export { knownThemes, themeQueries } from "./themes.js";
+export { VIBE_QUERIES, knownThemes, themeQueries } from "./themes.js";
 export type * from "./types.js";

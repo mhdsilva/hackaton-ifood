@@ -130,10 +130,13 @@ async function request(
   return response;
 }
 
-function createApi(provider: McpOAuthProvider = new TestOAuthProvider()): TestApi {
+function createApi(
+  provider: McpOAuthProvider = new TestOAuthProvider(),
+  now?: () => Date,
+): TestApi {
   const sessions = new McpSessionRegistry();
   return {
-    service: new PartyService(new PartyStore(), new ParticipantAccessStore()),
+    service: new PartyService(new PartyStore(), new ParticipantAccessStore(), now),
     sessions,
     oauth: new McpOAuthFlow(provider, sessions),
   };
@@ -684,7 +687,7 @@ test("serves the current questionnaire definition for the frontend", async () =>
   const response = await request(api, "GET", "/questionnaire");
   assert.equal(response.statusCode, 200);
   const definition = response.json();
-  assert.equal(definition.version, "v1");
+  assert.equal(definition.version, "v2");
   assert.equal(typeof definition.title, "string");
   assert.ok(Array.isArray(definition.questions));
   assert.ok(definition.questions.length >= 1);
@@ -815,7 +818,7 @@ test("rejects invalid questionnaire answers over HTTP", async () => {
 });
 
 test("reveals the result over HTTP with host-only access", async () => {
-  const api = createApi();
+  const api = createApi(undefined, () => new Date(2026, 9, 17, 12));
   const host = (
     await request(api, "POST", "/parties", {
       name: "Jantar de sexta",
@@ -863,10 +866,60 @@ test("reveals the result over HTTP with host-only access", async () => {
   );
   assert.equal(revealed.statusCode, 200);
   assert.equal(revealed.json().party.status, "THEME_REVEALED");
-  assert.equal(revealed.json().party.theme, "italiano");
+  assert.equal(revealed.json().party.theme, "sabadou a distancia");
 
   const missing = await request(api, "POST", `/parties/${partyId}/reveal`, {});
   assert.equal(missing.statusCode, 401);
+});
+
+test("the revealed result wins over the theme sent in the body", async () => {
+  const api: TestApi = { ...createApi(), agent: createDemoIntegration() };
+  const host = (
+    await request(api, "POST", "/parties", {
+      name: "Jantar de sexta",
+      host: { id: "ana", name: "Ana" },
+    })
+  ).json();
+  const partyId = host.party.party.id;
+  const guest = (
+    await request(api, "POST", `/parties/${partyId}/join`, {
+      participant: { id: "bruno", name: "Bruno" },
+    })
+  ).json();
+  await request(api, "POST", `/parties/${partyId}/close`, {}, host.participantToken);
+  for (const token of [host.participantToken, guest.participantToken]) {
+    await request(
+      api,
+      "POST",
+      `/parties/${partyId}/answers`,
+      {
+        questionnaireVersion: "v1",
+        answers: { address: "casa", theme: "italiano" },
+        completed: true,
+      },
+      token,
+    );
+  }
+
+  const revealed = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/reveal`,
+    {},
+    host.participantToken,
+  );
+  assert.equal(revealed.json().party.theme, "italiano");
+
+  // O corpo diz "japones", mas o resultado da revelação ("italiano") é quem manda.
+  const options = await request(
+    api,
+    "POST",
+    `/parties/${partyId}/options`,
+    { theme: "japones", budget: 60 },
+    host.participantToken,
+  );
+  assert.equal(options.statusCode, 200);
+  assert.equal(options.json().theme, "italiano");
 });
 
 test("reflects the participant order stage in the public snapshot", async () => {

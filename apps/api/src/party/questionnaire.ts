@@ -10,7 +10,7 @@ import type {
  *
  * Pergunta 1 é o endereço (opções vêm do iFood, não daqui); as demais são comuns.
  */
-export const CURRENT_QUESTIONNAIRE: QuestionnaireDefinition = {
+export const QUESTIONNAIRE_V1: QuestionnaireDefinition = {
   version: "v1",
   title: "Antes de montar a party",
   introduction:
@@ -41,13 +41,135 @@ export const CURRENT_QUESTIONNAIRE: QuestionnaireDefinition = {
   ],
 };
 
+export const QUESTIONNAIRE_V2: QuestionnaireDefinition = {
+  version: "v2",
+  title: "Antes de montar a party",
+  introduction: "Responda com o grupo. Cada resposta é sua; o tema é o resultado do conjunto.",
+  questions: [
+    {
+      id: "address",
+      type: "address",
+      label: "Onde você vai curtir a party hoje?",
+      required: true,
+      helpText:
+        "Usaremos a região para encontrar opções da mesma temática perto de você, mesmo longe dos amigos.",
+    },
+    {
+      id: "restrictions",
+      type: "multi_choice",
+      label: "Antes, você possui alguma restrição?",
+      required: false,
+      helpText: "Restrições vêm antes das preferências. A restrição é individual, não do grupo.",
+      allowOther: true,
+      otherOptionId: "outro",
+      otherInput: { label: "Conte outras restrições ou alergias", placeholder: "Digite aqui…" },
+      options: [
+        { id: "vegetarianismo", label: "Vegetarianismo" },
+        { id: "veganismo", label: "Veganismo" },
+        { id: "sem-lactose", label: "Sem lactose" },
+        { id: "sem-gluten", label: "Sem glúten" },
+        { id: "alergia-amendoim", label: "Alergia a amendoim" },
+        { id: "outro", label: "Outro" },
+      ],
+    },
+    {
+      id: "budget",
+      type: "single_choice",
+      label: "Até quanto você pretende gastar?",
+      required: true,
+      helpText: "O valor é individual e inclui uma estimativa das taxas.",
+      customInput: {
+        label: "Selecione sua faixa de valor",
+        placeholder: "Até R$ 50,00",
+        min: 1,
+        max: 999,
+      },
+      options: [
+        { id: "ate-25", label: "Até R$25", value: 25 },
+        { id: "ate-50", label: "Até R$50", value: 50 },
+        { id: "ate-75", label: "Até R$75", value: 75 },
+        { id: "outro", label: "Outro valor" },
+      ],
+    },
+    {
+      id: "energy",
+      type: "single_choice",
+      label: "Qual energia combina mais com você hoje?",
+      required: true,
+      helpText: "Vamos usar o clima escolhido para encontrar opções que combinem com o momento.",
+      options: [
+        { id: "leve-refrescante", label: "Leve e refrescante" },
+        { id: "quente-confortavel", label: "Quente e confortável" },
+        { id: "crocante-descontraida", label: "Crocante e descontraída" },
+        { id: "intensa-marcante", label: "Intensa e marcante" },
+        { id: "surpreenda", label: "Tanto faz, me surpreenda!" },
+      ],
+    },
+    {
+      id: "order-style",
+      type: "single_choice",
+      label: "Como você quer curtir seu pedido?",
+      required: true,
+      helpText: "Isso ajuda a definir o tipo e a variedade de itens para o pedido.",
+      options: [
+        { id: "refeicao-completa", label: "Uma refeição completa" },
+        { id: "varias-experimentar", label: "Várias coisas para experimentar" },
+        { id: "lanche-simples", label: "Um lanche sem complicação" },
+        { id: "sobremesa-bebida", label: "Uma sobremesa ou bebida especial" },
+        { id: "surpreenda", label: "Tanto faz, me surpreenda!" },
+      ],
+    },
+    {
+      id: "cravings",
+      type: "multi_choice",
+      label: "Escolha até dois desejos para hoje.",
+      required: false,
+      helpText: "Vamos priorizar opções que tenham os sabores e texturas escolhidos.",
+      maxSelections: 2,
+      options: [
+        { id: "crocante", label: "Crocante" },
+        { id: "cremoso", label: "Cremoso" },
+        { id: "fresco", label: "Fresco" },
+        { id: "bem-temperado", label: "Bem temperado" },
+        { id: "picante", label: "Picante" },
+        { id: "agridoce", label: "Agridoce" },
+        { id: "surpreenda", label: "Tanto faz, me surpreenda!" },
+      ],
+    },
+    {
+      id: "exclusions",
+      type: "multi_choice",
+      label: "Tem alguma coisa que você definitivamente não quer hoje?",
+      required: false,
+      helpText: "Marque tudo o que devemos deixar de fora das recomendações.",
+      allowOther: true,
+      otherOptionId: "outro",
+      otherInput: { label: "Conte o que você não deseja hoje", placeholder: "Digite aqui…" },
+      options: [
+        { id: "fritura", label: "Fritura" },
+        { id: "comida-crua", label: "Comida crua" },
+        { id: "muito-picante", label: "Muito picante" },
+        { id: "bebida", label: "Bebida" },
+        { id: "sobremesa", label: "Sobremesa" },
+        { id: "outro", label: "Outro" },
+      ],
+    },
+  ],
+};
+
+const QUESTIONNAIRES: Record<string, QuestionnaireDefinition> = {
+  v1: QUESTIONNAIRE_V1,
+  v2: QUESTIONNAIRE_V2,
+};
+
+/** Versão vigente, devolvida quando o cliente não pede uma específica. */
+export const CURRENT_QUESTIONNAIRE = QUESTIONNAIRE_V2;
+
 export function getQuestionnaire(
   version?: string,
 ): QuestionnaireDefinition | undefined {
-  if (!version || version === CURRENT_QUESTIONNAIRE.version) {
-    return structuredClone(CURRENT_QUESTIONNAIRE);
-  }
-  return undefined;
+  const definition = QUESTIONNAIRES[version ?? CURRENT_QUESTIONNAIRE.version];
+  return definition ? structuredClone(definition) : undefined;
 }
 
 export interface AnswerIssue {

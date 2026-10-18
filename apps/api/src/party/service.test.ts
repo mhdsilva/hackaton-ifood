@@ -7,8 +7,8 @@ import { ParticipantAccessStore } from "./access.js";
 import { PartyError, PartyService } from "./service.js";
 import { PartyStore } from "./store.js";
 
-function createService(): PartyService {
-  return new PartyService(new PartyStore(), new ParticipantAccessStore());
+function createService(now?: () => Date): PartyService {
+  return new PartyService(new PartyStore(), new ParticipantAccessStore(), now);
 }
 
 function answers(value: string): SubmitAnswersRequest {
@@ -234,7 +234,7 @@ test("accepts a draft without advancing and tracks progress", () => {
 });
 
 test("the host reveals the result only from READY_FOR_THEME", () => {
-  const service = createService();
+  const service = createService(() => new Date(2026, 9, 17, 12));
   const host = service.create({
     name: "Jantar de sexta",
     host: { id: "ana", name: "Ana" },
@@ -262,7 +262,7 @@ test("the host reveals the result only from READY_FOR_THEME", () => {
 
   const revealed = service.revealTheme(partyId, host.participantToken);
   assert.equal(revealed.party.status, "THEME_REVEALED");
-  assert.equal(revealed.party.theme, "italiano");
+  assert.equal(revealed.party.theme, "sabadou a distancia");
 
   assert.throws(
     () => service.revealTheme(partyId, host.participantToken),
