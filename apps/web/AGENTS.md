@@ -2,6 +2,10 @@
 
 Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávio no iFood Party (anteriormente SideQuest Party). O objetivo é entregar uma jornada demonstrável, com estrutura simples e adequada ao hackathon.
 
+## Regra sobre textos
+
+**Não altere nenhum texto visível da interface (`apps/web/**`) sem autorização explícita do Lucas Maeda.** Isso inclui títulos, rótulos, botões, mensagens, placeholders, erros e `aria-label`. Se uma mudança exigir texto novo ou diferente, proponha o texto e espere aprovação. Detalhes em `../../AGENTS.md`.
+
 ## Contexto e estado atual
 
 `QuestionNavigationProvider` trata separadamente as promessas `ready` e `finished` da View Transition API: `skipTransition()` pode rejeitar `ready` com `AbortError` e resolver `finished`. Cancelamento por timeout/nova navegação/desmontagem é esperado e não deve abrir o overlay de erro do Next; manter os handlers locais, sem ocultar rejeições globais.
