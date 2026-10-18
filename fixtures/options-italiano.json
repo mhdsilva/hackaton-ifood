@@ -1,0 +1,86 @@
+{
+  "participantId": "ana",
+  "source": "simulated",
+  "theme": "italiano",
+  "options": [
+    {
+      "merchant": {
+        "id": "f0671abe-24e0-4d85-b419-caf20570a32b",
+        "name": "Tomate Cru Pizzaria",
+        "distanceKm": 0.31,
+        "rating": 4.9
+      },
+      "items": [
+        {
+          "itemId": "f3d10467-a8d8-418e-8ac5-57045ce03b35",
+          "name": "1 pizza 22cm + 1 Tomatinho Doce",
+          "quantity": 2,
+          "unitPrice": 19.9,
+          "selectedOptions": [
+            {
+              "optionGroupId": "9a3ce4c6-db6d-4598-abbd-c7e7d906a0de",
+              "optionId": "e6f261eb-55c7-481c-9e69-7167e44beb45",
+              "name": "Mussarela",
+              "additionalPrice": 0
+            },
+            {
+              "optionGroupId": "1a390e60-aee7-475f-be11-1d72e6d67a40",
+              "optionId": "56703c55-ade7-454d-bb10-d8822ebbc5c6",
+              "name": "Chocolate ao Leite",
+              "additionalPrice": 0
+            }
+          ]
+        }
+      ],
+      "subtotal": 39.8,
+      "deliveryFee": 0,
+      "total": 39.8,
+      "minimumOrderAmount": 29.9,
+      "deliveryMethodId": "DEFAULT",
+      "estimatedDeliveryMinutes": {
+        "min": 24,
+        "max": 34
+      }
+    },
+    {
+      "merchant": {
+        "id": "6cd1f53c-b9ca-4497-8c40-f3f63b8c56f2",
+        "name": "Italin House Macarrão Gourmet - São Carlos",
+        "distanceKm": 0.19,
+        "rating": 4.8
+      },
+      "items": [
+        {
+          "itemId": "de94e756-7501-45a6-a0cd-22b33f11066d",
+          "name": "Macarrão ou Nhoque - Ragu de Costela",
+          "quantity": 1,
+          "unitPrice": 38.17,
+          "selectedOptions": [
+            {
+              "optionGroupId": "66a6d016-59ce-4265-85c6-5289496b1bc9",
+              "optionId": "d3dcfe25-cdca-4964-9dbd-027b42745787",
+              "name": "Ragu de Costela Box P (aprox. 450g)",
+              "additionalPrice": 0
+            },
+            {
+              "optionGroupId": "371a1e66-b3f8-40fa-a680-8522311ebbca",
+              "optionId": "92818ed2-314b-41a4-8ef5-55b290745970",
+              "name": "Talharim",
+              "additionalPrice": 0
+            }
+          ]
+        }
+      ],
+      "subtotal": 38.17,
+      "deliveryFee": 0,
+      "total": 38.17,
+      "minimumOrderAmount": 19.9,
+      "deliveryMethodId": "DEFAULT",
+      "estimatedDeliveryMinutes": {
+        "min": 20,
+        "max": 30
+      }
+    }
+  ],
+  "warnings": []
+}

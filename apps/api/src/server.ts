@@ -8,9 +8,19 @@ import type {
   SubmitAnswersRequest,
 } from "@sidequest/contracts";
 
+import { AgentError } from "./agent/pick-address.js";
+import {
+  createDemoIntegration,
+  createIfoodIntegration,
+  type PartyAgentIntegration,
+} from "./agent/integration.js";
+import type { LocalOption } from "./agent/types.js";
+import { CheckoutError } from "./ifood/checkout.js";
+import { IfoodMcpError } from "./ifood/client.js";
+import { createIfoodProvider, loadIfoodConfig } from "./ifood/index.js";
 import { DemoMcpOAuthProvider } from "./mcp/demo-oauth-provider.js";
 import { McpOAuthError, McpOAuthFlow } from "./mcp/oauth-flow.js";
-import type { McpOAuthMode } from "./ifood/provider.js";
+import type { McpOAuthMode, McpOAuthProvider } from "./ifood/provider.js";
 import { McpSessionRegistry } from "./mcp/session-registry.js";
 import { ParticipantAccessStore } from "./party/access.js";
 import { getQuestionnaire } from "./party/questionnaire.js";
@@ -21,6 +31,135 @@ export interface PartyServerOptions {
   allowedOrigins: string[];
   frontendUrl: string;
   oauth: McpOAuthFlow;
+  /** Agente e cliente MCP; ver apps/api/src/agent/integration.ts. */
+  agent?: PartyAgentIntegration;
+  /** Caminho do callback único; segue a redirect cadastrada no iFood. */
+  callbackPath?: string;
+}
+
+export const DEFAULT_CALLBACK_PATH = "/mcp-connection/callback";
+
+const AGENT_ERROR_STATUS: Record<AgentError["code"], number> = {
+  NO_ADDRESS: 409,
+  ADDRESS_SELECTION_REQUIRED: 409,
+  ADDRESS_NOT_FOUND: 409,
+  MCP_NOT_CONNECTED: 409,
+  NOT_FOUND: 404,
+  NO_OPTIONS: 422,
+  TIMEOUT: 504,
+};
+
+const CHECKOUT_ERROR_STATUS: Record<CheckoutError["code"], number> = {
+  CONSENT_REQUIRED: 400,
+  CART_NOT_CREATED: 502,
+  NO_DELIVERY_METHOD: 422,
+  PAYMENT_METHOD_UNAVAILABLE: 422,
+  ORDER_NOT_CREATED: 502,
+};
+
+/** Traduz erros do agente e do iFood para respostas HTTP sem detalhes internos. */
+async function runAgent<T>(work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof AgentError) {
+      throw new PartyError(AGENT_ERROR_STATUS[error.code], error.code, error.message, error.details);
+    }
+    if (error instanceof CheckoutError) {
+      throw new PartyError(CHECKOUT_ERROR_STATUS[error.code], error.code, error.message);
+    }
+    if (error instanceof IfoodMcpError && error.code === "TOOL_ERROR") {
+      throw new PartyError(502, "IFOOD_REJECTED", error.message);
+    }
+    if (error instanceof IfoodMcpError && error.code === "AUTHENTICATION_REQUIRED") {
+      throw new PartyError(409, "MCP_NOT_CONNECTED", "Reconecte sua conta do iFood");
+    }
+    throw new PartyError(503, "IFOOD_UNAVAILABLE", "Could not reach iFood right now");
+  }
+}
+
+function requireAgent<K extends keyof PartyAgentIntegration>(
+  agent: PartyAgentIntegration | undefined,
+  feature: K,
+): NonNullable<PartyAgentIntegration[K]> {
+  const handler = agent?.[feature];
+  if (!handler) {
+    throw new PartyError(501, "FEATURE_UNAVAILABLE", `${String(feature)} is not configured`);
+  }
+  return (handler as Function).bind(agent) as NonNullable<PartyAgentIntegration[K]>;
+}
+
+function parseOption(value: unknown): LocalOption {
+  const option = value as LocalOption | undefined;
+  const valid =
+    typeof option?.merchant?.id === "string" &&
+    typeof option.deliveryMethodId === "string" &&
+    Array.isArray(option.items) &&
+    option.items.length > 0 &&
+    option.items.every(
+      (item) =>
+        typeof item?.itemId === "string" &&
+        Number.isInteger(item.quantity) &&
+        item.quantity >= 1 &&
+        Array.isArray(item.selectedOptions) &&
+        item.selectedOptions.every((selected) => typeof selected?.optionId === "string"),
+    );
+  if (!valid) {
+    throw new PartyError(400, "INVALID_INPUT", "option must be one of the options returned by /options");
+  }
+  return option!;
+}
+
+function parseOptionsRequest(body: Record<string, unknown>) {
+  const { theme, budget, restrictions = [], addressId, maxOptions } = body ?? {};
+  if (typeof theme !== "string" || theme.trim().length === 0) {
+    throw new PartyError(400, "INVALID_INPUT", "theme is required");
+  }
+  if (typeof budget !== "number" || !Number.isFinite(budget) || budget <= 0) {
+    throw new PartyError(400, "INVALID_INPUT", "budget must be a positive number");
+  }
+  if (!Array.isArray(restrictions) || restrictions.some((value) => typeof value !== "string")) {
+    throw new PartyError(400, "INVALID_INPUT", "restrictions must be a list of strings");
+  }
+  if (addressId !== undefined && typeof addressId !== "string") {
+    throw new PartyError(400, "INVALID_INPUT", "addressId must be a string");
+  }
+  if (
+    maxOptions !== undefined &&
+    (typeof maxOptions !== "number" || !Number.isInteger(maxOptions) || maxOptions < 1 || maxOptions > 5)
+  ) {
+    throw new PartyError(400, "INVALID_INPUT", "maxOptions must be an integer from 1 to 5");
+  }
+  return {
+    theme: theme.trim(),
+    budget,
+    restrictions: restrictions as string[],
+    ...(addressId ? { addressId } : {}),
+    ...(maxOptions ? { maxOptions } : {}),
+  };
+}
+
+async function completeOAuthCallback(
+  url: URL,
+  response: ServerResponse,
+  service: PartyService,
+  options: PartyServerOptions,
+  partyId?: string,
+): Promise<void> {
+  const actor = await options.oauth.complete({
+    ...(partyId ? { partyId: service.get(partyId).party.id } : {}),
+    code: url.searchParams.get("code") ?? "",
+    state: url.searchParams.get("state") ?? "",
+    providerError: url.searchParams.get("error") ?? undefined,
+  });
+  const status = options.agent?.validateConnection
+    ? await options.agent.validateConnection(actor)
+    : "connected";
+  service.setMcpConnectionStatusForParticipant(actor.partyId, actor.participantId, status);
+  const redirect = new URL(options.frontendUrl);
+  redirect.searchParams.set("partyId", actor.partyId);
+  redirect.searchParams.set("mcp", status);
+  sendRedirect(response, redirect.toString());
 }
 
 function resolveAllowedOrigin(
@@ -135,6 +274,81 @@ async function routeRequest(
     return;
   }
 
+  if (url.pathname === (options.callbackPath ?? DEFAULT_CALLBACK_PATH)) {
+    if (method !== "GET") {
+      throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+    }
+    await completeOAuthCallback(url, response, service, options);
+    return;
+  }
+
+  const optionsRoute = url.pathname.match(/^\/parties\/([^/]+)\/options$/);
+  if (optionsRoute) {
+    if (method !== "POST") {
+      throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+    }
+    const partyId = decodeURIComponent(optionsRoute[1]);
+    const actor = service.authorizeParticipant(partyId, bearerToken(request));
+    if (!options.agent) {
+      throw new PartyError(501, "OPTIONS_UNAVAILABLE", "Local options are not configured");
+    }
+    const input = parseOptionsRequest(await readJson<Record<string, unknown>>(request));
+    const agent = options.agent;
+    sendJson(
+      response,
+      200,
+      await runAgent(() => agent.resolveOptions(actor, input)),
+      allowedOrigin,
+    );
+    return;
+  }
+
+  const checkoutRoute = url.pathname.match(/^\/parties\/([^/]+)\/(cart|order)(?:\/([^/]+))?$/);
+  if (checkoutRoute) {
+    const partyId = decodeURIComponent(checkoutRoute[1]);
+    const resource = checkoutRoute[2];
+    const orderId = checkoutRoute[3] ? decodeURIComponent(checkoutRoute[3]) : undefined;
+    const actor = service.authorizeParticipant(partyId, bearerToken(request));
+
+    if (resource === "cart" && method === "POST" && !orderId) {
+      const body = await readJson<{ option?: unknown; addressId?: unknown }>(request);
+      const option = parseOption(body.option);
+      if (body.addressId !== undefined && typeof body.addressId !== "string") {
+        throw new PartyError(400, "INVALID_INPUT", "addressId must be a string");
+      }
+      const prepare = requireAgent(options.agent, "prepareCart");
+      const cart = await runAgent(() =>
+        prepare(actor, {
+          option,
+          ...(typeof body.addressId === "string" ? { addressId: body.addressId } : {}),
+        }),
+      );
+      sendJson(response, 200, cart, allowedOrigin);
+      return;
+    }
+
+    if (resource === "order" && method === "POST" && !orderId) {
+      const body = await readJson<{ cartId?: unknown; userConsent?: unknown }>(request);
+      if (typeof body.cartId !== "string" || body.cartId.trim() === "") {
+        throw new PartyError(400, "INVALID_INPUT", "cartId is required");
+      }
+      const submit = requireAgent(options.agent, "submitOrder");
+      const order = await runAgent(() =>
+        submit(actor, { cartId: body.cartId as string, userConsent: body.userConsent === true }),
+      );
+      sendJson(response, 201, order, allowedOrigin);
+      return;
+    }
+
+    if (resource === "order" && method === "GET" && orderId) {
+      const track = requireAgent(options.agent, "trackOrder");
+      sendJson(response, 200, await runAgent(() => track(actor, orderId)), allowedOrigin);
+      return;
+    }
+
+    throw new PartyError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+  }
+
   const oauthRoute = url.pathname.match(
     /^\/parties\/([^/]+)\/mcp-connection\/(authorize|callback)$/,
   );
@@ -151,22 +365,9 @@ async function routeRequest(
       return;
     }
 
+    // Rota antiga, mantida por compatibilidade; o callback cadastrado no iFood é o único.
     if (method === "GET" && action === "callback") {
-      const actor = await options.oauth.complete({
-        partyId: service.get(partyId).party.id,
-        code: url.searchParams.get("code") ?? "",
-        state: url.searchParams.get("state") ?? "",
-        providerError: url.searchParams.get("error") ?? undefined,
-      });
-      service.setMcpConnectionStatusForParticipant(
-        actor.partyId,
-        actor.participantId,
-        "connected",
-      );
-      const redirect = new URL(options.frontendUrl);
-      redirect.searchParams.set("partyId", actor.partyId);
-      redirect.searchParams.set("mcp", "connected");
-      sendRedirect(response, redirect.toString());
+      await completeOAuthCallback(url, response, service, options, partyId);
       return;
     }
 
@@ -284,17 +485,18 @@ const isEntrypoint = process.argv[1]
   : false;
 
 /**
- * Apenas o modo de demonstração está implementado. O modo real (`ifood`) exige um agente
- * homologado e credenciais do iFood; até então, recusamos subir em vez de simular OAuth real
- * silenciosamente.
+ * `demo` usa tokens sintéticos. `ifood` usa o provider real e exige a configuração do agente
+ * (`IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET` e a redirect); sem ela, recusamos subir.
  */
-export function resolveMcpOAuthMode(raw: string | undefined): McpOAuthMode {
+export function resolveMcpOAuthMode(
+  raw: string | undefined,
+  env: Record<string, string | undefined> = process.env,
+): McpOAuthMode {
   const value = (raw ?? "demo").trim().toLowerCase();
   if (value === "demo") return "demo";
   if (value === "ifood") {
-    throw new Error(
-      "MCP_OAUTH_MODE=ifood ainda não está implementado: faltam agente homologado e credenciais reais do iFood",
-    );
+    loadIfoodConfig(env);
+    return "ifood";
   }
   throw new Error(`MCP_OAUTH_MODE inválido: ${raw}`);
 }
@@ -310,19 +512,28 @@ if (isEntrypoint) {
   const oauthMode = resolveMcpOAuthMode(process.env.MCP_OAUTH_MODE);
   const service = new PartyService(new PartyStore(), new ParticipantAccessStore());
   const sessions = new McpSessionRegistry();
-  const oauth = new McpOAuthFlow(
-    new DemoMcpOAuthProvider(publicApiUrl),
-    sessions,
-  );
+  const env = { ...process.env, PUBLIC_API_URL: publicApiUrl };
+  const provider: McpOAuthProvider =
+    oauthMode === "ifood" ? createIfoodProvider(env) : new DemoMcpOAuthProvider(publicApiUrl);
+  const oauth = new McpOAuthFlow(provider, sessions);
+  const ifoodConfig = oauthMode === "ifood" ? loadIfoodConfig(env) : undefined;
+  const agent = ifoodConfig
+    ? createIfoodIntegration({ sessions, provider, mcpUrl: ifoodConfig.mcpUrl })
+    : createDemoIntegration();
+  const callbackPath = ifoodConfig
+    ? new URL(ifoodConfig.redirectUri).pathname
+    : DEFAULT_CALLBACK_PATH;
   const server = createPartyServer(service, {
     allowedOrigins,
     frontendUrl,
     oauth,
+    agent,
+    callbackPath,
   });
 
   server.listen(port, () => {
     console.log(`SideQuest Party API listening on http://localhost:${port}`);
-    console.log(`MCP OAuth callback base: ${publicApiUrl}`);
+    console.log(`MCP OAuth callback: ${ifoodConfig?.redirectUri ?? publicApiUrl + callbackPath}`);
     if (oauthMode === "demo") {
       console.warn(
         "MCP OAuth em MODO DEMONSTRAÇÃO: os tokens são sintéticos e nenhuma conta real do iFood é conectada.",

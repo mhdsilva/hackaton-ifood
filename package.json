@@ -16,7 +16,9 @@
     "typecheck:web": "npm run build --workspace @sidequest/contracts && npm run typecheck --workspace @sidequest/web",
     "dev:api": "npm run dev --workspace @sidequest/api",
     "start:api": "npm run start --workspace @sidequest/api",
-    "test": "npm run build --workspace @sidequest/contracts && npm run test --workspace @sidequest/api"
+    "test": "npm run build --workspace @sidequest/contracts && npm run test --workspace @sidequest/api",
+    "ifood:login": "tsx apps/api/src/ifood/login-cli.ts login",
+    "ifood:refresh": "tsx apps/api/src/ifood/login-cli.ts refresh"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

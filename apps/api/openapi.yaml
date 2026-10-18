@@ -170,12 +170,12 @@ paths:
     parameters:
       - $ref: "#/components/parameters/PartyId"
     get:
-      operationId: completeMcpConnection
+      operationId: completePartyMcpConnection
+      deprecated: true
       security: []
       description: |
-        Recebe o callback do servidor OAuth, valida o state e troca o code pelos tokens
-        vinculados ao participante. Não exige Bearer porque é chamado pelo redirecionamento
-        do servidor de autorização.
+        Rota antiga, mantida por compatibilidade. Use `/mcp-connection/callback`: o iFood
+        compara a redirect URI inteira, então ela não pode variar por Party.
       parameters:
         - name: code
           in: query
@@ -194,6 +194,206 @@ paths:
               description: Destino do frontend com o resultado da conexão OAuth.
               schema: { type: string, format: uri-reference }
         "400": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /mcp-connection/callback:
+    get:
+      operationId: completeMcpConnection
+      security: []
+      description: |
+        Callback OAuth único, cadastrado no agente do iFood como
+        `PUBLIC_API_URL/mcp-connection/callback`. A Party e o participante vêm do `state`.
+        Troca o code pelos tokens, valida a conexão com uma leitura no iFood (modo `ifood`) e
+        redireciona ao frontend com `mcp=connected` ou `mcp=error`. Não exige Bearer porque é
+        chamado pelo redirecionamento do servidor de autorização.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: state
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "302":
+          description: Redireciona o navegador de volta à Party após concluir a conexão
+          headers:
+            Location:
+              required: true
+              description: Destino do frontend com `partyId` e `mcp` (connected ou error).
+              schema: { type: string, format: uri-reference }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/options:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: resolveLocalOptions
+      security:
+        - participantToken: []
+      description: |
+        Opções reais do tema perto do endereço do participante, usando somente a sessão MCP dele.
+        No modo `demo`, ou se o iFood falhar, devolve opções capturadas com `source: simulated`.
+        Com mais de um endereço salvo, responde `409 ADDRESS_SELECTION_REQUIRED` com
+        `details.candidates` (só alias ou bairro e cidade) para o participante escolher.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [theme, budget]
+              properties:
+                theme: { type: string, minLength: 1 }
+                budget:
+                  type: number
+                  exclusiveMinimum: 0
+                  description: Orçamento total em BRL, incluindo frete.
+                restrictions:
+                  type: array
+                  items: { type: string }
+                addressId: { type: string }
+                maxOptions: { type: integer, minimum: 1, maximum: 5 }
+      responses:
+        "200":
+          description: Opções do participante
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResolveOptionsOutput" }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+        "504": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/cart:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: prepareCart
+      security:
+        - participantToken: []
+      description: |
+        Cria o carrinho do participante para uma opção devolvida por `/options` e define entrega e
+        pagamento (Pix). Não envia o pedido nem cobra nada. No modo `demo`, `simulated` é `true`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [option]
+              properties:
+                option: { $ref: "#/components/schemas/LocalOption" }
+                addressId: { type: string }
+      responses:
+        "200":
+          description: Carrinho pronto para confirmação
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [cartId, merchantId, deliveryMethodId, paymentMethod, simulated]
+                properties:
+                  cartId: { type: string }
+                  merchantId: { type: string }
+                  deliveryMethodId: { type: string }
+                  paymentMethod: { type: string }
+                  total:
+                    type: number
+                    description: |
+                      Valor final do iFood, já com taxa de serviço e benefícios. Pode diferir do
+                      `total` estimado em `/options`.
+                  breakdown:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      items: { type: number }
+                      delivery: { type: number }
+                      fees: { type: number }
+                      benefits: { type: number }
+                      vouchers: { type: number }
+                  simulated: { type: boolean }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "502": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/order:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+    post:
+      operationId: submitOrder
+      security:
+        - participantToken: []
+      description: |
+        Envia o pedido do carrinho. Exige `userConsent: true` dado pelo próprio participante; sem
+        isso responde `400 CONSENT_REQUIRED` e o iFood nem é chamado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cartId, userConsent]
+              properties:
+                cartId: { type: string, minLength: 1 }
+                userConsent: { const: true }
+      responses:
+        "201":
+          description: Pedido criado
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [orderId, simulated]
+                properties:
+                  orderId: { type: string }
+                  simulated: { type: boolean }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "502": { $ref: "#/components/responses/ErrorResponse" }
+  /parties/{partyId}/order/{orderId}:
+    parameters:
+      - $ref: "#/components/parameters/PartyId"
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: trackOrder
+      security:
+        - participantToken: []
+      description: |
+        Status resumido do pedido do participante. Consultar de novo após `retryAfterSeconds`
+        e parar quando `terminal` for `true`. Mostrar `description`, nunca `statusCode`.
+      responses:
+        "200":
+          description: Status atual
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [orderId, statusCode, description, terminal, simulated]
+                properties:
+                  orderId: { type: string }
+                  statusCode: { type: string }
+                  description: { type: string }
+                  retryAfterSeconds: { type: integer }
+                  terminal: { type: boolean }
+                  pixCode:
+                    type: string
+                    description: Pix "copia e cola" enquanto o pagamento está pendente.
+                  simulated: { type: boolean }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
 components:
   securitySchemes:
@@ -344,3 +544,76 @@ components:
               examples: [ACCESS_TOKEN_REQUIRED, ACCESS_DENIED, PARTY_FULL, PARTY_CLOSED]
             message: { type: string }
             details: { type: object, additionalProperties: true }
+    ResolveOptionsOutput:
+      type: object
+      additionalProperties: false
+      required: [participantId, source, theme, options, warnings]
+      properties:
+        participantId: { type: string }
+        source:
+          type: string
+          enum: [live, simulated]
+        theme: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/LocalOption" }
+    LocalOption:
+      type: object
+      additionalProperties: false
+      required:
+        - merchant
+        - items
+        - subtotal
+        - deliveryFee
+        - total
+        - minimumOrderAmount
+        - deliveryMethodId
+        - estimatedDeliveryMinutes
+      properties:
+        merchant:
+          type: object
+          additionalProperties: false
+          required: [id, name, distanceKm]
+          properties:
+            id: { type: string }
+            name: { type: string }
+            distanceKm: { type: number }
+            rating: { type: number }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [itemId, name, quantity, unitPrice, selectedOptions]
+            properties:
+              itemId: { type: string }
+              name: { type: string }
+              quantity: { type: integer, minimum: 1 }
+              unitPrice: { type: number }
+              selectedOptions:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [optionGroupId, optionId, name, additionalPrice]
+                  properties:
+                    optionGroupId: { type: string }
+                    optionId: { type: string }
+                    name: { type: string }
+                    additionalPrice: { type: number }
+        subtotal: { type: number }
+        deliveryFee: { type: number }
+        total: { type: number }
+        minimumOrderAmount: { type: number }
+        deliveryMethodId: { type: string }
+        estimatedDeliveryMinutes:
+          type: object
+          additionalProperties: false
+          required: [min, max]
+          properties:
+            min: { type: number }
+            max: { type: number }

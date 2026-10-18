@@ -69,8 +69,12 @@ export class McpOAuthFlow {
     };
   }
 
+  /**
+   * O `state` identifica Party e participante, então o callback pode ser único
+   * (`/mcp-connection/callback`). `partyId` só é conferido quando vem da rota antiga.
+   */
   async complete(input: {
-    partyId: string;
+    partyId?: string;
     state: string;
     code?: string;
     providerError?: string;
@@ -92,7 +96,7 @@ export class McpOAuthFlow {
         "OAuth state is invalid, expired, or already used",
       );
     }
-    if (attempt.partyId !== input.partyId) {
+    if (input.partyId !== undefined && attempt.partyId !== input.partyId) {
       throw new McpOAuthError(
         "OAUTH_STATE_INVALID",
         "OAuth state does not belong to this Party",

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "ifood": {
+        "type": "remote",
+        "url": "https://consumer-mcp.ifood.com.br/marketplace",
+        "oauth": {
+          "client_id": "{env:IFOOD_CLIENT_ID}",
+          "client_secret": "{env:IFOOD_CLIENT_SECRET}",
+          "redirect_uri": "{env:IFOOD_REDIRECT_URI}",
+          "auth_server_metadata_url": "https://id.ifood.com.br/.well-known/openid-configuration"
+        }
+      }
+    }
+  }
+}

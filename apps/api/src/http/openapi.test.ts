@@ -97,6 +97,48 @@ test("documents the unauthenticated OAuth callback redirect", () => {
   );
 });
 
+test("documents the single OAuth callback and deprecates the per-Party one", () => {
+  const single = document.paths["/mcp-connection/callback"]?.get;
+  assert.deepEqual(single?.security, []);
+  assert.equal(single?.responses["302"].headers.Location.required, true);
+  assert.equal(
+    document.paths["/parties/{partyId}/mcp-connection/callback"]?.get.deprecated,
+    true,
+  );
+});
+
+test("documents local options with the agent output schema", () => {
+  const operation = document.paths["/parties/{partyId}/options"]?.post;
+  assert.deepEqual(operation?.security, [{ participantToken: [] }]);
+
+  const ajv = new Ajv2020({ strict: false });
+  addFormats(ajv);
+  ajv.addSchema(document, "openapi-options");
+  const validate = ajv.compile({
+    $ref: "openapi-options#/components/schemas/ResolveOptionsOutput",
+  });
+  const sample = JSON.parse(
+    readFileSync(new URL("../../../../fixtures/options-italiano.json", import.meta.url), "utf8"),
+  );
+
+  assert.equal(validate(sample), true, JSON.stringify(validate.errors));
+  assert.equal(validate({ ...sample, source: "cached" }), false);
+});
+
+test("documents checkout routes behind the participant token and explicit consent", () => {
+  for (const [path, method] of [
+    ["/parties/{partyId}/cart", "post"],
+    ["/parties/{partyId}/order", "post"],
+    ["/parties/{partyId}/order/{orderId}", "get"],
+  ] as const) {
+    assert.deepEqual(document.paths[path]?.[method]?.security, [{ participantToken: [] }], path);
+  }
+  const consent =
+    document.paths["/parties/{partyId}/order"].post.requestBody.content["application/json"].schema
+      .properties.userConsent;
+  assert.deepEqual(consent, { const: true });
+});
+
 test("does not expose the retired apiKey MCP placeholder", () => {
   assert.equal(document.paths["/parties/{partyId}/mcp-connection"], undefined);
   assert.equal(JSON.stringify(document).includes("apiKey"), false);
