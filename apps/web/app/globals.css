@@ -7,8 +7,8 @@
   --font-sans: "DM Sans Variable", Arial, sans-serif;
   --font-heading: "Inter Variable", Arial, sans-serif;
   --color-host-badge: #ffedea;
-  --color-invitation: #f7f7f7;
-  --color-invitation-foreground: #000000;
+  --color-invitation: var(--background);
+  --color-invitation-foreground: var(--foreground);
   --color-subtle: #e0e0e0;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -60,6 +60,9 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  html {
+    @apply bg-background;
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;

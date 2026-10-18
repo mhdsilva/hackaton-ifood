@@ -11,7 +11,7 @@ function useMockPartyState() {
   const currentParticipantId = snapshot.party.hostParticipantId;
   const [restrictions, setRestrictions] = useState<RestrictionId[]>([]);
   const [otherRestriction, setOtherRestriction] = useState("");
-  const [budgetOptionId, setBudgetOptionId] = useState<BudgetOptionId>("50");
+  const [budgetOptionId, setBudgetOptionId] = useState<BudgetOptionId | null>(null);
   const [customBudget, setCustomBudget] = useState("");
 
   function toggleRestriction(id: RestrictionId) {

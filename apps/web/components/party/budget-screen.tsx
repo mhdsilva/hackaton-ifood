@@ -11,7 +11,7 @@ import { parseMockBudget } from "@/lib/mock-questionnaire";
 export function BudgetScreen() {
   const { budgetOptionId, setBudgetOptionId, customBudget, setCustomBudget } = useMockParty();
   const router = useRouter();
-  const canContinue = budgetOptionId !== "other" || parseMockBudget(customBudget) !== null;
+  const canContinue = budgetOptionId !== null && (budgetOptionId !== "other" || parseMockBudget(customBudget) !== null);
 
   return (
     <PartyShell backHref="/party/restrictions" footer={<Button type="submit" form="budget-form" size="party" className="w-full" disabled={!canContinue}>Continuar</Button>}>

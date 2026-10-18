@@ -15,7 +15,7 @@ export function PartyComponentExamples() {
   const [selectedId, setSelectedId] = useState(addresses[0]?.id ?? "");
   const [restrictions, setRestrictions] = useState<RestrictionId[]>([]);
   const [otherRestriction, setOtherRestriction] = useState("");
-  const [budgetId, setBudgetId] = useState<BudgetOptionId>("50");
+  const [budgetId, setBudgetId] = useState<BudgetOptionId | null>(null);
   const [customBudget, setCustomBudget] = useState("");
 
   return (

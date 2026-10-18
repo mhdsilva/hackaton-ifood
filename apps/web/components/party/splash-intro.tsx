@@ -34,10 +34,12 @@ export function SplashIntro({ children }: { children: React.ReactNode }) {
       .set(logo, { filter: "brightness(0) invert(1)" })
       .set(party, { autoAlpha: 0, x: -18 })
       .to(wipe, { clipPath: `circle(${radius}px at 50% 50%)`, duration: 0.6, ease: "power3.inOut" }, 0.25)
+      // Alinha a cor real da splash ao fundo revelado, inclusive fora do recorte.
+      .set(splash, { backgroundColor: "#1c1c1c" })
       .to(logo, { filter: "brightness(1) invert(0)", duration: 0.45 }, 0.25)
       .to(brand, { x: -(party.offsetWidth + 4) / 2, duration: 0.8, ease: "power3.inOut" }, 0.25)
       .to(party, { autoAlpha: 1, x: 0, duration: 0.55, ease: "power3.out" }, 0.5)
-      .to({}, { duration: INTRO_DURATION - 1.05 });
+      .to(splash, { xPercent: -100, duration: 0.5, ease: "power3.inOut" }, INTRO_DURATION - 0.5);
 
     return () => timeline.kill();
   }, { scope: container, dependencies: [] });

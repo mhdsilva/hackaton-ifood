@@ -1,10 +1,10 @@
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { RadioCard } from "@/components/ui/radio-card";
 import { getMockBudgetOptions, type BudgetOptionId } from "@/lib/mock-questionnaire";
 
 export function BudgetChoices({ selected, onSelect, customValue, onCustomChange, inputId }: {
-  selected: BudgetOptionId;
+  selected: BudgetOptionId | null;
   onSelect: (value: BudgetOptionId) => void;
   customValue: string;
   onCustomChange: (value: string) => void;
@@ -20,9 +20,8 @@ export function BudgetChoices({ selected, onSelect, customValue, onCustomChange,
           </RadioCard>)}
         </div>
         {selected === "other" && <div className="mt-4 space-y-2">
-          <label htmlFor={inputId} className="text-sm font-medium">Seu orçamento em reais</label>
-          <Input id={inputId} type="text" inputMode="decimal" value={customValue} onChange={(event) => onCustomChange(event.target.value)} placeholder="Ex.: 60,00" aria-describedby={`${inputId}-hint`} required />
-          <p id={`${inputId}-hint`} className="text-xs text-muted-foreground">Informe um valor maior que zero, com até duas casas decimais.</p>
+          <label htmlFor={inputId} className="text-sm font-medium">Selecione seu orçamento desejado</label>
+          <CurrencyInput id={inputId} value={customValue} onValueChange={onCustomChange} aria-label="Orçamento máximo em reais" required />
         </div>}
       </fieldset>
       <aside className="flex items-start gap-[10px] rounded-lg bg-secondary p-3">
