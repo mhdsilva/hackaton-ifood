@@ -136,6 +136,60 @@ export interface QuestionnaireDefinition {
   questions: QuestionnaireQuestion[];
 }
 
+// Contrato do agente de opções locais (`POST /parties/:id/options`), usado pelo
+// carrinho (`POST /parties/:id/cart`). Movido de apps/api/src/agent/types.ts.
+
+export interface SelectedOption {
+  optionGroupId: string;
+  optionId: string;
+  name: string;
+  additionalPrice: number;
+}
+
+export interface ResolvedItem {
+  itemId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  /** Escolhas obrigatórias já feitas, prontas para `createCart`. */
+  selectedOptions: SelectedOption[];
+}
+
+export interface LocalOption {
+  merchant: {
+    id: string;
+    name: string;
+    distanceKm: number;
+    rating?: number;
+  };
+  items: ResolvedItem[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  minimumOrderAmount: number;
+  deliveryMethodId: string;
+  estimatedDeliveryMinutes: { min: number; max: number };
+}
+
+export interface ResolveOptionsInput {
+  participantId: string;
+  theme: string;
+  /** Orçamento total do participante, incluindo frete (BRL). */
+  budget: number;
+  restrictions: string[];
+  /** Obrigatório quando a conta tem mais de um endereço salvo. */
+  addressId?: string;
+  maxOptions?: number;
+}
+
+export interface ResolveOptionsOutput {
+  participantId: string;
+  source: "live" | "simulated";
+  theme: string;
+  options: LocalOption[];
+  warnings: string[];
+}
+
 export interface ApiErrorBody {
   error: {
     code: string;
