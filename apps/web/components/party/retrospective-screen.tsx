@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useRef } from "react";
 import { gsap } from "gsap";
@@ -55,7 +54,7 @@ export function RetrospectiveScreen() {
   return (
     <PartyShell brandTone="light" backdrop={<BrandBackdrop />} contentClassName="pt-6 pb-8" footerClassName="space-y-2 pt-4" footer={<>
       {summary && <RetrospectiveShareDialog summary={summary} />}
-      <Button asChild variant="ghost" className="w-full text-order-detail"><Link href={waiting ? "/party/confirmed" : "/"}>Voltar para a Party</Link></Button>
+      <Button asChild variant="ghost" className="w-full text-order-detail"><a href="https://www.ifood.com.br/">Acompanhar pedido</a></Button>
     </>}>
       <div ref={container} className="flex flex-col gap-6">
         <header data-retro-reveal className="space-y-3">

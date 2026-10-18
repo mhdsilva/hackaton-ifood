@@ -88,12 +88,14 @@ paths:
       security:
         - participantToken: []
       description: |
-        Lista os endereços da conta iFood conectada pelo próprio participante. Devolve somente
-        `addressId`, rótulo (alias ou bairro/cidade) e indicação de último uso; não expõe rua,
-        número, CEP ou coordenadas. No modo demo devolve o endereço sintético de São Carlos.
+        Lista os endereços da conta iFood conectada pelo próprio participante. Devolve
+        `addressId`, rótulo e indicação de último uso, com detalhes privados de entrega em
+        `details` quando disponíveis. Não inclui coordenadas nem dados comportamentais;
+        os detalhes não fazem parte do snapshot coletivo nem das ferramentas do planner.
+        No modo demo devolve o endereço sintético de São Carlos.
       responses:
         "200":
-          description: Endereços sanitizados disponíveis para seleção
+          description: Endereços privados disponíveis para seleção pelo próprio participante
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ParticipantAddressesResponse" }
@@ -741,6 +743,20 @@ components:
         addressId: { type: string }
         label: { type: string }
         isLastUsedAddress: { type: boolean }
+        details:
+          type: object
+          additionalProperties: false
+          description: Dados de entrega privados do participante autenticado; ausentes do snapshot coletivo e das ferramentas do planner.
+          properties:
+            formattedAddress: { type: string }
+            street: { type: string }
+            number: { type: string }
+            neighborhood: { type: string }
+            city: { type: string }
+            state: { type: string }
+            postalCode: { type: string }
+            complement: { type: string }
+            reference: { type: string }
     ParticipantAddressesResponse:
       type: object
       additionalProperties: false

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandBackdrop } from "@/components/party/brand-backdrop";
-import { PartyHeader } from "@/components/party/party-shell";
+import { PartyShell } from "@/components/party/party-shell";
 import { PreparationParticipants } from "@/components/party/preparation-participants";
 import { PreparationIllustration } from "@/components/party/preparation-illustration";
 import { PreparationTitle } from "@/components/party/preparation-title";
@@ -34,25 +34,21 @@ export function PreparingScreen() {
   const stage = stages[stageIndex];
 
   return (
-    <div className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)]">
-      <BrandBackdrop />
-      <div className="relative"><PartyHeader /></div>
-      <main id="main-content" aria-label="Preparação da Party" className="relative mx-auto flex w-full max-w-md flex-1 flex-col gap-8 px-5 pt-5 pb-[max(40px,env(safe-area-inset-bottom))]">
-        <section aria-live="polite" aria-atomic="true" className="space-y-1">
-          <p className="text-[11px] leading-normal font-bold text-primary">AS ESCOLHAS SE ENCONTRAM</p>
-          <PreparationTitle titles={preparationTitles} current={stageIndex} />
-        </section>
-        <div className="flex min-h-[306px] flex-1 items-center justify-center py-6">
-          <PreparationIllustration stage={stage} participants={participants} hostId={snapshot.party.hostParticipantId} />
+    <PartyShell fitViewport backdrop={<BrandBackdrop />} contentClassName="items-center justify-center text-center">
+      <section aria-live="polite" aria-atomic="true" className="w-full space-y-1">
+        <p className="text-[11px] leading-normal font-bold text-primary">AS ESCOLHAS SE ENCONTRAM</p>
+        <PreparationTitle titles={preparationTitles} current={stageIndex} />
+      </section>
+      <div className="preparation-orbit-space flex w-full min-h-0 max-h-[326px] flex-1 items-center justify-center [container-type:size]">
+        <PreparationIllustration stage={stage} participants={participants} hostId={snapshot.party.hostParticipantId} />
+      </div>
+      <section aria-label="Progresso da preparação" className="w-full shrink-0 space-y-4 text-preparation-caption">
+        <div className="space-y-[10px]">
+          <p className="text-[13px] leading-normal font-bold">Preparando a party · {stageIndex + 1} de {stages.length}</p>
+          <SegmentedProgress current={stageIndex + 1} total={stages.length} label="Preparação da Party" duration={MOCK_PREPARATION_STAGE_MS} running={splashComplete} />
         </div>
-        <section aria-label="Progresso da preparação" className="space-y-4 text-preparation-caption">
-          <div className="space-y-[10px]">
-            <p className="text-[13px] leading-normal font-bold">Preparando a party · {stageIndex + 1} de {stages.length}</p>
-            <SegmentedProgress current={stageIndex + 1} total={stages.length} label="Preparação da Party" duration={MOCK_PREPARATION_STAGE_MS} running={splashComplete} />
-          </div>
-          <PreparationParticipants participants={participants} hostId={snapshot.party.hostParticipantId} />
-        </section>
-      </main>
-    </div>
+        <PreparationParticipants participants={participants} hostId={snapshot.party.hostParticipantId} centered />
+      </section>
+    </PartyShell>
   );
 }

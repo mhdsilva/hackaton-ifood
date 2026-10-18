@@ -10,7 +10,7 @@ export function PreparationParticipants({ participants, hostId, centered = false
   onPrimary?: boolean;
 }) {
   return (
-    <div className={`space-y-[10px] text-preparation-caption ${centered ? "text-center" : ""}`}>
+    <div className={`preparation-participants shrink-0 space-y-[10px] text-preparation-caption ${centered ? "text-center" : ""}`}>
       <ul aria-label="Participantes da Party" className={`flex gap-[10px] ${centered ? "justify-center" : ""}`}>
         {participants.map((participant) => <li key={participant.id} aria-label={participant.name}>
           <ParticipantAvatar name={participant.name} isHost={participant.id === hostId} variant="connected" className={`size-[42px] text-[16.8px] ${onPrimary && participant.id === hostId ? "bg-background text-foreground" : ""}`} />

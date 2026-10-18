@@ -13,16 +13,17 @@ export function OrderConfirmedScreen() {
 
   return (
     <PartyShell
+      fitViewport
       brandTone="light"
       backdrop={<BrandBackdrop />}
-      contentClassName="min-h-full justify-center gap-6 pt-5 pb-10"
+      contentClassName="justify-center"
       footerClassName="pt-6 pb-[max(24px,env(safe-area-inset-bottom))]"
-      footer={<Button asChild size="party" className="w-full"><Link href="/party/pending/delivery">Acompanhar entrega</Link></Button>}
+      footer={<Button asChild size="party" className="w-full"><Link href="/party/retrospective">Ver retrospectiva</Link></Button>}
     >
       <section aria-labelledby="order-confirmed-title" className="text-center">
-        <h1 id="order-confirmed-title" className="font-preparation text-5xl leading-[1.2] font-bold">Pedido realizado,<br />aproveite com<br />seus amigos!</h1>
-        <div className="flex h-[280px] items-center justify-center">
-          <Image src="/figma/reveal-bag.svg" alt="Sacola do iFood" width={262.069} height={280} priority />
+        <h1 id="order-confirmed-title" className="party-stage-title font-preparation leading-[1.2] font-bold">Pedido realizado,<br />aproveite com<br />seus amigos!</h1>
+        <div className="flex h-[min(39cqh,280px)] items-center justify-center">
+          <Image src="/figma/reveal-bag.svg" alt="Sacola do iFood" width={262.069} height={280} priority className="h-full w-auto" />
         </div>
       </section>
       <PreparationParticipants participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} centered />

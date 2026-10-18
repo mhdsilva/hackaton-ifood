@@ -48,7 +48,7 @@ export function PreparationTitle({ titles, current }: { titles: readonly string[
   }, { scope: container, dependencies: [current, titles], revertOnUpdate: true });
 
   return (
-    <h1 ref={container} className="grid font-preparation text-5xl leading-[1.2] font-bold">
+    <h1 ref={container} className="party-stage-title grid font-preparation text-5xl leading-[1.2] font-bold">
       <span className="sr-only">{titles[current]}</span>
       {titles.map((title, index) => (
         <span key={title} data-title-layer aria-hidden="true" className="col-start-1 row-start-1" style={{ visibility: index === current ? "visible" : "hidden" }}>

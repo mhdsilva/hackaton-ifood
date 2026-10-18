@@ -34,7 +34,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { describeError, liveApi, LiveApiError } from "@/lib/api-client";
-import { fromParticipantAddress, pickDefaultAddress, type PartyAddress } from "@/lib/addresses";
+import { fromParticipantAddress, pickDefaultAddress, selectedPartyAddress, type PartyAddress } from "@/lib/addresses";
 import { buildQuestionnaireAnswers, budgetFromAnswers } from "@/lib/live-answers";
 import { getMockAddresses } from "@/lib/mock-party";
 import { partyFlowTarget } from "@/lib/party-flow";
@@ -379,10 +379,7 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
         )
       : [];
     // O endereço escolhido fica na resposta pelo rótulo; no snapshot não há o id do iFood.
-    const chosenLabel = typeof answers.address === "string" ? answers.address : null;
-    const chosenAddress = chosenLabel
-      ? addresses.find((address) => address.label === chosenLabel)
-      : undefined;
+    const chosenAddress = selectedPartyAddress(addresses, selectedAddressId, answers.address);
     const addressId = addressesLive
       ? chosenAddress?.id ?? selectedAddressId ?? undefined
       : undefined;

@@ -73,6 +73,10 @@ pelo polling de `GET /parties/:id`.
   exemplo** e avisa explicitamente que não vêm do iFood (nunca simula sucesso).
 - O item escolhido guarda o `addressId` real (`ParticipantAddress.addressId`), que é o que
   `POST /parties/:id/options` espera em `addressId`.
+- `ParticipantAddress.details` inclui os componentes completos disponíveis no MCP para o
+  próprio participante: rua, número, complemento, bairro, cidade/UF, CEP e referência.
+  Seleção e resumo usam o mesmo formatador. Esses dados continuam fora do snapshot coletivo
+  e do planner; o endpoint é privado e não devolve coordenadas nem histórico comportamental.
 - "Adicionar novo endereço" (`/party/pending/new-address`) agora funciona de verdade, com
   apresentação provisória: `POST /addresses/resolve` → escolher candidato → `POST /addresses`
   → volta para `/party/address` com o endereço novo selecionado.

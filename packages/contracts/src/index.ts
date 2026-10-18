@@ -68,11 +68,25 @@ export interface PartySnapshot {
   participants: Participant[];
 }
 
-/** Endereço do participante projetado para seleção no cliente, sem coordenadas ou endereço completo. */
+/** Dados privados de entrega, enviados somente ao participante autenticado. */
+export interface ParticipantAddressDetails {
+  formattedAddress?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  complement?: string;
+  reference?: string;
+}
+
+/** Endereço para seleção do próprio participante; não faz parte do snapshot coletivo. */
 export interface ParticipantAddress {
   addressId: string;
   label: string;
   isLastUsedAddress: boolean;
+  details?: ParticipantAddressDetails;
 }
 
 export interface ParticipantAddressesResponse {

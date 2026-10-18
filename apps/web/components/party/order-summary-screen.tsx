@@ -11,6 +11,7 @@ import { useParty } from "@/components/party/party-provider";
 import { describeError, LiveApiError } from "@/lib/api-client";
 import { getMockRevealedOrder } from "@/lib/mock-reveal";
 import { revealTheme } from "@/lib/reveal-theme";
+import { addressDetailLines, selectedPartyAddress } from "@/lib/addresses";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const rating = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
@@ -34,6 +35,7 @@ export function OrderSummaryScreen() {
     connectingMcp,
     addresses,
     addressesLive,
+    addressesLoading,
     selectedAddressId,
   } = useParty();
   const [order, setOrder] = useState<OrderState>({ status: "loading" });
@@ -49,7 +51,7 @@ export function OrderSummaryScreen() {
   const themeCopy = revealTheme(snapshot.party);
 
   useEffect(() => {
-    if (isMock) return;
+    if (isMock || addressesLoading) return;
     let alive = true;
     resolveRef
       .current()
@@ -67,7 +69,7 @@ export function OrderSummaryScreen() {
     return () => {
       alive = false;
     };
-  }, [isMock, currentParticipantId, theme, reloadKey]);
+  }, [isMock, addressesLoading, currentParticipantId, theme, reloadKey]);
 
   if (isMock) {
     const mock = getMockRevealedOrder();
@@ -156,11 +158,7 @@ export function OrderSummaryScreen() {
   const themeAddress = (() => {
     if (!addressesLive) return undefined;
     const me = snapshot.participants.find((participant) => participant.id === currentParticipantId);
-    const label = me?.questionnaireResponse?.answers.address;
-    return (
-      (typeof label === "string" ? addresses.find((address) => address.label === label) : undefined) ??
-      addresses.find((address) => address.id === selectedAddressId)
-    );
+    return selectedPartyAddress(addresses, selectedAddressId, me?.questionnaireResponse?.answers.address);
   })();
   const delivery = option.estimatedDeliveryMinutes.max > 0
     ? `Hoje, ${option.estimatedDeliveryMinutes.min} - ${option.estimatedDeliveryMinutes.max} min`
@@ -209,7 +207,7 @@ export function OrderSummaryScreen() {
       <OrderDetailCard
         icon="/figma/order-map-pin.svg"
         title={themeAddress?.label ?? "Endereço de entrega"}
-        detail={themeAddress?.street ?? themeAddress?.region ?? "Endereço cadastrado no iFood"}
+        detail={themeAddress ? addressDetailLines(themeAddress).join("\n") || "Endereço cadastrado no iFood" : "Endereço cadastrado no iFood"}
       />
       <OrderDetailCard icon="/figma/order-wallet.svg" title="Método de Pagamento" detail="Definido no pagamento" action={
         <Button asChild variant="link" className="h-auto shrink-0 p-0 text-[11px] font-normal"><Link href="/party/pending/payment-method">Trocar método</Link></Button>

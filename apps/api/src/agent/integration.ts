@@ -38,6 +38,7 @@ import { AgentError, pickAddress } from "./pick-address.js";
 import type { PlannerOptionsSettings } from "./planner-options.js";
 import { resolveOptions } from "./resolve-options.js";
 import { sanitizeAddress } from "./sanitize.js";
+import { participantAddressDetails, toParticipantAddress } from "./participant-address.js";
 import type {
   IfoodCoordinates,
   IfoodAddress,
@@ -116,7 +117,7 @@ export function createIfoodIntegration(deps: {
     },
     async listAddresses(actor) {
       const result = await clientFor(actor).callTool<{ results?: IfoodAddress[] }>("listAddresses");
-      return (result.results ?? []).map(sanitizeAddress);
+      return (result.results ?? []).map(toParticipantAddress);
     },
     async resolveNewAddress(actor, input) {
       return resolveAddressCandidates(clientFor(actor), input.address);
@@ -225,7 +226,7 @@ async function persistParticipantAddress(
       ? (result.agentHints as Record<string, unknown>)
       : {};
   return {
-    address: { addressId: result.addressId, label, isLastUsedAddress: false },
+    address: { addressId: result.addressId, label, isLastUsedAddress: false, ...participantAddressDetails(result) },
     alreadyExists: agentHints.alreadyExists === true,
     simulated: false,
   };

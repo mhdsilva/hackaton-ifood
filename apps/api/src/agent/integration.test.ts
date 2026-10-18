@@ -133,6 +133,7 @@ test("uses the participant MCP session for geocoding and confirmed address creat
       addressId: "created-address",
       label: "Centro, São Carlos",
       isLastUsedAddress: false,
+      details: { neighborhood: "Centro", city: "São Carlos", state: "SP", postalCode: "13560-000" },
     },
     alreadyExists: false,
     simulated: false,
@@ -155,4 +156,31 @@ test("uses the participant MCP session for geocoding and confirmed address creat
   assert.ok(seen.every((entry) => entry.authorization === "Bearer participant-access-token"));
   assert.equal(JSON.stringify(resolution).includes("coordinates"), false);
   assert.equal(JSON.stringify(created).includes("coordinates"), false);
+});
+
+test("returns complete delivery details to the authenticated owner without MCP metadata", async () => {
+  const { fetchImpl, seen } = fakeMcp(() => ({ results: [{
+    addressId: "home", alias: "Casa", isLastUsedAddress: true,
+    formattedAddress: "Rua X, 44, Apto 12, Centro, São Carlos, SP",
+    location: { street: "Rua X", number: "44", neighborhood: "Centro", city: "São Carlos", state: "SP" },
+    postalCode: "13560000", complement: "Apto 12", reference: "Portão azul",
+    coordinates: { latitude: -22.01, longitude: -47.89 },
+    topMerchantTypes: { RESTAURANT: "10" },
+    agentHints: { ignored: true },
+  }] }));
+  const sessions = new McpSessionRegistry();
+  sessions.set("party-1", "owner", {
+    accessToken: "owner-token", refreshToken: "owner-refresh", accessTokenExpiresAt: "2999-01-01T00:00:00.000Z",
+  });
+  const integration = createIfoodIntegration({ sessions, provider, mcpUrl: "https://mcp.example/marketplace", fetchImpl });
+  assert.deepEqual(await integration.listAddresses!({ partyId: "party-1", participantId: "owner" }), [{
+    addressId: "home", label: "Casa", isLastUsedAddress: true,
+    details: {
+      formattedAddress: "Rua X, 44, Apto 12, Centro, São Carlos, SP",
+      street: "Rua X", number: "44", neighborhood: "Centro", city: "São Carlos", state: "SP",
+      postalCode: "13560000", complement: "Apto 12", reference: "Portão azul",
+    },
+  }]);
+  assert.ok(seen.every((request) => request.authorization === "Bearer owner-token"));
+  await assert.rejects(integration.listAddresses!({ partyId: "party-1", participantId: "other" }), { code: "MCP_NOT_CONNECTED" });
 });

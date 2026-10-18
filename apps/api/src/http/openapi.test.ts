@@ -14,6 +14,16 @@ const document = parse(
   readFileSync(new URL("../../openapi.yaml", import.meta.url), "utf8"),
 ) as any;
 
+test("accepts optional private address details without exposing coordinates", () => {
+  const ajv = new Ajv2020({ strict: false });
+  ajv.addSchema(document, "openapi-address-details");
+  const validate = ajv.compile({ $ref: "openapi-address-details#/components/schemas/ParticipantAddress" });
+  const address = { addressId: "home", label: "Casa", isLastUsedAddress: false };
+  assert.equal(validate(address), true);
+  assert.equal(validate({ ...address, details: { street: "Rua X", number: "44", complement: "Apto 12", postalCode: "13560000" } }), true);
+  assert.equal(validate({ ...address, details: { coordinates: { latitude: -22, longitude: -47 } } }), false);
+});
+
 test("accepts a completed questionnaire response in a public snapshot", () => {
   const ajv = new Ajv2020({ strict: false });
   addFormats(ajv);

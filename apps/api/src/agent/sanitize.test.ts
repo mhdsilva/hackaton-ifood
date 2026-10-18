@@ -36,7 +36,11 @@ test("sanitizes an address to a safe label without coordinates", () => {
   assert.deepEqual(
     sanitizeAddress({
       addressId: "a1",
-      location: { neighborhood: "Centro", city: "São Carlos", state: "SP" },
+      location: { street: "Rua Privada", number: "44", neighborhood: "Centro", city: "São Carlos", state: "SP" },
+      formattedAddress: "Rua Privada, 44, Centro, São Carlos, SP",
+      postalCode: "13560000",
+      complement: "Apto 12",
+      reference: "Portão azul",
       coordinates: { latitude: -22, longitude: -47.9 },
     }),
     { addressId: "a1", label: "Centro, São Carlos", isLastUsedAddress: false },

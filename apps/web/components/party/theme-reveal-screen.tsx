@@ -15,15 +15,15 @@ export function ThemeRevealScreen() {
   const theme = isMock ? getMockRevealTheme() : revealTheme(snapshot.party);
 
   return (
-    <PartyShell tone="celebration" brandTone="inverse" contentClassName="pb-3" footerClassName="pt-6 pb-[max(24px,env(safe-area-inset-bottom))]" footer={
+    <PartyShell fitViewport tone="celebration" brandTone="inverse" contentClassName="theme-reveal-content justify-center" footerClassName="pt-3 pb-[max(12px,env(safe-area-inset-bottom))]" footer={
       <Button asChild variant="inverse" size="party" className="w-full"><Link href="/party/unboxing">Descobrir meu pedido</Link></Button>
     }>
-      <section aria-labelledby="theme-title" className="space-y-1">
+      <section aria-labelledby="theme-title" className="shrink-0 space-y-1">
         <p className="text-xs leading-4 font-bold">A TEMÁTICA DE VOCÊS É</p>
-        <h1 id="theme-title" className="font-preparation text-[80px] leading-none font-semibold"><span className="font-normal">{theme.introduction}</span><br />{theme.emphasis}</h1>
+        <h1 id="theme-title" className="theme-reveal-title font-preparation leading-none font-semibold"><span className="font-normal">{theme.introduction}</span><br />{theme.emphasis}</h1>
         <p className="text-sm leading-5">{theme.description}</p>
       </section>
-      <div className="relative h-[245px] overflow-hidden rounded-tl-[64px] rounded-br-[64px]">
+      <div className="relative min-h-0 max-h-[245px] flex-1 overflow-hidden rounded-tl-[64px] rounded-br-[64px]">
         <Image src={theme.image} alt="" fill sizes="(max-width: 448px) calc(100vw - 40px), 408px" className="object-cover" priority />
       </div>
       <PreparationParticipants participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} onPrimary />

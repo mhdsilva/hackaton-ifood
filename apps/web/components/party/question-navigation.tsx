@@ -41,6 +41,9 @@ export function QuestionNavigationProvider({ children }: { children: ReactNode }
       timeout = setTimeout(() => { transition.skipTransition(); finish(); }, 1500);
       router.push(href);
     }));
+    // skipTransition() rejeita ready com AbortError, mesmo quando finished resolve.
+    // Cancelar a captura é esperado no timeout ou ao trocar de rota novamente.
+    void transition.ready.catch(() => {});
     void transition.finished.catch(() => {});
   }, [pathname, router]);
 

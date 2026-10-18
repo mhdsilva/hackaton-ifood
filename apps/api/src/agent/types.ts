@@ -27,7 +27,11 @@ export interface IfoodCoordinates {
 export interface IfoodAddress {
   addressId: string;
   alias?: string | null;
-  location?: { neighborhood?: string; city?: string; state?: string };
+  formattedAddress?: string;
+  location?: { street?: string; number?: string; neighborhood?: string; city?: string; state?: string };
+  postalCode?: string;
+  complement?: string | null;
+  reference?: string | null;
   coordinates: IfoodCoordinates;
   isLastUsedAddress?: boolean;
 }
