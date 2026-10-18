@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useState } from "react";
 import { canStartMockParty, getMockAddresses, getMockPartySession } from "@/lib/mock-party";
-import type { BudgetOptionId, RestrictionId } from "@/lib/mock-questionnaire";
+import { getMockPreferenceQuestion, MAX_MOCK_DESIRES, parseMockBudget, toggleMockDesire, type BudgetOptionId, type RestrictionId, type PreferenceQuestionId, type DesireId, type ExclusionId } from "@/lib/mock-questionnaire";
 
 function useMockPartyState() {
   const [session, setSession] = useState(getMockPartySession);
@@ -13,6 +13,18 @@ function useMockPartyState() {
   const [otherRestriction, setOtherRestriction] = useState("");
   const [budgetOptionId, setBudgetOptionId] = useState<BudgetOptionId | null>(null);
   const [customBudget, setCustomBudget] = useState("");
+  const [preferences, setPreferences] = useState<Record<PreferenceQuestionId, string | null>>({ energy: null, "order-style": null });
+  const [desires, setDesires] = useState<DesireId[]>([]);
+  const [exclusions, setExclusions] = useState<ExclusionId[]>([]);
+  const [otherExclusion, setOtherExclusion] = useState("");
+  const [completedParticipantIds, setCompletedParticipantIds] = useState<string[]>([]);
+
+  const hasRequiredAnswers = selectedAddressId !== null &&
+    (!restrictions.includes("other") || otherRestriction.trim().length > 0) &&
+    budgetOptionId !== null && (budgetOptionId !== "other" || parseMockBudget(customBudget) !== null) &&
+    preferences.energy !== null && preferences["order-style"] !== null &&
+    desires.length >= 1 && desires.length <= MAX_MOCK_DESIRES;
+  const canCompleteQuestionnaire = hasRequiredAnswers && (!exclusions.includes("outro") || otherExclusion.trim().length > 0);
 
   const enterParty = useCallback((code: string | null) => {
     setSession((current) => current.inviteCode === code ? current : getMockPartySession(code));
@@ -20,6 +32,26 @@ function useMockPartyState() {
 
   function toggleRestriction(id: RestrictionId) {
     setRestrictions((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  }
+
+  function selectPreference(id: PreferenceQuestionId, value: string) {
+    if (getMockPreferenceQuestion(id).options.some((option) => option.id === value)) {
+      setPreferences((current) => ({ ...current, [id]: value }));
+    }
+  }
+
+  function toggleDesire(id: DesireId) {
+    setDesires((current) => toggleMockDesire(current, id));
+  }
+
+  function toggleExclusion(id: ExclusionId) {
+    setExclusions((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  }
+
+  function completeQuestionnaire() {
+    if (!canCompleteQuestionnaire) return false;
+    setCompletedParticipantIds((current) => current.includes(currentParticipantId) ? current : [...current, currentParticipantId]);
+    return true;
   }
 
   function startParty() {
@@ -31,7 +63,9 @@ function useMockPartyState() {
 
   return { snapshot, currentParticipantId, inviteCode, enterParty, addresses, selectedAddressId, setSelectedAddressId, startParty,
     restrictions, toggleRestriction, otherRestriction, setOtherRestriction,
-    budgetOptionId, setBudgetOptionId, customBudget, setCustomBudget };
+    budgetOptionId, setBudgetOptionId, customBudget, setCustomBudget,
+    preferences, selectPreference, desires, toggleDesire, exclusions, toggleExclusion, otherExclusion, setOtherExclusion,
+    hasRequiredAnswers, canCompleteQuestionnaire, completeQuestionnaire, completedParticipantIds };
 }
 
 const MockPartyContext = createContext<ReturnType<typeof useMockPartyState> | null>(null);

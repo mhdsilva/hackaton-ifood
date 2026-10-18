@@ -6,8 +6,9 @@ import { ParticipantList } from "@/components/party/participant-list";
 import { QuestionProgress } from "@/components/party/question-progress";
 import { RestrictionChoices } from "@/components/party/restriction-choices";
 import { BudgetChoices } from "@/components/party/budget-choices";
+import { QuestionChoices } from "@/components/party/question-choices";
 import { getMockAddresses, getMockParty } from "@/lib/mock-party";
-import { MOCK_QUESTIONNAIRE_STEPS, type BudgetOptionId, type RestrictionId } from "@/lib/mock-questionnaire";
+import { getMockDesireOptions, getMockPreferenceQuestion, MAX_MOCK_DESIRES, MOCK_QUESTIONNAIRE_STEPS, toggleMockDesire, type BudgetOptionId, type DesireId, type RestrictionId } from "@/lib/mock-questionnaire";
 
 export function PartyComponentExamples() {
   const [snapshot] = useState(getMockParty);
@@ -17,6 +18,8 @@ export function PartyComponentExamples() {
   const [otherRestriction, setOtherRestriction] = useState("");
   const [budgetId, setBudgetId] = useState<BudgetOptionId | null>(null);
   const [customBudget, setCustomBudget] = useState("");
+  const [energy, setEnergy] = useState<string | null>(null);
+  const [desires, setDesires] = useState<DesireId[]>([]);
 
   return (
     <section aria-labelledby="party-components-title" className="rounded-xl border bg-card p-6 sm:p-8">
@@ -34,6 +37,12 @@ export function PartyComponentExamples() {
         </fieldset>
         <RestrictionChoices selected={restrictions} onToggle={(id) => setRestrictions((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} other={otherRestriction} onOtherChange={setOtherRestriction} inputId="example-other-restriction" />
         <BudgetChoices selected={budgetId} onSelect={setBudgetId} customValue={customBudget} onCustomChange={setCustomBudget} inputId="example-custom-budget" />
+        <QuestionChoices name="example-energy" legend="Escolha única" options={getMockPreferenceQuestion("energy").options} selected={energy ? [energy] : []} onSelect={setEnergy} />
+        <QuestionChoices name="example-desires" legend="Desejos · uma ou duas escolhas" options={getMockDesireOptions()} selected={desires} onSelect={(id) => setDesires((current) => toggleMockDesire(current, id))} multiple maxSelections={MAX_MOCK_DESIRES} />
+        <div className="space-y-2">
+          <h3 className="font-bold">Conclusão individual · simulação</h3>
+          <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={snapshot.party.hostParticipantId} readyParticipantIds={[snapshot.party.hostParticipantId]} />
+        </div>
       </div>
     </section>
   );

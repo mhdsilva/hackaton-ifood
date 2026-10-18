@@ -142,6 +142,7 @@ test("serves v2 by default and keeps v1 retrievable", () => {
     current?.questions.find((question) => question.id === "cravings")?.maxSelections,
     2,
   );
+  assert.equal(current?.questions.find((question) => question.id === "cravings")?.required, true);
   assert.equal(
     current?.questions.find((question) => question.id === "restrictions")?.allowOther,
     true,
@@ -174,6 +175,24 @@ test("validates a full v2 response", () => {
 
   assert.deepEqual(
     validateAnswers(v2, { address: "casa" }).map((issue) => issue.questionId),
-    ["budget", "energy", "order-style"],
+    ["budget", "energy", "order-style", "cravings"],
   );
+});
+
+test("v2 requires one or two cravings to finish but accepts incomplete drafts", () => {
+  const v2 = getQuestionnaire("v2");
+  assert.ok(v2);
+  const answers = { address: "casa", budget: "ate-50", energy: "leve-refrescante", "order-style": "refeicao-completa" };
+  for (const cravings of [undefined, [], ["crocante"], ["crocante", "cremoso"], ["crocante", "cremoso", "fresco"]]) {
+    const response = cravings === undefined ? answers : { ...answers, cravings };
+    const expected = !cravings?.length
+      ? [{ questionId: "cravings", reason: "required" }]
+      : cravings.length > 2 ? [{ questionId: "cravings", reason: "too_many_selections" }] : [];
+    assert.deepEqual(validateAnswers(v2, response), expected);
+  }
+  assert.deepEqual(validateAnswers(v2, {}, { requireComplete: false }), []);
+  assert.deepEqual(validateAnswers(v2, { cravings: [] }, { requireComplete: false }), []);
+  assert.deepEqual(validateAnswers(v2, { cravings: ["crocante", "cremoso", "fresco"] }, { requireComplete: false }), [
+    { questionId: "cravings", reason: "too_many_selections" },
+  ]);
 });

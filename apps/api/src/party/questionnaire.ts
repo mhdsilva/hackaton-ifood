@@ -123,7 +123,7 @@ export const QUESTIONNAIRE_V2: QuestionnaireDefinition = {
       id: "cravings",
       type: "multi_choice",
       label: "Escolha até dois desejos para hoje.",
-      required: false,
+      required: true,
       helpText: "Vamos priorizar opções que tenham os sabores e texturas escolhidos.",
       maxSelections: 2,
       options: [

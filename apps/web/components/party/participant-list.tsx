@@ -8,10 +8,11 @@ export function ParticipantAvatar({ name, isHost }: { name: string; isHost: bool
   );
 }
 
-export function ParticipantList({ participants, hostId, currentParticipantId }: {
+export function ParticipantList({ participants, hostId, currentParticipantId, readyParticipantIds }: {
   participants: Participant[];
   hostId: string;
   currentParticipantId: string;
+  readyParticipantIds?: readonly string[];
 }) {
   return (
     <ul>
@@ -21,7 +22,9 @@ export function ParticipantList({ participants, hostId, currentParticipantId }: 
           <li key={participant.id} className="flex min-h-[62px] items-center gap-3 border-b py-2">
             <ParticipantAvatar name={participant.name} isHost={isHost} />
             <span className="min-w-0 flex-1 break-words">{participant.name}{participant.id === currentParticipantId ? " (Você)" : ""}</span>
-            {isHost && <span className="rounded-full bg-host-badge px-3 py-1 text-[11px] leading-6 font-medium text-primary">Host</span>}
+            {readyParticipantIds ? <span className={`rounded-full px-3 py-1 text-[11px] leading-6 font-medium ${readyParticipantIds.includes(participant.id) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+              {readyParticipantIds.includes(participant.id) ? "Pronto" : "Aguardando..."}
+            </span> : isHost && <span className="rounded-full bg-host-badge px-3 py-1 text-[11px] leading-6 font-medium text-primary">Host</span>}
           </li>
         );
       })}

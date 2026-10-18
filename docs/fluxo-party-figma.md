@@ -129,7 +129,7 @@ Cada etapa tem: título, texto de apoio, tipo de seleção e as opções exatas 
 
 - **Pergunta:** "Escolha até dois desejos para hoje."
 - **Apoio:** "Vamos priorizar opções que tenham os sabores e texturas escolhidos."
-- **Seleção:** múltipla, **no máximo dois**. `Crocante`, `Cremoso`, `Fresco`, `Bem temperado`,
+- **Seleção:** múltipla, **pelo menos um e no máximo dois**, conforme alinhamento com Otávio. `Crocante`, `Cremoso`, `Fresco`, `Bem temperado`,
   `Picante`, `Agridoce`, `Tanto faz, me surpreenda!`
 - **Individual.**
 
@@ -304,7 +304,7 @@ Para o Figma, a opção 2 é a que corresponde à tela. **Decidido: opção 2** 
       "label": "Como você quer curtir seu pedido?",
       "options": ["refeicao-completa", "varias-experimentar", "lanche-simples", "sobremesa-bebida", "surpreenda"] },
 
-    { "id": "cravings", "type": "multi_choice", "required": false, "maxSelections": 2,
+    { "id": "cravings", "type": "multi_choice", "required": true, "maxSelections": 2,
       "label": "Escolha até dois desejos para hoje.",
       "options": ["crocante", "cremoso", "fresco", "bem-temperado", "picante", "agridoce", "surpreenda"] },
 

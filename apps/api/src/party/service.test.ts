@@ -19,6 +19,35 @@ function answers(value: string): SubmitAnswersRequest {
   };
 }
 
+test("v2 cannot mark a participant ready without one or two cravings", () => {
+  const service = createService();
+  const host = service.create({ name: "Party", host: { id: "ana", name: "Ana" } });
+  const partyId = host.party.party.id;
+  service.join(partyId, { participant: { id: "bruno", name: "Bruno" } });
+  service.closeMembership(partyId, host.participantToken);
+  const base = { address: "casa", budget: "ate-50", energy: "leve-refrescante", "order-style": "refeicao-completa" };
+  service.submitAnswers(partyId, host.participantToken, { questionnaireVersion: "v2", answers: base, completed: false });
+
+  for (const cravings of [undefined, [], ["crocante", "cremoso", "fresco"]]) {
+    assert.throws(() => service.submitAnswers(partyId, host.participantToken, {
+      questionnaireVersion: "v2",
+      answers: cravings === undefined ? base : { ...base, cravings },
+      completed: true,
+    }), (error: unknown) => error instanceof PartyError && error.code === "INVALID_ANSWERS");
+    const unchanged = service.get(partyId);
+    assert.equal(unchanged.party.status, "COLLECTING_ANSWERS");
+    assert.equal(unchanged.participants.find((participant) => participant.id === "ana")?.questionnaireResponse?.completed, false);
+  }
+
+  for (const cravings of [["crocante"], ["crocante", "cremoso"]]) {
+    const saved = service.submitAnswers(partyId, host.participantToken, {
+      questionnaireVersion: "v2", answers: { ...base, cravings }, completed: true,
+    });
+    assert.equal(saved.participants.find((participant) => participant.id === "ana")?.questionnaireResponse?.completed, true);
+    assert.equal(saved.party.status, "COLLECTING_ANSWERS");
+  }
+});
+
 test("creates an open Party and limits membership to four people", () => {
   const service = createService();
   const created = service.create({

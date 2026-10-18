@@ -7,6 +7,7 @@ const screens: Record<string, { name: string; backHref: string }> = {
   "invite": { name: "Entrada pelo convite", backHref: "/" },
   "new-address": { name: "Adicionar novo endereço", backHref: "/party/address" },
   "next-question": { name: "Etapa 4 · Próxima pergunta", backHref: "/party/budget" },
+  "reveal": { name: "Resultado da Party", backHref: "/party/waiting" },
 };
 
 export const metadata = { title: "Tela pendente | iFood Party" };

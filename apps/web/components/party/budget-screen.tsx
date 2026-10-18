@@ -16,7 +16,7 @@ export function BudgetScreen() {
   return (
     <PartyShell backHref="/party/restrictions" footer={<Button type="submit" form="budget-form" size="party" className="w-full" disabled={!canContinue}>Continuar</Button>}>
       <QuestionIntroduction id="budget-title" step={3} title="Até quanto você pretende gastar?" description="Esse valor é individual e inclui uma estimativa das taxas. O orçamento é individual, e não do grupo." />
-      <form id="budget-form" onSubmit={(event) => { event.preventDefault(); if (canContinue) router.push("/party/pending/next-question"); }}>
+      <form id="budget-form" onSubmit={(event) => { event.preventDefault(); if (canContinue) router.push("/party/energy"); }}>
         <BudgetChoices selected={budgetOptionId} onSelect={setBudgetOptionId} customValue={customBudget} onCustomChange={setCustomBudget} inputId="custom-budget" />
       </form>
     </PartyShell>
