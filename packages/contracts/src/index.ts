@@ -267,6 +267,16 @@ export interface LocalOption {
   estimatedDeliveryMinutes: { min: number; max: number };
 }
 
+/** Preferências só do participante: entram no pedido dele, nunca no tema da Party. */
+export interface PersonalPreferences {
+  /** Desejos de sabor/textura (rótulos legíveis). */
+  cravings?: string[];
+  /** O que a pessoa quer deixar de fora. */
+  avoid?: string[];
+  /** Textos livres ("outro") escritos pela própria pessoa. */
+  notes?: string[];
+}
+
 export interface ResolveOptionsInput {
   participantId: string;
   theme: string;
@@ -275,6 +285,8 @@ export interface ResolveOptionsInput {
   /** Orçamento total do participante, incluindo frete (BRL). */
   budget: number;
   restrictions: string[];
+  /** Preenchido pelo servidor com as respostas do próprio participante. */
+  preferences?: PersonalPreferences;
   /** Obrigatório quando a conta tem mais de um endereço salvo. */
   addressId?: string;
   maxOptions?: number;

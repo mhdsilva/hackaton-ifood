@@ -28,6 +28,7 @@ import { McpOAuthError, McpOAuthFlow } from "./mcp/oauth-flow.js";
 import type { McpOAuthMode, McpOAuthProvider } from "./ifood/provider.js";
 import { McpSessionRegistry } from "./mcp/session-registry.js";
 import { ParticipantAccessStore } from "./party/access.js";
+import { personalPreferences } from "./party/preferences.js";
 import { getQuestionnaire } from "./party/questionnaire.js";
 import { PartyError, PartyService } from "./party/service.js";
 import { PartyStore } from "./party/store.js";
@@ -424,7 +425,15 @@ async function routeRequest(
     if (!options.agent) {
       throw new PartyError(501, "OPTIONS_UNAVAILABLE", "Local options are not configured");
     }
-    const party = service.get(partyId).party;
+    const snapshot = service.get(partyId);
+    const party = snapshot.party;
+    const ownResponse = snapshot.participants.find(
+      (participant) => participant.id === actor.participantId,
+    )?.questionnaireResponse;
+    const preferences = personalPreferences(
+      ownResponse?.answers,
+      ownResponse?.questionnaireVersion,
+    );
     const input = parseOptionsRequest(
       await readJson<Record<string, unknown>>(request),
       party.theme,
@@ -434,7 +443,7 @@ async function routeRequest(
         ? party.themeQueries
         : themeQueries(party.theme ?? input.theme);
     const agent = options.agent;
-    const output = await runAgent(() => agent.resolveOptions(actor, { ...input, queries }));
+    const output = await runAgent(() => agent.resolveOptions(actor, { ...input, queries, ...(preferences ? { preferences } : {}) }));
     service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
       orderStage: "options_ready",
     });

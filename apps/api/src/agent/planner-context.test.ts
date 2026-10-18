@@ -40,6 +40,23 @@ test("messages carry the theme, budget, restrictions and safe address labels", (
   assert.match(text, /sem pimenta/);
 });
 
+test("personal preferences reach only this participant's order prompt", () => {
+  const messages = buildPlannerMessages({
+    theme: "italiano",
+    budget: 50,
+    addresses: [rawAddress],
+    preferences: { cravings: ["Crocante"], avoid: ["Fritura"], notes: ["sem coentro"] },
+  });
+  const system = messages[0].content ?? "";
+  const user = messages[1].content ?? "";
+  assert.match(system, /nunca para mudar o tema/);
+  assert.match(user, /Preferências só deste participante/);
+  assert.match(user, /Desejos: Crocante/);
+  assert.match(user, /Evitar: Fritura/);
+  assert.match(user, /sem coentro/);
+  assert.match(user, /Tema escolhido pelo grupo: italiano/);
+});
+
 test("messages never leak street, zip, coordinates or personal data", () => {
   const messages = buildPlannerMessages({ theme: "italiano", budget: 50, addresses: [rawAddress] });
   const text = messages.map((message) => message.content ?? "").join("\n");
