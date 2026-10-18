@@ -139,8 +139,25 @@
 }
 
 .theme-reveal-title {
-  font-size: min(20cqw, 13cqh, 80px);
+  font-size: 64px;
   overflow-wrap: anywhere;
+}
+
+.party-stage-content.theme-reveal-content {
+  gap: 32px;
+  padding-top: 20px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  font-variation-settings: "opsz" 14;
+}
+
+.theme-reveal-content .preparation-participants {
+  margin-inline: 0;
+}
+
+.theme-reveal-content .preparation-participants ul > li > * {
+  width: 42px;
+  height: 42px;
+  font-size: 16.8px;
 }
 
 @keyframes preparation-orbit {

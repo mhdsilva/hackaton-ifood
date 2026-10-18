@@ -116,7 +116,7 @@ function questionOptions(
 export interface LivePartyValue {
   snapshot: PartySnapshot;
   currentParticipantId: string;
-  startParty: () => void;
+  startParty: () => Promise<boolean>;
   /** `false` quando `GET /questionnaire` falhou e as telas usam o catálogo fixo do Figma. */
   usingLiveCatalog: boolean;
   addresses: PartyAddress[];
@@ -345,13 +345,17 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
     };
   }, [session, addressesRequestKey]);
 
-  const startParty = useCallback(() => {
-    if (!session || !snapshot || !canStartLiveParty(snapshot, session.participantId)) return;
+  const startParty = useCallback(async (): Promise<boolean> => {
+    if (!session || !snapshot || !canStartLiveParty(snapshot, session.participantId) ||
+      snapshot.participants.find((participant) => participant.id === session.participantId)?.mcpConnectionStatus !== "connected") return false;
     setActionError(null);
-    liveApi
-      .closeParty(session.partyId, session.token)
-      .then(setSnapshot)
-      .catch((cause: unknown) => setActionError(describeError(cause)));
+    try {
+      setSnapshot(await liveApi.closeParty(session.partyId, session.token));
+      return true;
+    } catch (cause) {
+      setActionError(describeError(cause));
+      return false;
+    }
   }, [session, snapshot]);
 
   const revealTheme = useCallback(async (): Promise<boolean> => {

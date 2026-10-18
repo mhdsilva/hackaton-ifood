@@ -10,19 +10,21 @@ export function getMockParty(): PartySnapshot {
       ...participant,
       name: index === 0 ? "Júlio" : "Lucas",
       questionnaireResponse: null,
-      mcpConnectionStatus: "not_connected",
+      mcpConnectionStatus: index === 0 ? "connected" : "not_connected",
     })),
   };
 }
 
 // Entrada simulada: o código da URL não autentica um participante real.
-export function getMockPartySession(inviteCode: string | null = null) {
+export function getMockPartySession(inviteCode: string | null = null, authenticatedPreview = false) {
   const snapshot = getMockParty();
+  if (authenticatedPreview) snapshot.participants.forEach((participant) => { participant.mcpConnectionStatus = "connected"; });
   if (inviteCode) snapshot.party.code = inviteCode;
   const guest = snapshot.participants.find((participant) => participant.id !== snapshot.party.hostParticipantId);
   return {
     snapshot,
     inviteCode,
+    authenticatedPreview,
     currentParticipantId: inviteCode && guest ? guest.id : snapshot.party.hostParticipantId,
   };
 }
@@ -39,5 +41,6 @@ export function getMockAddresses(): PartyAddress[] {
 export function canStartMockParty(snapshot: PartySnapshot, participantId: string): boolean {
   return snapshot.party.status === "OPEN" && !snapshot.party.membershipLocked &&
     snapshot.party.hostParticipantId === participantId &&
-    snapshot.participants.length >= 2 && snapshot.participants.length <= 4;
+    snapshot.participants.length >= 2 && snapshot.participants.length <= 4 &&
+    snapshot.participants.every((participant) => participant.mcpConnectionStatus === "connected");
 }

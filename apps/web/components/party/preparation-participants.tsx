@@ -3,11 +3,12 @@ import type { PreparationParticipant } from "@/lib/mock-preparation";
 
 const participantNames = new Intl.ListFormat("pt-BR", { style: "long", type: "conjunction" });
 
-export function PreparationParticipants({ participants, hostId, centered = false, onPrimary = false }: {
+export function PreparationParticipants({ participants, hostId, centered = false, onPrimary = false, caption = "party" }: {
   participants: readonly PreparationParticipant[];
   hostId: string;
   centered?: boolean;
   onPrimary?: boolean;
+  caption?: "party" | "connected";
 }) {
   return (
     <div className={`preparation-participants shrink-0 space-y-[10px] text-preparation-caption ${centered ? "text-center" : ""}`}>
@@ -16,7 +17,7 @@ export function PreparationParticipants({ participants, hostId, centered = false
           <ParticipantAvatar name={participant.name} isHost={participant.id === hostId} variant="connected" className={`size-[42px] text-[16.8px] ${onPrimary && participant.id === hostId ? "bg-background text-foreground" : ""}`} />
         </li>)}
       </ul>
-      <p className="text-xs leading-4">{participantNames.format(participants.map((participant) => participant.name))} na Party</p>
+      <p className="text-xs leading-4">{participantNames.format(participants.map((participant) => participant.name))} {caption === "connected" ? (participants.length === 1 ? "conectado" : "conectados") : "na Party"}</p>
     </div>
   );
 }

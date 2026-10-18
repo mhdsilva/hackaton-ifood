@@ -42,7 +42,7 @@ export function UnboxingScreen() {
       <section aria-labelledby="unboxing-title" className="text-center">
         <div className="space-y-2">
           <p className="text-[11px] leading-[14px] font-bold text-primary">AS ESCOLHAS SE ENCONTRARAM</p>
-          <h1 id="unboxing-title" className="party-stage-title font-preparation leading-[1.2] font-bold">E o pedido<br />escolhido para<br />você foi...</h1>
+          <h1 id="unboxing-title" className="font-preparation text-[40px] leading-[1.2] font-bold">E o pedido escolhido<br />para você foi...</h1>
         </div>
         <div className="mx-auto flex h-[min(39cqh,280px)] items-center justify-center overflow-hidden">
           <div ref={bag} className="h-full"><Image src="/figma/reveal-bag.svg" alt="Sacola surpresa do iFood" width={262.069} height={280} priority className="h-full w-auto" /></div>

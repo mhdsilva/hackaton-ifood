@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, Suspense, useContext, useEffect, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { LivePartyProvider, useParty as useLiveParty, type LivePartyValue } from "@/components/party/live-party-provider";
 import { MockPartyProvider, useMockParty } from "@/components/party/mock-party-provider";
 import { getMockBudgetOptions, getMockDesireOptions, getMockExclusionOptions, getMockPreferenceQuestion, getMockRestrictionOptions } from "@/lib/mock-questionnaire";
@@ -23,10 +23,12 @@ function LivePartyBridge({ children }: { children: ReactNode }) {
 function MockPartyBridge({ children }: { children: ReactNode }) {
   const mock = useMockParty();
   const searchParams = useSearchParams();
-  const code = searchParams.get("code")?.trim() || null;
+  const pathname = usePathname();
+  const code = searchParams.get("code")?.trim() || (pathname === "/" ? null : mock.inviteCode);
+  const authenticatedPreview = searchParams.get("preview") === "authenticated" || (pathname !== "/" && mock.authenticatedPreview);
   const { enterParty } = mock;
 
-  useEffect(() => { enterParty(code); }, [code, enterParty]);
+  useEffect(() => { enterParty(code, authenticatedPreview); }, [code, authenticatedPreview, enterParty]);
 
   const restrictionOptions = getMockRestrictionOptions();
   const budgetOptions = getMockBudgetOptions();
@@ -65,10 +67,11 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
       if (option) mock.toggleExclusion(option.id);
     },
     completeQuestionnaire: async () => mock.completeQuestionnaire(),
+    startParty: async () => mock.startParty(),
     // A prévia libera a preparação sem simular respostas dos outros participantes.
     revealTheme: async () => true,
-    connectMcp: async () => {},
-    connectingMcp: false,
+    connectMcp: mock.connectMcp,
+    connectingMcp: mock.connectingMcp,
     resolveOrderOptions: async () => {
       throw new Error("A busca de pedido usa o iFood; indisponível na prévia mockada.");
     },
@@ -79,7 +82,7 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
     loadRetrospective: async () => { throw new Error("Retrospectiva indisponível na prévia mockada."); },
   };
 
-  if (mock.inviteCode !== code) return <PartyLoading />;
+  if (mock.inviteCode !== code || mock.authenticatedPreview !== authenticatedPreview) return <PartyLoading />;
   return <PartyContext.Provider value={value}>{children}</PartyContext.Provider>;
 }
 

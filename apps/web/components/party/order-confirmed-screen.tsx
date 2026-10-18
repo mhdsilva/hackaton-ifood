@@ -12,12 +12,14 @@ import { useParty } from "@/components/party/party-provider";
 
 export function OrderConfirmedScreen() {
   const router = useRouter();
-  const { snapshot, isMock, cart, submitPartyOrder } = useParty();
+  const { snapshot, currentParticipantId, isMock, cart, submitPartyOrder } = useParty();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const checkoutSimulated = cart?.checkoutSimulated === true;
+  const orderStage = snapshot.participants.find((participant) => participant.id === currentParticipantId)?.orderStage;
+  const orderCompleted = orderStage === "order_submitted" || orderStage === "delivered";
 
-  if (!isMock) {
+  if (!isMock && !orderCompleted) {
     return (
       <PartyShell
         brandTone="light"
@@ -44,7 +46,7 @@ export function OrderConfirmedScreen() {
       >
         <section aria-labelledby="order-confirmed-title" className="text-center">
           <p className="mb-2 text-xs font-bold text-primary">{checkoutSimulated ? "PEDIDO PREPARADO · CHECKOUT SIMULADO" : "CARRINHO PRONTO"}</p>
-          <h1 id="order-confirmed-title" className="font-preparation text-5xl leading-[1.2] font-bold">{checkoutSimulated ? <>Pedido pronto,<br />vamos continuar<br />a demonstração!</> : <>Carrinho pronto,<br />confirme seu<br />pedido no iFood.</>}</h1>
+          <h1 id="order-confirmed-title" className="font-preparation text-[40px] leading-[1.2] font-bold">{checkoutSimulated ? <>Pedido pronto,<br />vamos continuar<br />a demonstração!</> : <>Carrinho pronto,<br />confirme seu<br />pedido no iFood.</>}</h1>
           <div className="flex h-[280px] items-center justify-center">
             <Image src="/figma/reveal-bag.svg" alt="Sacola do iFood" width={262.069} height={280} priority />
           </div>
@@ -66,7 +68,7 @@ export function OrderConfirmedScreen() {
       footer={<Button asChild size="party" className="w-full"><Link href="/party/retrospective">Ver retrospectiva</Link></Button>}
     >
       <section aria-labelledby="order-confirmed-title" className="text-center">
-        <h1 id="order-confirmed-title" className="party-stage-title font-preparation leading-[1.2] font-bold">Pedido realizado,<br />aproveite com<br />seus amigos!</h1>
+        <h1 id="order-confirmed-title" className="font-preparation text-[40px] leading-[1.2] font-bold">Seu pedido<br />foi realizado!</h1>
         <div className="flex h-[min(39cqh,280px)] items-center justify-center">
           <Image src="/figma/reveal-bag.svg" alt="Sacola do iFood" width={262.069} height={280} priority className="h-full w-auto" />
         </div>

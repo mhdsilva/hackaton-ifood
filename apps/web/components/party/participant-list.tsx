@@ -1,5 +1,6 @@
 import type { Participant } from "@sidequest/contracts";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 export function ParticipantAvatar({ name, isHost, variant = "default", className }: {
   name: string;
@@ -29,13 +30,18 @@ export function ParticipantList({ participants, hostId, currentParticipantId, re
     <ul>
       {participants.map((participant) => {
         const isHost = participant.id === hostId;
+        const isCurrent = participant.id === currentParticipantId;
+        const authenticated = participant.mcpConnectionStatus === "connected";
+        const authenticating = participant.mcpConnectionStatus === "validating";
         return (
           <li key={participant.id} className="flex min-h-[62px] items-center gap-3 border-b py-2">
-            <ParticipantAvatar name={participant.name} isHost={isHost} />
-            <span className="min-w-0 flex-1 break-words">{participant.name}{participant.id === currentParticipantId ? " (Você)" : ""}</span>
-            {readyParticipantIds ? <span className={`rounded-full px-3 py-1 text-[11px] leading-6 font-medium ${readyParticipantIds.includes(participant.id) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+            <ParticipantAvatar name={participant.name} isHost={isHost} className={isCurrent ? "bg-primary text-primary-foreground" : "bg-foreground text-primary"} />
+            <span className="min-w-0 flex-1 break-words">{participant.name}{isHost ? " (Host)" : ""}{isCurrent && <span className="sr-only"> (Você)</span>}</span>
+            {readyParticipantIds ? <Badge variant={readyParticipantIds.includes(participant.id) ? "solid" : "muted"}>
               {readyParticipantIds.includes(participant.id) ? "Pronto" : "Aguardando..."}
-            </span> : isHost && <span className="rounded-full bg-host-badge px-3 py-1 text-[11px] leading-6 font-medium text-primary">Host</span>}
+            </Badge> : <Badge variant={authenticated ? "soft" : "muted"}>
+              {authenticated ? "Autenticado" : authenticating ? "Autenticando-se" : participant.mcpConnectionStatus === "error" ? "Falha no login" : "Não autenticado"}
+            </Badge>}
           </li>
         );
       })}

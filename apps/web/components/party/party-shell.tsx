@@ -19,8 +19,8 @@ export function PartyHeader({ backHref, brandTone = "primary" }: { backHref?: st
         </Link>
         <p className="font-heading text-base font-bold">IFOOD PARTY</p>
       </> : <div aria-label="iFood Party" className="flex items-center gap-[2.732px]">
-        <Image src="/figma/logo.svg" alt="iFood" width={54.8293} height={30.439} className={brandTone === "inverse" ? "brightness-0 invert" : undefined} />
-        <span className={`text-[21.219px] leading-[31.828px] font-black italic ${brandTone !== "primary" ? "text-foreground" : "text-primary"}`}>Party</span>
+        <Image src={brandTone === "inverse" ? "/figma/reveal-logo-white.svg" : "/figma/logo.svg"} alt="iFood" width={54.8293} height={30.439} />
+        <span className={`text-[21.219px] leading-[31.828px] italic ${brandTone === "inverse" ? "font-[1000]" : "font-black"} ${brandTone !== "primary" ? "text-foreground" : "text-primary"}`} style={brandTone === "inverse" ? { fontVariationSettings: '"opsz" 14' } : undefined}>Party</span>
       </div>}
       </div>
     </header>
@@ -45,7 +45,7 @@ export function PartyShell({ children, footer, backHref, tone = "default", brand
       <main id="main-content" className={cn("min-h-0 flex-1", fitViewport ? "party-stage-main overflow-hidden" : "overflow-y-auto overscroll-y-contain scroll-pt-5 scroll-pb-5")}>
         <div className={cn("party-content mx-auto flex w-full max-w-md flex-col gap-8 px-5 py-5", fitViewport && "party-stage-content", contentClassName)}>{children}</div>
       </main>
-      {footer && <footer className={cn("z-10 shrink-0 border-t bg-background", tone === "celebration" && "border-transparent bg-primary")}>
+      {footer && <footer className={cn("z-10 shrink-0 border-t bg-background", tone === "celebration" && "border-0 bg-primary")}>
         <div className={cn("mx-auto w-full max-w-md space-y-3 px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]", footerClassName)}>
           {footer}
         </div>

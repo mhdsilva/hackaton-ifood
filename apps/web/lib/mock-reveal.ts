@@ -1,7 +1,7 @@
 // Cenário visual do Figma: nenhum catálogo, carrinho ou pagamento real é consultado.
 export function getMockRevealTheme() {
   return {
-    title: "Italiano",
+    title: "Noite Italiana",
     description: "Sabores diferentes, a mesma temática.",
     image: "/figma/theme-italian.png",
   };
@@ -15,7 +15,7 @@ export function getMockRevealedOrder() {
   ];
   const fees = 6;
   return {
-    theme: getMockRevealTheme().title,
+    theme: "Italiano",
     merchant: "Forno da Vila",
     rating: "4,8",
     items,

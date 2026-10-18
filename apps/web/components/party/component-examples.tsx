@@ -9,6 +9,7 @@ import { getMockRetrospective } from "@/lib/mock-retrospective";
 import { AddressOption } from "@/components/party/address-option";
 import Link from "next/link";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
+import { AuthenticationBanner } from "@/components/party/authentication-banner";
 import { getMockPreparationGroup } from "@/lib/mock-preparation";
 import { QuestionProgress } from "@/components/party/question-progress";
 import { SegmentedProgress } from "@/components/party/segmented-progress";
@@ -30,6 +31,7 @@ export function PartyComponentExamples() {
   const [energy, setEnergy] = useState<string | null>(null);
   const [desires, setDesires] = useState<DesireId[]>([]);
   const [progressStep, setProgressStep] = useState(1);
+  const [authenticated, setAuthenticated] = useState(false);
   const [flip, setFlip] = useState({ value: 3, previous: 3 });
   const retrospective = getMockRetrospective(snapshot);
 
@@ -40,6 +42,11 @@ export function PartyComponentExamples() {
         <div className="space-y-4">
           <h3 className="font-bold">Participantes</h3>
           <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={snapshot.party.hostParticipantId} />
+          <AuthenticationBanner status={authenticated ? "connected" : "not_connected"} onLogin={() => setAuthenticated(true)} />
+          {authenticated && <Button variant="outline" onClick={() => setAuthenticated(false)}>Repetir banner de login</Button>}
+          <Link href="/?code=PREVIA" className="block text-sm underline underline-offset-4">Lobby simulado · convidado sem autenticação</Link>
+          <Link href="/" className="block text-sm underline underline-offset-4">Lobby simulado · host aguardando autenticação</Link>
+          <Link href="/?preview=authenticated" className="block text-sm underline underline-offset-4">Lobby simulado · todos autenticados</Link>
           <h3 className="font-bold">Progresso</h3>
           <QuestionProgress key={progressStep} current={progressStep} total={MOCK_QUESTIONNAIRE_STEPS} />
           <Button variant="outline" onClick={() => setProgressStep((step) => step % MOCK_QUESTIONNAIRE_STEPS + 1)}>Avançar progresso</Button>

@@ -7,16 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useParty } from "@/components/party/party-provider";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
 import { PartyShell } from "@/components/party/party-shell";
-import { canStartMockParty } from "@/lib/mock-party";
-import { canStartLiveParty, pendingGuestsWithoutMcp } from "@/lib/party-flow";
+import { AuthenticationBanner } from "@/components/party/authentication-banner";
+import { getLobbyState } from "@/lib/lobby-state";
 import { buildPartyInviteUrl } from "@/lib/party-invitation";
-
-const MCP_STATUS_LABEL: Record<string, string> = {
-  not_connected: "Ainda não conectado",
-  validating: "Conectando...",
-  connected: "Conectado",
-  error: "Falha ao conectar. Tente de novo.",
-};
 
 export function LobbyScreen() {
   const { snapshot, currentParticipantId, startParty, connectMcp, connectingMcp, isMock } = useParty();
@@ -24,27 +17,9 @@ export function LobbyScreen() {
   const [copyStatus, setCopyStatus] = useState("");
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState(false);
-  const isHost = currentParticipantId === snapshot.party.hostParticipantId;
-  const host = snapshot.participants.find((participant) => participant.id === snapshot.party.hostParticipantId);
-  const me = snapshot.participants.find((participant) => participant.id === currentParticipantId);
+  const [starting, setStarting] = useState(false);
+  const { isHost, host, me, hasStarted, canContinue, buttonLabel } = getLobbyState(snapshot, currentParticipantId);
   const mcpStatus = me?.mcpConnectionStatus ?? "not_connected";
-  const hasStarted = snapshot.party.status === "COLLECTING_ANSWERS";
-  // No modo real o host só inicia quando todos os convidados conectaram o iFood;
-  // a prévia mockada não simula conexão, então mantém a regra antiga.
-  const pendingGuests = isMock ? [] : pendingGuestsWithoutMcp(snapshot);
-  const canStart = isMock
-    ? canStartMockParty(snapshot, currentParticipantId)
-    : canStartLiveParty(snapshot, currentParticipantId);
-  const canContinue = isHost && (hasStarted || canStart);
-  const waitMessage = (() => {
-    if (pendingGuests.length === 0) {
-      return "Aguarde pelo menos duas pessoas. Somente o host pode iniciar.";
-    }
-    const names = pendingGuests.map((participant) => participant.name).join(", ");
-    return pendingGuests.length === 1
-      ? `Aguardando ${names} conectar o iFood para começar.`
-      : `Aguardando ${names} conectarem o iFood para começar.`;
-  })();
 
   useEffect(() => {
     if (!copied) return;
@@ -71,13 +46,15 @@ export function LobbyScreen() {
   }
 
   return (
-    <PartyShell footer={<>
-      <Button size="party" className="w-full" disabled={!canContinue} onClick={() => {
-        if (!hasStarted) startParty();
-        router.push("/party/address");
-      }}>{isHost ? (hasStarted ? "Continuar party" : "Iniciar party") : `Aguardando ${host?.name ?? "o anfitrião"}...`}</Button>
-      {isHost && !canContinue && <p className="text-sm text-muted-foreground">{waitMessage}</p>}
-    </>}>
+    <PartyShell brandTone="light" footer={
+      <Button size="party" className="h-auto min-h-[50px] w-full py-3 break-words whitespace-normal" disabled={!canContinue || starting} aria-busy={starting} onClick={async () => {
+        if (!canContinue || starting) return;
+        setStarting(true);
+        try {
+          if (hasStarted || await startParty()) router.push("/party/address");
+        } finally { setStarting(false); }
+      }}>{starting ? "Iniciando party..." : buttonLabel}</Button>
+    }>
       <section aria-labelledby="party-title" className="relative isolate overflow-hidden rounded-2xl bg-secondary p-6 text-foreground">
         <Image src="/figma/banner-logo.svg" alt="" width={286} height={155} className="pointer-events-none absolute top-7 left-[101px] -z-10 max-w-none opacity-50" />
         <p className="text-xs leading-[normal] font-bold text-primary">{isMock ? "PRÉVIA · DADOS SIMULADOS" : "CRIAR PARTY"}</p>
@@ -92,31 +69,21 @@ export function LobbyScreen() {
             {copied ? "Copiado!" : copying ? "Copiando..." : "Copiar link"}
           </Button>
         </div> : <div className="mt-6 flex items-center gap-3">
-          <ParticipantAvatar name={host?.name ?? "Anfitrião"} isHost />
+          <ParticipantAvatar name={host?.name ?? "Anfitrião"} isHost className="bg-foreground text-primary" />
           <p className="text-sm leading-[18px]">{host?.name ?? "O anfitrião"} chamou você<br />pra uma party</p>
         </div>}
         <p role="status" className="sr-only">{copyStatus}</p>
         {copyStatus && !copied && <p className="mt-3 text-xs" aria-hidden="true">{copyStatus}</p>}
       </section>
+      <AuthenticationBanner status={mcpStatus} connecting={connectingMcp} onLogin={() => void connectMcp()} />
       <section aria-labelledby="experience-title" className="space-y-4">
         <h2 id="experience-title" className="text-2xl leading-[1.12] font-bold">Cada um no seu canto. Todo mundo na mesma vibe.</h2>
         <p className="text-sm leading-5 text-secondary-foreground">Vocês respondem juntos e descobrem uma temática. Cada pessoa recebe opções locais, adaptadas ao próprio endereço.</p>
       </section>
-      <section aria-labelledby="participants-title" className="space-y-2">
+      <section aria-labelledby="participants-title" aria-live="polite" aria-atomic="true" className="space-y-2">
         <h2 id="participants-title" className="text-base leading-6 font-bold">Participantes da Party</h2>
         <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={currentParticipantId} />
       </section>
-      {!isMock && <section aria-labelledby="mcp-title" className="space-y-2">
-        <h2 id="mcp-title" className="text-base leading-6 font-bold">Sua conexão com o iFood</h2>
-        <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
-          <p role="status" className="text-sm text-muted-foreground">{MCP_STATUS_LABEL[mcpStatus] ?? mcpStatus}</p>
-          {(mcpStatus === "not_connected" || mcpStatus === "error") && (
-            <Button size="sm" variant="outline" disabled={connectingMcp} onClick={connectMcp}>
-              {connectingMcp ? "Abrindo..." : "Conectar iFood"}
-            </Button>
-          )}
-        </div>
-      </section>}
     </PartyShell>
   );
 }
