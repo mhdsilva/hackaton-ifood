@@ -26,6 +26,22 @@ function distanceLabel(km: number): string {
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1).replace(".", ",")} km`;
 }
 
+function OrderItem({ name, detail, price }: { name: string; detail?: string; price: number }) {
+  const complement = detail?.trim();
+  return (
+    <li className="flex h-[60px] items-center gap-3 border-b py-2">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary"><Image src="/figma/order-basket.svg" alt="" width={16} height={16} /></span>
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className="truncate text-sm leading-[1.35] font-bold">{name}</h2>
+          {complement && <p className="truncate text-xs leading-[1.35] text-order-detail">{complement}</p>}
+        </div>
+        <p className="shrink-0 text-sm leading-[1.35] font-bold">{currency.format(price)}</p>
+      </div>
+    </li>
+  );
+}
+
 export function OrderSummaryScreen() {
   const router = useRouter();
   const {
@@ -89,13 +105,7 @@ export function OrderSummaryScreen() {
           <p className="flex items-center gap-1 text-muted-foreground"><span className="text-xs">★ {mock.rating}</span><span className="text-[13px] leading-[1.35]">{mock.merchant}</span></p>
         </section>
         <ul aria-label="Itens do pedido">
-          {mock.items.map((item) => <li key={item.id} className="flex items-center gap-3 border-b py-2">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary"><Image src="/figma/order-basket.svg" alt="" width={16} height={16} /></span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <h2 className="text-sm leading-[1.35] font-bold">{item.name}</h2>
-              <div className="flex items-start justify-between gap-3"><p className="text-xs leading-[1.35] text-order-detail">{item.description}</p><p className="shrink-0 text-sm leading-[1.35] font-bold">{currency.format(item.price)}</p></div>
-            </div>
-          </li>)}
+          {mock.items.map((item) => <OrderItem key={item.id} name={item.name} detail={item.description} price={item.price} />)}
         </ul>
         <section aria-label="Total do pedido" className="space-y-2 leading-[1.35]">
           <div className="flex items-center justify-between gap-3 text-2xl font-bold"><h2>Total do pedido</h2><p className="shrink-0">{currency.format(mock.total)}</p></div>
@@ -199,16 +209,7 @@ export function OrderSummaryScreen() {
         {option.items.map((item) => {
           const detail = item.selectedOptions.map((selected) => selected.name).join(" · ");
           return (
-            <li key={`${item.itemId}-${detail}`} className="flex items-center gap-3 border-b py-2">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary"><Image src="/figma/order-basket.svg" alt="" width={16} height={16} /></span>
-              <div className="min-w-0 flex-1 space-y-1">
-                <h2 className="text-sm leading-[1.35] font-bold">{item.quantity > 1 ? `${item.quantity}× ` : ""}{item.name}</h2>
-                <div className="flex items-start justify-between gap-3">
-                  {detail ? <p className="text-xs leading-[1.35] text-order-detail">{detail}</p> : <span />}
-                  <p className="shrink-0 text-sm leading-[1.35] font-bold">{currency.format(item.unitPrice * item.quantity)}</p>
-                </div>
-              </div>
-            </li>
+            <OrderItem key={`${item.itemId}-${detail}`} name={`${item.quantity > 1 ? `${item.quantity}× ` : ""}${item.name}`} detail={detail} price={item.unitPrice * item.quantity} />
           );
         })}
       </ul>

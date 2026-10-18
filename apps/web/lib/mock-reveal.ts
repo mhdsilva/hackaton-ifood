@@ -10,7 +10,7 @@ export function getMockRevealTheme() {
 export function getMockRevealedOrder() {
   const items = [
     { id: "pizza", name: "Pizza individual", description: "Sabor Calabresa", price: 38 },
-    { id: "focaccia", name: "Focaccia", description: "Sabor Alecrim", price: 12 },
+    { id: "focaccia", name: "Focaccia", price: 12 },
     { id: "water", name: "Água com gás", description: "330ml", price: 8 },
   ];
   const fees = 6;

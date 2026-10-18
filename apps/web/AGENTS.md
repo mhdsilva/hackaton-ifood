@@ -4,6 +4,12 @@ Estas diretrizes se aplicam a `apps/web/**`, área de responsabilidade do Otávi
 
 ## Contexto e estado atual
 
+Os itens do resumo de pedido usam a mesma composição nos modos mock e real, com altura de 60 px. Sem complemento, o título fica centralizado verticalmente; o preço fica sempre centralizado verticalmente, com ou sem complemento. A Focaccia do mock não tem complemento para demonstrar esse estado.
+
+Na retrospectiva, o número da distância e o título alternativo do card vermelho usam 40 px. A seção “Esse encontro tem nome”, com o nome da Party e a frase abaixo, foi removida da tela.
+
+O título da retrospectiva também usa 40 px; “Cada um num canto.” e “Todo mundo junto.” ocupam uma linha cada, sem quebra interna. A badge “Prévia” do cabeçalho e a nota abaixo das estatísticas sobre distância/endereços/dados simulados foram removidas por solicitação do usuário.
+
 O resumo em `/party/order` exibe novamente o card “Método de Pagamento” após o endereço, reutilizando `OrderDetailCard` e `order-wallet.svg`, com “Pix” fixo e sem ação de trocar método, nos modos mock e conectado, conforme solicitado. Esta apresentação não altera a integração de checkout.
 
 Títulos da sacola (`/party/unboxing`), resumo (`/party/order`) e confirmação (`/party/confirmed`) usam 40 px. A confirmação concluída mostra “Seu pedido foi realizado!”; no modo conectado, o texto de confirmação só é exibido após `order_submitted`/`delivered`, preservando a etapa de consentimento quando o carrinho ainda está preparado.

@@ -109,15 +109,15 @@ export function RetrospectiveScreen() {
     <PartyShell brandTone="light" backdrop={<BrandBackdrop />} contentClassName="pt-6 pb-8" footerClassName="space-y-2 pt-4" footer={<>
       {summary && <RetrospectiveShareDialog summary={summary} />}
       <Button asChild variant="ghost" className="w-full text-order-detail"><a href="https://www.ifood.com.br/">Acompanhar pedido</a></Button>
+      <Button asChild variant="ghost" className="w-full text-order-detail"><Link href="/">Voltar ao início</Link></Button>
     </>}>
       <div ref={container} className="flex flex-col gap-6">
         <header data-retro-reveal className="space-y-3">
           <div className="flex items-center justify-between gap-2 text-[10px] leading-4 font-bold tracking-[0.08em]">
             <p className="flex items-center gap-2 text-primary"><span className="size-1.5 rounded-full bg-primary" />{waiting ? "A PARTY AINDA ESTÁ ACONTECENDO" : "A RETROSPECTIVA DA PARTY"}</p>
-            {usingPreview && <span className="rounded-full border border-border bg-background px-2 py-0.5 text-muted-foreground">PRÉVIA</span>}
           </div>
-          <h1 className="font-preparation text-[48px] leading-[1.05] font-bold tracking-[-0.015em]">
-            {waiting ? <>A mesa está<br />quase completa.</> : summary ? <>Cada um num canto.<br /><span className="text-primary">Todo mundo junto.</span></> : <>Esse encontro ainda<br />vai virar história.</>}
+          <h1 className="font-preparation text-[40px] leading-[1.05] font-bold tracking-[-0.015em]">
+            {waiting ? <>A mesa está<br />quase completa.</> : summary ? <><span className="block whitespace-nowrap">Cada um num canto.</span><span className="block whitespace-nowrap text-primary">Todo mundo junto.</span></> : <>Esse encontro ainda<br />vai virar história.</>}
           </h1>
           <p className="text-sm leading-5 text-order-detail">{waiting ? "A retrospectiva aparece quando todos os pedidos forem concluídos." : summary ? "Os pedidos foram diferentes. O momento foi de vocês." : "Ainda não temos os dados para contar como foi essa Party."}</p>
         </header>
@@ -132,11 +132,11 @@ export function RetrospectiveScreen() {
             {summary.maxDistanceKm !== undefined ? <>
               <h2 id="distance-title" className="mt-4 flex items-baseline gap-2 font-preparation font-semibold tabular-nums">
                 <span className="sr-only">{distanceFormat.format(summary.maxDistanceKm)} quilômetros</span>
-                <span aria-hidden="true" data-retro-number={summary.maxDistanceKm} data-distance className="text-[clamp(56px,20vw,80px)] leading-none tracking-[-0.03em]">{distanceFormat.format(summary.maxDistanceKm)}</span><span aria-hidden="true" className="text-[32px]">km</span>
+                <span aria-hidden="true" data-retro-number={summary.maxDistanceKm} data-distance className="text-[40px] leading-none tracking-[-0.03em]">{distanceFormat.format(summary.maxDistanceKm)}</span><span aria-hidden="true" className="text-[32px]">km</span>
               </h2>
               <p className="mt-1 max-w-[250px] text-sm leading-5">entre os dois pontos mais distantes.<br /><strong>Uma mesma vibe no caminho.</strong></p>
             </> : <>
-              <h2 id="distance-title" className="mt-5 font-preparation text-[56px] leading-none font-bold">Vários lugares.<br />Uma mesma vibe.</h2>
+              <h2 id="distance-title" className="mt-5 font-preparation text-[40px] leading-none font-bold">Vários lugares.<br />Uma mesma vibe.</h2>
               <p className="mt-3 text-xs leading-4 text-white/80">A distância não está disponível nesta Party.</p>
             </>}
             <div aria-hidden="true" className="relative mt-6 flex items-center justify-between px-1">
@@ -151,12 +151,6 @@ export function RetrospectiveScreen() {
             <RetrospectiveStats summary={summary} />
           </section>
 
-          <section data-retro-reveal aria-labelledby="memory-title" className="border-t pt-5">
-            <p className="text-[10px] leading-4 font-bold tracking-[0.08em] text-primary">ESSE ENCONTRO TEM NOME</p>
-            <h2 id="memory-title" className="mt-1 break-words font-preparation text-[30px] leading-tight font-semibold">{summary.partyName}</h2>
-            <p className="mt-2 text-xs leading-5 text-order-detail">Que o próximo pedido seja mais uma desculpa para estar perto.</p>
-          </section>
-          <p data-retro-reveal className="text-[10px] leading-4 text-muted-foreground">{summary.maxDistanceKm !== undefined ? "A distância é aproximada, em linha reta, e compartilhada apenas como um número do grupo. Os endereços individuais não aparecem aqui. " : "Os endereços individuais não aparecem nesta retrospectiva. "}{usingPreview ? "Dados simulados para esta prévia." : ""}</p>
         </> : <section data-retro-reveal role="status" className="rounded-tl-[40px] rounded-tr-xl rounded-br-[40px] rounded-bl-xl border bg-background/90 p-7">
           <p className="font-preparation text-[80px] leading-none font-semibold text-primary">{waiting ? response?.pendingDeliveryCount : "—"}</p>
           <h2 className="mt-2 text-lg font-bold">{waiting ? response?.pendingDeliveryCount === 1 ? "pedido ainda em andamento" : "pedidos ainda em andamento" : "Retrospectiva indisponível"}</h2>
