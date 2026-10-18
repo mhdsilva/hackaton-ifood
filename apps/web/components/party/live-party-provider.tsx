@@ -33,7 +33,6 @@ import type {
   LocalOption,
 } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   describeError,
   liveApi,
@@ -687,55 +686,55 @@ function StatusScreen({ message, children }: { message: string; children?: React
   );
 }
 
-/** Sem sessão: cria a Party (sem `?code`) ou entra nela (com `?code`). Ainda sem tela do Figma. */
+/**
+ * Sem sessão: entra por convite (`?code`) ou cria a Party sozinha, sem pedir nome de
+ * ninguém — quem abre o link sem código já vira host de uma Party sem nome e cai no
+ * lobby para convidar o resto do grupo.
+ */
 function EntryGate({
   onEntered,
 }: {
   onEntered: (session: StoredSession, party: PartySnapshot) => void;
 }) {
   const inviteCode = useSyncExternalStore(subscribeNoop, readInviteCode, () => null);
-  const [partyName, setPartyName] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const started = useRef(false);
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const participantId = randomParticipantId();
-      const result = inviteCode
-        ? await liveApi.joinParty(inviteCode, { participant: { id: participantId } })
-        : await liveApi.createParty({
-            name: partyName.trim() || "Party sem nome",
-            host: { id: participantId },
-          });
-      onEntered({ partyId: result.party.party.id, participantId, token: result.participantToken }, result.party);
-    } catch (cause) {
-      setError(describeError(cause));
-    } finally {
-      setBusy(false);
-    }
-  }
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    (async () => {
+      try {
+        const participantId = randomParticipantId();
+        const result = inviteCode
+          ? await liveApi.joinParty(inviteCode, { participant: { id: participantId } })
+          : await liveApi.createParty({ name: "Party sem nome", host: { id: participantId } });
+        onEntered({ partyId: result.party.party.id, participantId, token: result.participantToken }, result.party);
+      } catch (cause) {
+        setError(describeError(cause));
+      }
+    })();
+  }, [inviteCode, onEntered]);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 p-5">
-      <h1 className="text-2xl font-bold">{inviteCode ? "Entrar na Party" : "Criar Party"}</h1>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <form className="space-y-3" onSubmit={submit}>
-        {!inviteCode && (
-          <Input
-            aria-label="Nome da Party"
-            placeholder="Nome da Party"
-            value={partyName}
-            onChange={(event) => setPartyName(event.target.value)}
-          />
-        )}
-        <Button type="submit" size="party" className="w-full" disabled={busy}>
-          {busy ? "Entrando..." : inviteCode ? "Entrar" : "Criar Party"}
-        </Button>
-      </form>
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 p-5 text-center">
+      {error ? (
+        <>
+          <p role="alert" className="text-sm text-destructive">{error}</p>
+          <Button
+            size="party"
+            className="w-full"
+            onClick={() => {
+              started.current = false;
+              setError(null);
+            }}
+          >
+            Tentar de novo
+          </Button>
+        </>
+      ) : (
+        <p className="text-muted-foreground">{inviteCode ? "Entrando na Party..." : "Criando Party..."}</p>
+      )}
     </div>
   );
 }
