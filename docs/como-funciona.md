@@ -170,10 +170,9 @@ O backend (`PartyService.create`, em `src/party/service.ts`):
 
 - `name` é opcional: o servidor usa "Convidado 1", "Convidado 2"… e o `getUser` do iFood
   substitui pelo `fullName` na validação do OAuth.
-- Recusa quando o resultado já está pronto (`READY_FOR_THEME`) ou revelado (`THEME_REVEALED`) —
-  `PARTY_CLOSED` —, quando a Party está cheia — máximo de **4** — (`PARTY_FULL`) ou se o `id` já
-  existir. Durante `COLLECTING_ANSWERS` ainda dá para entrar: quem chega atrasado responde como
-  os outros.
+- Recusa depois que o anfitrião inicia a Party — a entrada só é aceita enquanto ela está
+  `OPEN`; depois disso responde `PARTY_ALREADY_STARTED` —, quando a Party está cheia — máximo
+  de **4** — (`PARTY_FULL`) ou se o `id` já existir.
 - Devolve o próprio `participantToken` do convidado.
 
 **O token de participante**

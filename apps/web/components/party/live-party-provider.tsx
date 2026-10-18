@@ -717,41 +717,77 @@ function EntryGate({
 }: {
   onEntered: (session: StoredSession, party: PartySnapshot) => void;
 }) {
+  const router = useRouter();
   const inviteCode = useSyncExternalStore(subscribeNoop, readInviteCode, () => null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; partyStarted: boolean } | null>(null);
   const started = useRef(false);
+
+  const enter = useCallback(
+    async (code: string | null) => {
+      const participantId = randomParticipantId();
+      const result = code
+        ? await liveApi.joinParty(code, { participant: { id: participantId } })
+        : await liveApi.createParty({ name: partyNameForToday(), host: { id: participantId } });
+      onEntered(
+        { partyId: result.party.party.id, participantId, token: result.participantToken },
+        result.party,
+      );
+    },
+    [onEntered],
+  );
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
     (async () => {
       try {
-        const participantId = randomParticipantId();
-        const result = inviteCode
-          ? await liveApi.joinParty(inviteCode, { participant: { id: participantId } })
-          : await liveApi.createParty({ name: partyNameForToday(), host: { id: participantId } });
-        onEntered({ partyId: result.party.party.id, participantId, token: result.participantToken }, result.party);
+        await enter(inviteCode);
       } catch (cause) {
-        setError(describeError(cause));
+        const partyStarted =
+          cause instanceof LiveApiError && cause.code === "PARTY_ALREADY_STARTED";
+        setError({
+          message: partyStarted
+            ? "Essa Party já iniciou e não aceita mais participantes."
+            : describeError(cause),
+          partyStarted,
+        });
       }
     })();
-  }, [inviteCode, onEntered]);
+  }, [inviteCode, enter]);
+
+  // Entrar por convite não volta a funcionar; quem caiu aqui cria a própria Party. O `?code`
+  // antigo é removido para a sessão nova não ser descartada ao recarregar.
+  const createOwnParty = useCallback(async () => {
+    setError(null);
+    try {
+      await enter(null);
+      router.replace("/");
+    } catch (cause) {
+      setError({ message: describeError(cause), partyStarted: false });
+    }
+  }, [enter, router]);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 p-5 text-center">
       {error ? (
         <>
-          <p role="alert" className="text-sm text-destructive">{error}</p>
-          <Button
-            size="party"
-            className="w-full"
-            onClick={() => {
-              started.current = false;
-              setError(null);
-            }}
-          >
-            Tentar de novo
-          </Button>
+          <p role="alert" className="text-sm text-destructive">{error.message}</p>
+          {error.partyStarted ? (
+            <Button size="party" className="w-full" onClick={() => void createOwnParty()}>
+              Criar uma nova Party
+            </Button>
+          ) : (
+            <Button
+              size="party"
+              className="w-full"
+              onClick={() => {
+                started.current = false;
+                setError(null);
+              }}
+            >
+              Tentar de novo
+            </Button>
+          )}
         </>
       ) : (
         <p className="text-muted-foreground">{inviteCode ? "Entrando na Party..." : "Criando Party..."}</p>

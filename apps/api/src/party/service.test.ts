@@ -90,7 +90,7 @@ test("creates an open Party and limits membership to four people", () => {
   );
 });
 
-test("only the host closes membership and late joiners still enter during answers", () => {
+test("only the host closes membership and nobody else joins after it starts", () => {
   const service = createService();
   const host = service.create({
     name: "Jantar de sexta",
@@ -110,12 +110,12 @@ test("only the host closes membership and late joiners still enter during answer
   assert.equal(closed.party.status, "COLLECTING_ANSWERS");
   assert.equal(closed.party.membershipLocked, true);
 
-  // Quem chega atrasado ainda entra enquanto as respostas são coletadas.
-  const late = service.join(host.party.party.id, {
-    participant: { id: "caio", name: "Caio" },
-  });
-  assert.equal(late.party.party.status, "COLLECTING_ANSWERS");
-  assert.equal(late.party.participants.length, 3);
+  // Depois que o anfitrião inicia, quem chega atrasado não entra mais.
+  assert.throws(
+    () => service.join(host.party.party.id, { participant: { id: "caio", name: "Caio" } }),
+    (error: unknown) => error instanceof PartyError && error.code === "PARTY_ALREADY_STARTED",
+  );
+  assert.equal(service.get(host.party.party.id).participants.length, 2);
 });
 
 test("the host cannot start until every guest connected the iFood", () => {
@@ -150,7 +150,7 @@ test("the host cannot start until every guest connected the iFood", () => {
   assert.equal(closed.party.membershipLocked, true);
 });
 
-test("nobody joins after the result is ready or revealed", async () => {
+test("nobody joins after the Party started, is ready or revealed", async () => {
   const service = createService();
   const host = service.create({
     name: "Jantar de sexta",
@@ -167,13 +167,13 @@ test("nobody joins after the result is ready or revealed", async () => {
 
   assert.throws(
     () => service.join(partyId, { participant: { id: "caio", name: "Caio" } }),
-    (error: unknown) => error instanceof PartyError && error.code === "PARTY_CLOSED",
+    (error: unknown) => error instanceof PartyError && error.code === "PARTY_ALREADY_STARTED",
   );
 
   await service.revealTheme(partyId, host.participantToken);
   assert.throws(
     () => service.join(partyId, { participant: { id: "caio", name: "Caio" } }),
-    (error: unknown) => error instanceof PartyError && error.code === "PARTY_CLOSED",
+    (error: unknown) => error instanceof PartyError && error.code === "PARTY_ALREADY_STARTED",
   );
 });
 

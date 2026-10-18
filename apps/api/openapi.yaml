@@ -177,6 +177,10 @@ paths:
       - $ref: "#/components/parameters/PartyId"
     post:
       operationId: joinParty
+      description: |
+        Entra na Party pelo `code` (ou `partyId`). A entrada só é aceita enquanto a Party
+        está `OPEN`; depois que o anfitrião inicia (`POST /parties/{partyId}/close`), ela
+        responde `409 PARTY_ALREADY_STARTED`.
       requestBody:
         required: true
         content:
@@ -859,7 +863,7 @@ components:
           properties:
             code:
               type: string
-              examples: [ACCESS_TOKEN_REQUIRED, ACCESS_DENIED, PARTY_FULL, PARTY_CLOSED]
+              examples: [ACCESS_TOKEN_REQUIRED, ACCESS_DENIED, PARTY_FULL, PARTY_CLOSED, PARTY_ALREADY_STARTED]
             message: { type: string }
             details: { type: object, additionalProperties: true }
     ResolveOptionsOutput:
