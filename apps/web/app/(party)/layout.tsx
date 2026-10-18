@@ -1,5 +1,5 @@
-import { LivePartyProvider } from "@/components/party/live-party-provider";
+import { PartyProvider } from "@/components/party/party-provider";
 
 export default function PartyLayout({ children }: { children: React.ReactNode }) {
-  return <LivePartyProvider>{children}</LivePartyProvider>;
+  return <PartyProvider>{children}</PartyProvider>;
 }

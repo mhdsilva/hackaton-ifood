@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { BudgetChoices } from "@/components/party/budget-choices";
-import { useParty } from "@/components/party/live-party-provider";
+import { useParty } from "@/components/party/party-provider";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
 import { parseMockBudget } from "@/lib/mock-questionnaire";

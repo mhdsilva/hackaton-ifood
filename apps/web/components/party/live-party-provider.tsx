@@ -97,7 +97,7 @@ function questionOptions(
   return definition?.questions.find((question) => question.id === questionId)?.options;
 }
 
-interface LivePartyValue {
+export interface LivePartyValue {
   snapshot: PartySnapshot;
   currentParticipantId: string;
   startParty: () => void;

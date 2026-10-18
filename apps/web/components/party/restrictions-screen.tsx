@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useParty } from "@/components/party/live-party-provider";
+import { useParty } from "@/components/party/party-provider";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
 import { RestrictionChoices } from "@/components/party/restriction-choices";

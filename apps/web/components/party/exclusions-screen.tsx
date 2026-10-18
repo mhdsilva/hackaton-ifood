@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
-import { useParty } from "@/components/party/live-party-provider";
+import { useParty } from "@/components/party/party-provider";
 
 export function ExclusionsScreen() {
   const { exclusionOptions, exclusions, toggleExclusion, otherExclusion, setOtherExclusion, hasRequiredAnswers, canCompleteQuestionnaire, completeQuestionnaire } = useParty();

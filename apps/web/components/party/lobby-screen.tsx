@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useParty } from "@/components/party/live-party-provider";
+import { useParty } from "@/components/party/party-provider";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
 import { PartyShell } from "@/components/party/party-shell";
 import { canStartMockParty } from "@/lib/mock-party";
@@ -18,7 +18,7 @@ const MCP_STATUS_LABEL: Record<string, string> = {
 };
 
 export function LobbyScreen() {
-  const { snapshot, currentParticipantId, startParty, connectMcp, connectingMcp } = useParty();
+  const { snapshot, currentParticipantId, startParty, connectMcp, connectingMcp, isMock } = useParty();
   const router = useRouter();
   const [copyStatus, setCopyStatus] = useState("");
   const [copying, setCopying] = useState(false);
@@ -45,7 +45,7 @@ export function LobbyScreen() {
     try {
       const url = buildPartyInviteUrl(snapshot.party.code, window.location.origin);
       await navigator.clipboard.writeText(url);
-      setCopyStatus("Link da prévia copiado!");
+      setCopyStatus(isMock ? "Link da prévia copiado!" : "Link da Party copiado!");
       setCopied(true);
     } catch {
       setCopyStatus("Não foi possível copiar. Tente novamente.");
@@ -64,7 +64,7 @@ export function LobbyScreen() {
     </>}>
       <section aria-labelledby="party-title" className="relative isolate overflow-hidden rounded-2xl bg-secondary p-6 text-foreground">
         <Image src="/figma/banner-logo.svg" alt="" width={286} height={155} className="pointer-events-none absolute top-7 left-[101px] -z-10 max-w-none opacity-50" />
-        <p className="text-xs leading-[normal] font-bold text-primary">CRIAR PARTY</p>
+        <p className="text-xs leading-[normal] font-bold text-primary">{isMock ? "PRÉVIA · DADOS SIMULADOS" : "CRIAR PARTY"}</p>
         <h1 id="party-title" className="mt-2 text-4xl leading-[1.12] font-bold">{snapshot.party.name}</h1>
         {isHost ? <div className="mt-6 flex items-center gap-3 rounded-lg bg-invitation p-4 text-invitation-foreground">
           <Image src="/figma/share.svg" alt="" width={20} height={20} className="shrink-0" />
@@ -90,7 +90,7 @@ export function LobbyScreen() {
         <h2 id="participants-title" className="text-base leading-6 font-bold">Participantes da Party</h2>
         <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={currentParticipantId} />
       </section>
-      <section aria-labelledby="mcp-title" className="space-y-2">
+      {!isMock && <section aria-labelledby="mcp-title" className="space-y-2">
         <h2 id="mcp-title" className="text-base leading-6 font-bold">Sua conexão com o iFood</h2>
         <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
           <p role="status" className="text-sm text-muted-foreground">{MCP_STATUS_LABEL[mcpStatus] ?? mcpStatus}</p>
@@ -100,7 +100,7 @@ export function LobbyScreen() {
             </Button>
           )}
         </div>
-      </section>
+      </section>}
     </PartyShell>
   );
 }

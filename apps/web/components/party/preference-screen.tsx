@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
 import { QuestionChoices } from "@/components/party/question-choices";
-import { useParty } from "@/components/party/live-party-provider";
+import { useParty } from "@/components/party/party-provider";
 import { getMockPreferenceQuestion, type PreferenceQuestionId } from "@/lib/mock-questionnaire";
 
 export function PreferenceScreen({ questionId }: { questionId: PreferenceQuestionId }) {
