@@ -83,6 +83,20 @@
   to { transform: scaleX(1); }
 }
 
+.preparation-orbit,
+.preparation-orbit-avatar {
+  animation: preparation-orbit 24s linear infinite;
+}
+
+.preparation-orbit-avatar {
+  animation-direction: reverse;
+}
+
+@keyframes preparation-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Só o texto e o formulário deslizam: shell, ações e progresso ficam no lugar. */
 .party-content:has([data-question-progress]) .question-copy {
   view-transition-name: question-copy;
@@ -136,6 +150,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .preparation-orbit,
+  .preparation-orbit-avatar {
+    animation: none;
+  }
+
   .party-progress-fill[data-state="active"][data-running="true"] {
     animation: none;
     transform: scaleX(1);
