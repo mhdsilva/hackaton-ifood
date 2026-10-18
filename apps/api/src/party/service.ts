@@ -5,6 +5,7 @@ import type {
   JoinPartyRequest,
   McpConnectionStatus,
   Participant,
+  PartyOrderStage,
   PartySessionResponse,
   PartySnapshot,
   SubmitAnswersRequest,
@@ -283,6 +284,25 @@ export class PartyService {
     }
 
     participant.mcpConnectionStatus = status;
+    return this.store.save(snapshot);
+  }
+
+  setOrderProgressForParticipant(
+    idOrCode: string,
+    participantId: string,
+    patch: { orderStage?: PartyOrderStage; orderId?: string; orderStatus?: string },
+  ): PartySnapshot {
+    const snapshot = this.get(idOrCode);
+    const participant = snapshot.participants.find(
+      (candidate) => candidate.id === participantId,
+    );
+    if (!participant) {
+      throw new PartyError(404, "PARTICIPANT_NOT_FOUND", "Participant not found");
+    }
+
+    if (patch.orderStage !== undefined) participant.orderStage = patch.orderStage;
+    if (patch.orderId !== undefined) participant.orderId = patch.orderId;
+    if (patch.orderStatus !== undefined) participant.orderStatus = patch.orderStatus;
     return this.store.save(snapshot);
   }
 

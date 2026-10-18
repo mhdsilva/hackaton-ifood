@@ -38,6 +38,18 @@ Estados: `OPEN` → `COLLECTING_ANSWERS` → `READY_FOR_THEME` → `THEME_REVEAL
   resultado. Segundo `reveal` ou fora de `READY_FOR_THEME` retorna `409 NOT_READY_FOR_REVEAL`;
   outro participante recebe `403 HOST_ONLY`.
 
+### 1c. Progresso do pedido (pós-revelação)
+
+Depois da revelação, o snapshot mostra o avanço de cada participante:
+
+- `participant.orderStage`: `none` → `options_ready` → `cart_created` → `order_submitted` →
+  `delivered` (marcado pelo servidor a cada rota bem-sucedida: `/options`, `/cart`, `/order`,
+  `GET /order/:orderId`).
+- `participant.orderId` e `participant.orderStatus` (último `status.code` do rastreio).
+
+Os três campos são opcionais (não quebram mocks). Use pelo polling para mostrar quem já escolheu
+opções, quem montou o carrinho e quem recebeu.
+
 ### 2. Questionário (wizard "Etapa X de 8")
 
 - `GET /questionnaire` → `{ version, title, introduction?, questions[] }`. Renderizar a partir

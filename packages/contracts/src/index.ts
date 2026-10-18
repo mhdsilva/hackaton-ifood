@@ -33,7 +33,21 @@ export interface Participant {
    * Etapa X de 8). O servidor sempre envia; opcional para dados legados/mocks.
    */
   answeredCount?: number;
+  /** Estágio do participante depois de `READY_FOR_THEME` (opções, carrinho, pedido). */
+  orderStage?: PartyOrderStage;
+  /** Id do pedido do participante, quando já submetido. */
+  orderId?: string;
+  /** Último `status.code` do `trackOrder` do iFood, quando houver. */
+  orderStatus?: string;
 }
+
+/** Progresso individual após a revelação: opções → carrinho → pedido → entrega. */
+export type PartyOrderStage =
+  | "none"
+  | "options_ready"
+  | "cart_created"
+  | "order_submitted"
+  | "delivered";
 
 export interface PartyInfo {
   id: string;

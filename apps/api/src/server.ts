@@ -294,12 +294,11 @@ async function routeRequest(
     }
     const input = parseOptionsRequest(await readJson<Record<string, unknown>>(request));
     const agent = options.agent;
-    sendJson(
-      response,
-      200,
-      await runAgent(() => agent.resolveOptions(actor, input)),
-      allowedOrigin,
-    );
+    const output = await runAgent(() => agent.resolveOptions(actor, input));
+    service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+      orderStage: "options_ready",
+    });
+    sendJson(response, 200, output, allowedOrigin);
     return;
   }
 
@@ -323,6 +322,9 @@ async function routeRequest(
           ...(typeof body.addressId === "string" ? { addressId: body.addressId } : {}),
         }),
       );
+      service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+        orderStage: "cart_created",
+      });
       sendJson(response, 200, cart, allowedOrigin);
       return;
     }
@@ -336,13 +338,23 @@ async function routeRequest(
       const order = await runAgent(() =>
         submit(actor, { cartId: body.cartId as string, userConsent: body.userConsent === true }),
       );
+      service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+        orderStage: "order_submitted",
+        orderId: order.orderId,
+      });
       sendJson(response, 201, order, allowedOrigin);
       return;
     }
 
     if (resource === "order" && method === "GET" && orderId) {
       const track = requireAgent(options.agent, "trackOrder");
-      sendJson(response, 200, await runAgent(() => track(actor, orderId)), allowedOrigin);
+      const tracking = await runAgent(() => track(actor, orderId));
+      service.setOrderProgressForParticipant(actor.partyId, actor.participantId, {
+        orderId: tracking.orderId,
+        orderStatus: tracking.statusCode,
+        ...(tracking.terminal ? { orderStage: "delivered" as const } : {}),
+      });
+      sendJson(response, 200, tracking, allowedOrigin);
       return;
     }
 

@@ -867,3 +867,51 @@ test("reveals the result over HTTP with host-only access", async () => {
   const missing = await request(api, "POST", `/parties/${partyId}/reveal`, {});
   assert.equal(missing.statusCode, 401);
 });
+
+test("reflects the participant order stage in the public snapshot", async () => {
+  let now = Date.parse("2026-10-17T20:00:00Z");
+  const api: TestApi = { ...createApi(), agent: createDemoIntegration(() => now) };
+  const { host } = await createHostAndAuthorize(api);
+  const partyId = host.party.party.id;
+  const token = host.participantToken;
+  const participant = async () => {
+    const snapshot = (await request(api, "GET", `/parties/${partyId}`)).json();
+    return snapshot.participants.find((entry: any) => entry.id === "ana");
+  };
+
+  assert.equal((await participant()).orderStage, undefined);
+
+  const options = (
+    await request(api, "POST", `/parties/${partyId}/options`, { theme: "italiano", budget: 60 }, token)
+  ).json();
+  assert.equal((await participant()).orderStage, "options_ready");
+
+  const cart = (
+    await request(api, "POST", `/parties/${partyId}/cart`, { option: options.options[0] }, token)
+  ).json();
+  assert.equal((await participant()).orderStage, "cart_created");
+
+  const order = (
+    await request(
+      api,
+      "POST",
+      `/parties/${partyId}/order`,
+      { cartId: cart.cartId, userConsent: true },
+      token,
+    )
+  ).json();
+  const afterOrder = await participant();
+  assert.equal(afterOrder.orderStage, "order_submitted");
+  assert.equal(afterOrder.orderId, order.orderId);
+
+  await request(api, "GET", `/parties/${partyId}/order/${order.orderId}`, undefined, token);
+  const afterStatus = await participant();
+  assert.equal(afterStatus.orderStatus, "CONFIRMED");
+  assert.equal(afterStatus.orderStage, "order_submitted");
+
+  now += 61_000;
+  await request(api, "GET", `/parties/${partyId}/order/${order.orderId}`, undefined, token);
+  const afterDelivered = await participant();
+  assert.equal(afterDelivered.orderStatus, "CONCLUDED");
+  assert.equal(afterDelivered.orderStage, "delivered");
+});

@@ -573,6 +573,16 @@ components:
           type: integer
           minimum: 0
           description: Quantas perguntas da definição o participante já respondeu.
+        orderStage:
+          type: string
+          enum: [none, options_ready, cart_created, order_submitted, delivered]
+          description: "Estágio do participante depois de READY_FOR_THEME (opções, carrinho, pedido, entrega)."
+        orderId:
+          type: string
+          description: Id do pedido do participante, quando já submetido.
+        orderStatus:
+          type: string
+          description: Último status.code do trackOrder do iFood, quando houver.
     PartySnapshot:
       type: object
       required: [party, participants]

@@ -269,3 +269,40 @@ test("the host reveals the result only from READY_FOR_THEME", () => {
       error instanceof PartyError && error.code === "NOT_READY_FOR_REVEAL",
   );
 });
+
+test("tracks each participant's order progress", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  const partyId = host.party.party.id;
+
+  const afterOptions = service.setOrderProgressForParticipant(partyId, "ana", {
+    orderStage: "options_ready",
+  });
+  assert.equal(afterOptions.participants[0]?.orderStage, "options_ready");
+
+  const afterOrder = service.setOrderProgressForParticipant(partyId, "ana", {
+    orderStage: "order_submitted",
+    orderId: "order-1",
+  });
+  assert.equal(afterOrder.participants[0]?.orderStage, "order_submitted");
+  assert.equal(afterOrder.participants[0]?.orderId, "order-1");
+
+  const afterTrack = service.setOrderProgressForParticipant(partyId, "ana", {
+    orderStage: "delivered",
+    orderStatus: "CONCLUDED",
+  });
+  assert.equal(afterTrack.participants[0]?.orderStage, "delivered");
+  assert.equal(afterTrack.participants[0]?.orderStatus, "CONCLUDED");
+
+  assert.throws(
+    () =>
+      service.setOrderProgressForParticipant(partyId, "ghost", {
+        orderStage: "none",
+      }),
+    (error: unknown) =>
+      error instanceof PartyError && error.code === "PARTICIPANT_NOT_FOUND",
+  );
+});
