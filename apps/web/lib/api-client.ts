@@ -3,11 +3,15 @@
  * as telas de produto (`components/party/live-party-provider.tsx`).
  */
 import type {
+  AddressResolutionResponse,
   ApiErrorBody,
+  CreateParticipantAddressRequest,
+  CreateParticipantAddressResponse,
   CreatePartyRequest,
   JoinPartyRequest,
   McpAuthorizationResponse,
   Participant,
+  ParticipantAddressesResponse,
   PartySessionResponse,
   PartySnapshot,
   QuestionnaireDefinition,
@@ -110,6 +114,29 @@ export const liveApi = {
       "POST",
       `/parties/${encodeURIComponent(codeOrId)}/mcp-connection/authorize`,
       { token },
+    ),
+
+  /** Endereços salvos na conta do iFood do próprio participante (409 se não conectado). */
+  getAddresses: (codeOrId: string, token: string) =>
+    request<ParticipantAddressesResponse>(
+      "GET",
+      `/parties/${encodeURIComponent(codeOrId)}/addresses`,
+      { token },
+    ),
+
+  /** Busca candidatos no iFood para um endereço digitado (`matchConfidence` diz se é único). */
+  resolveAddress: (codeOrId: string, token: string, body: { address: string }) =>
+    request<AddressResolutionResponse>(
+      "POST",
+      `/parties/${encodeURIComponent(codeOrId)}/addresses/resolve`,
+      { body, token },
+    ),
+
+  createAddress: (codeOrId: string, token: string, body: CreateParticipantAddressRequest) =>
+    request<CreateParticipantAddressResponse>(
+      "POST",
+      `/parties/${encodeURIComponent(codeOrId)}/addresses`,
+      { body, token },
     ),
 
   getQuestionnaire: (version?: string) =>

@@ -10,7 +10,7 @@
  * de tradução. Ver `apps/api/src/party/questionnaire.ts` (definição v2).
  */
 import { otherAnswerKey, valueAnswerKey } from "@sidequest/contracts";
-import type { MockAddress } from "@/lib/mock-party";
+import type { PartyAddress } from "@/lib/addresses";
 import { parseMockBudget, type BudgetOptionId, type RestrictionId } from "@/lib/mock-questionnaire";
 
 const RESTRICTION_ANSWER_ID: Record<RestrictionId, string> = {
@@ -31,7 +31,7 @@ const BUDGET_ANSWER_ID: Record<BudgetOptionId, string> = {
 
 export interface LiveAnswerState {
   selectedAddressId: string | null;
-  addresses: MockAddress[];
+  addresses: PartyAddress[];
   restrictions: string[];
   otherRestriction: string;
   budgetOptionId: string | null;

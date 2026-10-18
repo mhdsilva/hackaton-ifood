@@ -135,7 +135,12 @@ export class PartyService {
 
   join(idOrCode: string, input: JoinPartyRequest): PartySessionResponse {
     const snapshot = this.get(idOrCode);
-    if (snapshot.party.membershipLocked || snapshot.party.status !== "OPEN") {
+    // A entrada fecha quando o resultado está pronto. Durante `COLLECTING_ANSWERS` quem
+    // chega atrasado ainda entra e responde — o anfitrião pode ter iniciado com 2 de 4.
+    if (
+      snapshot.party.status === "READY_FOR_THEME" ||
+      snapshot.party.status === "THEME_REVEALED"
+    ) {
       throw new PartyError(409, "PARTY_CLOSED", "Party membership is closed");
     }
     if (snapshot.participants.length >= MAX_PARTICIPANTS) {

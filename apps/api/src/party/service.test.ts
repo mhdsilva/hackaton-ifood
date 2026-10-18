@@ -78,7 +78,7 @@ test("creates an open Party and limits membership to four people", () => {
   );
 });
 
-test("only the host closes membership and nobody joins afterwards", () => {
+test("only the host closes membership and late joiners still enter during answers", () => {
   const service = createService();
   const host = service.create({
     name: "Jantar de sexta",
@@ -96,11 +96,37 @@ test("only the host closes membership and nobody joins afterwards", () => {
   const closed = service.closeMembership(host.party.party.id, host.participantToken);
   assert.equal(closed.party.status, "COLLECTING_ANSWERS");
   assert.equal(closed.party.membershipLocked, true);
+
+  // Quem chega atrasado ainda entra enquanto as respostas são coletadas.
+  const late = service.join(host.party.party.id, {
+    participant: { id: "caio", name: "Caio" },
+  });
+  assert.equal(late.party.party.status, "COLLECTING_ANSWERS");
+  assert.equal(late.party.participants.length, 3);
+});
+
+test("nobody joins after the result is ready or revealed", () => {
+  const service = createService();
+  const host = service.create({
+    name: "Jantar de sexta",
+    host: { id: "ana", name: "Ana" },
+  });
+  const guest = service.join(host.party.party.id, {
+    participant: { id: "bruno", name: "Bruno" },
+  });
+  const partyId = host.party.party.id;
+  service.closeMembership(partyId, host.participantToken);
+  service.submitAnswers(partyId, host.participantToken, answers("massa"));
+  service.submitAnswers(partyId, guest.participantToken, answers("pizza"));
+
   assert.throws(
-    () =>
-      service.join(host.party.party.id, {
-        participant: { id: "caio", name: "Caio" },
-      }),
+    () => service.join(partyId, { participant: { id: "caio", name: "Caio" } }),
+    (error: unknown) => error instanceof PartyError && error.code === "PARTY_CLOSED",
+  );
+
+  service.revealTheme(partyId, host.participantToken);
+  assert.throws(
+    () => service.join(partyId, { participant: { id: "caio", name: "Caio" } }),
     (error: unknown) => error instanceof PartyError && error.code === "PARTY_CLOSED",
   );
 });
