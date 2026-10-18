@@ -20,7 +20,7 @@ export interface LlmThemePlannerSettings {
   timeoutMs?: number;
 }
 
-export const DEFAULT_THEME_PLANNER_TIMEOUT_MS = 8_000;
+export const DEFAULT_THEME_PLANNER_TIMEOUT_MS = 10_000;
 
 /**
  * Respostas que o modelo pode ver. `address` fica de fora (dado pessoal/de entrega) e
