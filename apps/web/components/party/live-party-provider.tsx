@@ -92,6 +92,20 @@ function randomParticipantId(): string {
   return `p-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const WEEKDAY_PARTY_NAME = [
+  "Domingou à distância",
+  "Segundou à distância",
+  "Terçou à distância",
+  "Quartou à distância",
+  "Quintou à distância",
+  "Sextou à distância",
+  "Sabadou à distância",
+] as const;
+
+function partyNameForToday(): string {
+  return WEEKDAY_PARTY_NAME[new Date().getDay()];
+}
+
 function questionOptions(
   definition: QuestionnaireDefinition | null,
   questionId: string,
@@ -688,8 +702,9 @@ function StatusScreen({ message, children }: { message: string; children?: React
 
 /**
  * Sem sessão: entra por convite (`?code`) ou cria a Party sozinha, sem pedir nome de
- * ninguém — quem abre o link sem código já vira host de uma Party sem nome e cai no
- * lobby para convidar o resto do grupo.
+ * ninguém — quem abre o link sem código já vira host de uma Party batizada pelo dia da
+ * semana ("Sextou à distância", "Domingou à distância"...) e cai no lobby para convidar
+ * o resto do grupo.
  */
 function EntryGate({
   onEntered,
@@ -708,7 +723,7 @@ function EntryGate({
         const participantId = randomParticipantId();
         const result = inviteCode
           ? await liveApi.joinParty(inviteCode, { participant: { id: participantId } })
-          : await liveApi.createParty({ name: "Party sem nome", host: { id: participantId } });
+          : await liveApi.createParty({ name: partyNameForToday(), host: { id: participantId } });
         onEntered({ partyId: result.party.party.id, participantId, token: result.participantToken }, result.party);
       } catch (cause) {
         setError(describeError(cause));
