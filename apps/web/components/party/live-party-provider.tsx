@@ -127,6 +127,8 @@ export interface LivePartyValue {
   budgetOptions: readonly Option[];
   budgetOptionId: string | null;
   setBudgetOptionId: (id: string | null) => void;
+  /** Faixa aceita pelo "Outro valor" em `budget.customInput` (padrão 1–999). */
+  budgetCustomRange: { min: number; max: number };
   customBudget: string;
   setCustomBudget: (value: string) => void;
   energyOptions: readonly Option[];
@@ -410,17 +412,25 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
 
   const restrictionOptions = questionOptions(questionnaire, "restrictions") ?? getMockRestrictionOptions();
   const budgetOptions = questionOptions(questionnaire, "budget") ?? getMockBudgetOptions();
+  const budgetCustom = questionnaire?.questions.find((question) => question.id === "budget")?.customInput;
+  const budgetCustomRange = { min: budgetCustom?.min ?? 1, max: budgetCustom?.max ?? 999 };
   const energyOptions = questionOptions(questionnaire, "energy") ?? getMockPreferenceQuestion("energy").options;
   const orderStyleOptions =
     questionOptions(questionnaire, "order-style") ?? getMockPreferenceQuestion("order-style").options;
   const desireOptions = questionOptions(questionnaire, "cravings") ?? getMockDesireOptions();
   const exclusionOptions = questionOptions(questionnaire, "exclusions") ?? getMockExclusionOptions();
 
+  const customBudgetAmount = parseMockBudget(customBudget);
+  const customBudgetInRange =
+    customBudgetAmount !== null &&
+    customBudgetAmount >= budgetCustomRange.min &&
+    customBudgetAmount <= budgetCustomRange.max;
+
   const hasRequiredAnswers =
     selectedAddressId !== null &&
     (!restrictions.includes(otherRestrictionId) || otherRestriction.trim().length > 0) &&
     budgetOptionId !== null &&
-    (budgetOptionId !== otherBudgetId || parseMockBudget(customBudget) !== null) &&
+    (budgetOptionId !== otherBudgetId || customBudgetInRange) &&
     preferences.energy !== null &&
     preferences["order-style"] !== null &&
     desires.length >= 1 &&
@@ -531,6 +541,7 @@ export function LivePartyProvider({ children }: { children: ReactNode }) {
         budgetOptions,
         budgetOptionId,
         setBudgetOptionId,
+        budgetCustomRange,
         customBudget,
         setCustomBudget,
         energyOptions,
