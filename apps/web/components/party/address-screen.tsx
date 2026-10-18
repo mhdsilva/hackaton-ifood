@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AddressOption } from "@/components/party/address-option";
-import { useMockParty } from "@/components/party/mock-party-provider";
+import { useParty } from "@/components/party/live-party-provider";
 import { PartyShell } from "@/components/party/party-shell";
 import { QuestionIntroduction } from "@/components/party/question-introduction";
 
 export function AddressScreen() {
-  const { addresses, selectedAddressId, setSelectedAddressId } = useMockParty();
+  const { addresses, selectedAddressId, setSelectedAddressId } = useParty();
   const router = useRouter();
   const hasSelection = addresses.some((address) => address.id === selectedAddressId);
 

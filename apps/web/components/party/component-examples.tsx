@@ -10,7 +10,7 @@ import { RestrictionChoices } from "@/components/party/restriction-choices";
 import { BudgetChoices } from "@/components/party/budget-choices";
 import { QuestionChoices } from "@/components/party/question-choices";
 import { getMockAddresses, getMockParty } from "@/lib/mock-party";
-import { getMockDesireOptions, getMockPreferenceQuestion, MAX_MOCK_DESIRES, MOCK_QUESTIONNAIRE_STEPS, toggleMockDesire, type BudgetOptionId, type DesireId, type RestrictionId } from "@/lib/mock-questionnaire";
+import { getMockBudgetOptions, getMockDesireOptions, getMockPreferenceQuestion, getMockRestrictionOptions, MAX_MOCK_DESIRES, MOCK_QUESTIONNAIRE_STEPS, toggleMockDesire, type BudgetOptionId, type DesireId, type RestrictionId } from "@/lib/mock-questionnaire";
 
 export function PartyComponentExamples() {
   const [snapshot] = useState(getMockParty);
@@ -38,8 +38,8 @@ export function PartyComponentExamples() {
           <legend className="mb-4 font-bold">Seleção de endereço · dados simulados</legend>
           {addresses.map((address) => <AddressOption key={address.id} address={address} selected={address.id === selectedId} onSelect={setSelectedId} />)}
         </fieldset>
-        <RestrictionChoices selected={restrictions} onToggle={(id) => setRestrictions((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} other={otherRestriction} onOtherChange={setOtherRestriction} inputId="example-other-restriction" />
-        <BudgetChoices selected={budgetId} onSelect={setBudgetId} customValue={customBudget} onCustomChange={setCustomBudget} inputId="example-custom-budget" />
+        <RestrictionChoices options={getMockRestrictionOptions()} selected={restrictions} onToggle={(id) => setRestrictions((current) => current.includes(id as RestrictionId) ? current.filter((value) => value !== id) : [...current, id as RestrictionId])} otherId="other" other={otherRestriction} onOtherChange={setOtherRestriction} inputId="example-other-restriction" />
+        <BudgetChoices options={getMockBudgetOptions()} selected={budgetId} onSelect={(id) => setBudgetId(id as BudgetOptionId)} otherId="other" customValue={customBudget} onCustomChange={setCustomBudget} inputId="example-custom-budget" />
         <QuestionChoices name="example-energy" legend="Escolha única" options={getMockPreferenceQuestion("energy").options} selected={energy ? [energy] : []} onSelect={setEnergy} />
         <QuestionChoices name="example-desires" legend="Desejos · uma ou duas escolhas" options={getMockDesireOptions()} selected={desires} onSelect={(id) => setDesires((current) => toggleMockDesire(current, id))} multiple maxSelections={MAX_MOCK_DESIRES} />
         <div className="space-y-2">

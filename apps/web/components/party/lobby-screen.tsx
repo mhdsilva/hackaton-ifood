@@ -4,20 +4,29 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useMockParty } from "@/components/party/mock-party-provider";
+import { useParty } from "@/components/party/live-party-provider";
 import { ParticipantAvatar, ParticipantList } from "@/components/party/participant-list";
 import { PartyShell } from "@/components/party/party-shell";
 import { canStartMockParty } from "@/lib/mock-party";
 import { buildPartyInviteUrl } from "@/lib/party-invitation";
 
+const MCP_STATUS_LABEL: Record<string, string> = {
+  not_connected: "Ainda não conectado",
+  validating: "Conectando...",
+  connected: "Conectado",
+  error: "Falha ao conectar. Tente de novo.",
+};
+
 export function LobbyScreen() {
-  const { snapshot, currentParticipantId, startParty } = useMockParty();
+  const { snapshot, currentParticipantId, startParty, connectMcp, connectingMcp } = useParty();
   const router = useRouter();
   const [copyStatus, setCopyStatus] = useState("");
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState(false);
   const isHost = currentParticipantId === snapshot.party.hostParticipantId;
   const host = snapshot.participants.find((participant) => participant.id === snapshot.party.hostParticipantId);
+  const me = snapshot.participants.find((participant) => participant.id === currentParticipantId);
+  const mcpStatus = me?.mcpConnectionStatus ?? "not_connected";
   const hasStarted = snapshot.party.status === "COLLECTING_ANSWERS";
   const canContinue = isHost && (hasStarted || canStartMockParty(snapshot, currentParticipantId));
 
@@ -80,6 +89,17 @@ export function LobbyScreen() {
       <section aria-labelledby="participants-title" className="space-y-2">
         <h2 id="participants-title" className="text-base leading-6 font-bold">Participantes da Party</h2>
         <ParticipantList participants={snapshot.participants} hostId={snapshot.party.hostParticipantId} currentParticipantId={currentParticipantId} />
+      </section>
+      <section aria-labelledby="mcp-title" className="space-y-2">
+        <h2 id="mcp-title" className="text-base leading-6 font-bold">Sua conexão com o iFood</h2>
+        <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+          <p role="status" className="text-sm text-muted-foreground">{MCP_STATUS_LABEL[mcpStatus] ?? mcpStatus}</p>
+          {(mcpStatus === "not_connected" || mcpStatus === "error") && (
+            <Button size="sm" variant="outline" disabled={connectingMcp} onClick={connectMcp}>
+              {connectingMcp ? "Abrindo..." : "Conectar iFood"}
+            </Button>
+          )}
+        </div>
       </section>
     </PartyShell>
   );

@@ -1,7 +1,13 @@
-import type {
-  QuestionnaireDefinition,
-  QuestionnaireQuestion,
+import {
+  otherAnswerKey,
+  valueAnswerKey,
+  type QuestionnaireDefinition,
+  type QuestionnaireQuestion,
 } from "@sidequest/contracts";
+
+// Reexportados por compatibilidade: a definição canônica agora mora em
+// @sidequest/contracts (convenção compartilhada com o frontend).
+export { otherAnswerKey, valueAnswerKey };
 
 /**
  * Definição temporária do questionário, alinhada ao fluxo do Figma. O Júlio ainda
@@ -177,22 +183,8 @@ export interface AnswerIssue {
   reason: string;
 }
 
-/**
- * Texto livre do "Outro" e valor digitado do "Outro valor" ficam em chaves
- * companheiras, para manter `answers` como mapa plano:
- *   answers[`${questionId}__other`] -> string
- *   answers[`${questionId}__value`] -> number
- */
-export const OTHER_ANSWER_SUFFIX = "__other";
-export const VALUE_ANSWER_SUFFIX = "__value";
-
-export function otherAnswerKey(questionId: string): string {
-  return `${questionId}${OTHER_ANSWER_SUFFIX}`;
-}
-
-export function valueAnswerKey(questionId: string): string {
-  return `${questionId}${VALUE_ANSWER_SUFFIX}`;
-}
+// otherAnswerKey/valueAnswerKey vêm de @sidequest/contracts (convenção compartilhada
+// com o frontend, que monta esse mesmo envelope antes de enviar as respostas).
 
 const DEFAULT_OTHER_OPTION_ID = "outro";
 

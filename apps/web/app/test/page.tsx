@@ -20,7 +20,7 @@ import type {
 } from "@sidequest/contracts";
 import { Button } from "@/components/ui/button";
 import { QuestionnaireForm } from "./questionnaire-form";
-import { apiBase, describeError, liveApi } from "./live-api";
+import { apiBase, describeError, liveApi } from "@/lib/api-client";
 
 const STORAGE_KEY = "ifood-party-test-session";
 

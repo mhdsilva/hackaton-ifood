@@ -1,9 +1,6 @@
 /**
- * Cliente da API real, só para a pasta de teste `app/test`.
- *
- * Não é a integração definitiva do produto (essa fica para o Otávio, seguindo o
- * §6 do `docs/handoff-colucci.md`). Aqui é o mínimo para testar o backend de
- * ponta a ponta pelo navegador.
+ * Cliente da API real, compartilhado entre `app/test` (ponta a ponta manual) e
+ * as telas de produto (`components/party/live-party-provider.tsx`).
  */
 import type {
   ApiErrorBody,

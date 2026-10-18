@@ -1,5 +1,5 @@
-import { MockPartyProvider } from "@/components/party/mock-party-provider";
+import { LivePartyProvider } from "@/components/party/live-party-provider";
 
 export default function PartyLayout({ children }: { children: React.ReactNode }) {
-  return <MockPartyProvider>{children}</MockPartyProvider>;
+  return <LivePartyProvider>{children}</LivePartyProvider>;
 }

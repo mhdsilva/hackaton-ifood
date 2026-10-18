@@ -1,6 +1,5 @@
-import { Suspense } from "react";
-import { PartyEntry, PartyEntryLoading } from "@/components/party/party-entry";
+import { LobbyScreen } from "@/components/party/lobby-screen";
 
 export default function HomePage() {
-  return <Suspense fallback={<PartyEntryLoading />}><PartyEntry /></Suspense>;
+  return <LobbyScreen />;
 }

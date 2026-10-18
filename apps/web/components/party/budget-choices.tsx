@@ -1,11 +1,13 @@
 import Image from "next/image";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { SelectionCard } from "@/components/ui/selection-card";
-import { getMockBudgetOptions, type BudgetOptionId } from "@/lib/mock-questionnaire";
 
-export function BudgetChoices({ selected, onSelect, customValue, onCustomChange, inputId }: {
-  selected: BudgetOptionId | null;
-  onSelect: (value: BudgetOptionId) => void;
+export function BudgetChoices({ options, selected, onSelect, otherId, customValue, onCustomChange, inputId }: {
+  options: readonly { id: string; label: string }[];
+  selected: string | null;
+  onSelect: (value: string) => void;
+  /** Id da opção "Outro valor": `outro` no catálogo real, `other` no fallback do Figma. */
+  otherId: string;
   customValue: string;
   onCustomChange: (value: string) => void;
   inputId: string;
@@ -15,11 +17,11 @@ export function BudgetChoices({ selected, onSelect, customValue, onCustomChange,
       <fieldset className="min-w-0">
         <legend className="mb-4 text-base leading-6 font-bold">Selecione o orçamento desejado</legend>
         <div className="space-y-3">
-          {getMockBudgetOptions().map((option) => <SelectionCard key={option.id} name={inputId} value={option.id} checked={selected === option.id} onSelect={() => onSelect(option.id)}>
+          {options.map((option) => <SelectionCard key={option.id} name={inputId} value={option.id} checked={selected === option.id} onSelect={() => onSelect(option.id)}>
             <span className={`min-w-0 flex-1 text-[15px] leading-[21px] ${selected === option.id ? "font-bold" : "font-medium text-muted-foreground"}`}>{option.label}</span>
           </SelectionCard>)}
         </div>
-        {selected === "other" && <div className="mt-4 space-y-2">
+        {selected === otherId && <div className="mt-4 space-y-2">
           <label htmlFor={inputId} className="text-sm font-medium">Selecione seu orçamento desejado</label>
           <CurrencyInput id={inputId} value={customValue} onValueChange={onCustomChange} aria-label="Orçamento máximo em reais" required />
         </div>}

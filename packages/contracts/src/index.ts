@@ -264,6 +264,24 @@ export interface ResolveOptionsOutput {
   warnings: string[];
 }
 
+/**
+ * Texto livre do "Outro" e valor digitado do "Outro valor" ficam em chaves
+ * companheiras, para manter `answers` como mapa plano:
+ *   answers[`${questionId}__other`] -> string
+ *   answers[`${questionId}__value`] -> number
+ * Convenção compartilhada entre a validação da API e quem monta o envelope no frontend.
+ */
+export const OTHER_ANSWER_SUFFIX = "__other";
+export const VALUE_ANSWER_SUFFIX = "__value";
+
+export function otherAnswerKey(questionId: string): string {
+  return `${questionId}${OTHER_ANSWER_SUFFIX}`;
+}
+
+export function valueAnswerKey(questionId: string): string {
+  return `${questionId}${VALUE_ANSWER_SUFFIX}`;
+}
+
 export interface ApiErrorBody {
   error: {
     code: string;
