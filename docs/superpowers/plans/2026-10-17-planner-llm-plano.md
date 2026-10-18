@@ -138,9 +138,9 @@ decidir qual das duas entra no pitch.
 
 | # | Task | Arquivos | Pronto quando |
 | --- | --- | --- | --- |
-| P1 | Montar as mensagens iniciais (tema, orçamento, restrições, endereços sanitizados) | `agent/planner-context.ts` (novo) | teste: mensagem não contém rua/CEP/e-mail/telefone |
-| P2 | Tool de finalização `proposeOptions` + whitelist dos IDs vistos | `agent/planner.ts` | teste: ID inventado é descartado; ID visto vira opção |
-| P3 | Traduzir a proposta em `LocalOption[]` reusando `getItem` + `buildOption` | `agent/planner-options.ts` (novo) | teste: duas consultas viram até 3 opções no orçamento |
+| ✅ P1 | Montar as mensagens iniciais (tema, orçamento, restrições, endereços sanitizados) | `agent/planner-context.ts` | feito: `planner-context.test.ts` |
+| ✅ P2 | Tool de finalização `proposeOptions` + whitelist dos IDs vistos | `agent/planner.ts` | feito: ID inventado é descartado (`planner.test.ts`) |
+| ✅ P3 | Traduzir a proposta em `LocalOption[]` reusando `getItem` + `buildOption` | `agent/planner-options.ts` | feito: proposta vira até 3 opções no orçamento (`planner-options.test.ts`) |
 | P4 | Ligar na integração: com config → planner; alguns erros → determinístico | `agent/integration.ts` | teste: sem chave = caminho de hoje; com fake = planner |
 | P5 | Timeout/limite e degradação sem quebrar os outros participantes | `agent/integration.ts` | teste: planner travado não derruba o participante B |
 | P6 | Tools próprias: `themeFromAnswers`, `proposeSubstitutes`, `describeOption`, `rankOptions` | `agent/planner-tools.ts` (novo) | teste: substituto só aponta para o que existe |
@@ -150,6 +150,10 @@ decidir qual das duas entra no pitch.
 > `compose.yaml` e `.env.example` **já** têm `OPENCODE_API_KEY`, `OPENCODE_MODEL` e
 > `OPENCODE_BASE_URL` (vieram no `b8bb662`, e o compose também recebeu `IFOOD_*`).
 > Só falta o código consumir `loadOpenCodeConfig`.
+
+**P1–P3 entregues e testados, mas ainda não ligados ao fluxo**: `resolveOptionsWithPlanner`
+existe e tem teste ponta a ponta, mas nada chama — falta o **P4** (integração escolher o planner
+quando há `OPENCODE_API_KEY` e cair no determinístico quando não há).
 
 ## 6. Como testar e como ensaiar a demo
 

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { ChatClient, ChatMessage } from "../llm/client.js";
-import { ifoodToolbox, runPlanner } from "./planner.js";
-import type { IfoodAddress, ToolCaller } from "./types.js";
+import { ifoodToolbox, plannerToolbox, runPlanner } from "./planner.js";
+import type { IfoodAddress, IfoodSearchItem, ToolCaller } from "./types.js";
 
 function assistant(
   call: { id?: string; name: string; args: string } | null,
@@ -263,4 +263,57 @@ test("getRecommendations injects the participant location", async () => {
   assert.deepEqual(output, { results: [{ itemId: "r1" }] });
   assert.deepEqual(calls[0].userLocation, { latitude: -22.01, longitude: -47.89 });
   assert.equal(calls[0].pageSize, 5);
+});
+
+const searchItem: IfoodSearchItem = {
+  itemId: "i1",
+  itemName: "Massa",
+  unitPrice: 30,
+  merchant: {
+    merchantId: "m1",
+    merchantName: "Cantina",
+    isOpen: true,
+    straightLineDistanceKm: 1,
+    deliveryMethod: { deliveryMethodId: "d1", estimatedMinutes: { min: 20, max: 30 }, fee: 5 },
+  },
+};
+
+test("plannerToolbox accepts only items the MCP actually returned", async () => {
+  const caller: ToolCaller = {
+    async callTool<T>(name: string): Promise<T> {
+      if (name === "listAddresses") return { results: [address] } as T;
+      if (name === "searchOffers") return { results: [searchItem] } as T;
+      throw new Error(`tool inesperada: ${name}`);
+    },
+  };
+
+  const planner = plannerToolbox(caller);
+  await planner.toolbox.searchOffers.run({ query: "massa" });
+
+  const result = (await planner.toolbox.proposeOptions.run({
+    items: [
+      { merchantId: "m1", itemId: "i1" },
+      { merchantId: "m9", itemId: "i9" },
+    ],
+  })) as { accepted: Array<{ itemId: string }>; rejected: string[] };
+
+  assert.equal(result.accepted.length, 1);
+  assert.equal(result.accepted[0].itemId, "i1");
+  assert.equal(result.rejected.length, 1);
+  assert.deepEqual(
+    planner.proposal()?.map((entry) => entry.itemId),
+    ["i1"],
+  );
+});
+
+test("plannerToolbox keeps the proposal empty when every id is invented", async () => {
+  const caller: ToolCaller = {
+    async callTool<T>(): Promise<T> {
+      return { results: [] } as T;
+    },
+  };
+
+  const planner = plannerToolbox(caller);
+  await planner.toolbox.proposeOptions.run({ items: [{ merchantId: "m9", itemId: "i9" }] });
+  assert.equal(planner.proposal(), undefined);
 });

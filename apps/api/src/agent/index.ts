@@ -6,8 +6,12 @@ export {
 } from "./fallback.js";
 export type { DiscoveryFixture } from "./fallback.js";
 export { AgentError, addressLabel, pickAddress } from "./pick-address.js";
-export { ifoodToolbox, runPlanner } from "./planner.js";
-export type { IfoodToolboxSettings, PlannerOutcome, PlannerSettings, PlannerStep, ToolBox, ToolSpec } from "./planner.js";
+export { ifoodToolbox, plannerToolbox, runPlanner } from "./planner.js";
+export type { IfoodToolboxSettings, PlannerOutcome, PlannerSettings, PlannerStep, PlannerToolbox, PlannerToolboxSettings, ToolBox, ToolSpec } from "./planner.js";
+export { buildPlannerMessages } from "./planner-context.js";
+export type { PlannerContext } from "./planner-context.js";
+export { buildProposedOptions, resolveOptionsWithPlanner } from "./planner-options.js";
+export type { PlannerOptionsSettings } from "./planner-options.js";
 export { sanitizeAddress, stripPersonalData } from "./sanitize.js";
 export {
   resolveOptions,
