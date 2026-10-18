@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,10 @@ import { BrandBackdrop } from "@/components/party/brand-backdrop";
 import { PartyShell } from "@/components/party/party-shell";
 import { ParticipantAvatar } from "@/components/party/participant-list";
 import { RetrospectiveStats } from "@/components/party/retrospective-stats";
+import { RetrospectiveShareDialog } from "@/components/party/retrospective-share-dialog";
 import { useParty } from "@/components/party/party-provider";
 import { useSplashComplete } from "@/components/party/splash-intro";
-import { buildRetrospectiveShareText, getMockRetrospective, retrospectiveThemeLabel, type RetrospectivePreview } from "@/lib/mock-retrospective";
+import { getMockRetrospective, retrospectiveThemeLabel, type RetrospectivePreview } from "@/lib/mock-retrospective";
 
 const distanceFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const integerFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
@@ -27,7 +28,6 @@ export function RetrospectiveScreen() {
   const waiting = response.state === "waiting_for_deliveries";
   const container = useRef<HTMLDivElement>(null);
   const splashComplete = useSplashComplete();
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
 
   useGSAP(() => {
     if (!splashComplete) return;
@@ -52,31 +52,10 @@ export function RetrospectiveScreen() {
     return () => { media.revert(); finishNumbers(); };
   }, { scope: container, dependencies: [splashComplete, preview, summary?.participantCount, summary?.completedOrderCount, summary?.itemCount, summary?.merchantCount, summary?.maxDistanceKm], revertOnUpdate: true });
 
-  useEffect(() => {
-    if (copyStatus !== "copied") return;
-    const timer = window.setTimeout(() => setCopyStatus("idle"), 2500);
-    return () => window.clearTimeout(timer);
-  }, [copyStatus]);
-
-  async function copyRetrospective() {
-    if (!summary) return;
-    try {
-      await navigator.clipboard.writeText(buildRetrospectiveShareText(summary));
-      setCopyStatus("copied");
-    } catch {
-      setCopyStatus("error");
-    }
-  }
-
   return (
     <PartyShell brandTone="light" backdrop={<BrandBackdrop />} contentClassName="pt-6 pb-8" footerClassName="space-y-2 pt-4" footer={<>
-      {summary && <Button size="party" className="w-full" onClick={copyRetrospective}>
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" /></svg>
-        {copyStatus === "copied" ? "Retrospectiva copiada!" : "Copiar esse momento"}
-      </Button>}
+      {summary && <RetrospectiveShareDialog summary={summary} />}
       <Button asChild variant="ghost" className="w-full text-order-detail"><Link href={waiting ? "/party/confirmed" : "/"}>Voltar para a Party</Link></Button>
-      {copyStatus === "error" && <p role="alert" className="text-center text-xs text-primary">Não foi possível copiar. Tente novamente.</p>}
-      <p role="status" className="sr-only">{copyStatus === "copied" ? "Retrospectiva copiada para a área de transferência." : ""}</p>
     </>}>
       <div ref={container} className="flex flex-col gap-6">
         <header data-retro-reveal className="space-y-3">
