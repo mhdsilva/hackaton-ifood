@@ -10,6 +10,7 @@
  * de tradução. Ver `apps/api/src/party/questionnaire.ts` (definição v2).
  */
 import { otherAnswerKey, valueAnswerKey } from "@sidequest/contracts";
+import type { QuestionnaireDefinition } from "@sidequest/contracts";
 import type { PartyAddress } from "@/lib/addresses";
 import { parseMockBudget, type BudgetOptionId, type RestrictionId } from "@/lib/mock-questionnaire";
 
@@ -42,6 +43,29 @@ export interface LiveAnswerState {
   otherExclusion: string;
   /** `false` só quando as telas estão no catálogo fixo do Figma (API indisponível). */
   usingLiveCatalog: boolean;
+}
+
+/**
+ * Orçamento a partir das respostas já persistidas (`answers` do snapshot), para o agente
+ * buscar opções reais com o parâmetro que o participante escolheu. Aceita a faixa fixa e o
+ * "Outro valor"; fica no fallback dos ids conhecidos se o questionário não tiver carregado.
+ */
+export function budgetFromAnswers(
+  definition: QuestionnaireDefinition | null,
+  answers: Record<string, unknown>,
+): number | null {
+  const question = definition?.questions.find((entry) => entry.id === "budget");
+  const option = question?.options?.find((entry) => entry.id === answers.budget);
+  if (typeof option?.value === "number") return option.value;
+
+  const custom = answers[valueAnswerKey("budget")];
+  if (typeof custom === "number" && Number.isFinite(custom) && custom >= 1) return custom;
+
+  const known: Record<string, number> = { "ate-25": 25, "ate-50": 50, "ate-75": 75 };
+  if (typeof answers.budget === "string" && known[answers.budget] !== undefined) {
+    return known[answers.budget];
+  }
+  return null;
 }
 
 export function buildQuestionnaireAnswers(state: LiveAnswerState): Record<string, unknown> {

@@ -43,6 +43,7 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
     saveAddress: async () => { throw new Error("Cadastro de endereço indisponível na prévia mockada."); },
     restrictionOptions,
     budgetOptions,
+    budgetCustomRange: { min: 1, max: 999 },
     energyOptions: getMockPreferenceQuestion("energy").options,
     orderStyleOptions: getMockPreferenceQuestion("order-style").options,
     desireOptions,
@@ -68,6 +69,9 @@ function MockPartyBridge({ children }: { children: ReactNode }) {
     revealTheme: async () => true,
     connectMcp: async () => {},
     connectingMcp: false,
+    resolveOrderOptions: async () => {
+      throw new Error("A busca de pedido usa o iFood; indisponível na prévia mockada.");
+    },
   };
 
   if (mock.inviteCode !== code) return <PartyLoading />;

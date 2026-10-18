@@ -25,7 +25,15 @@ Troquei o `MockPartyProvider` por um novo `LivePartyProvider`
   `/party/preparing` (a tela de animação do Otávio). A preparação usa os participantes reais e
   uma bola em órbita por pessoa. Depois dela, `/party/countdown` → `/party/reveal` mostram
   `party.theme` e `party.themeReason`; como só existe a arte italiana, todos os temas usam
-  `theme-italian.png` por enquanto.
+  `theme-italian.png` por enquanto. O pedido em `/party/order` agora é real: `resolveOrderOptions`
+  chama `POST /parties/:id/options` com o token do participante, e a API resolve via agente/MCP
+  usando o tema da Party + orçamento, restrições e endereço das respostas dele. A tela tem
+  carregamento, erro com “Conectar iFood”/“Tentar de novo” e até três opções (“Gerar outra
+  opção” alterna); sem loja que caiba, não cai para um menu fictício. O checkout segue em
+  `/party/pending/checkout`; o modo mock continua com o cenário de `lib/mock-reveal.ts`.
+- **Orçamento “Outro valor”**: o front valida a faixa de `budget.customInput` da API (1–999)
+  antes de continuar. Fora dela, o envio falhava com `INVALID_ANSWERS`/`custom_value_required`;
+  agora o botão fica bloqueado e a tela mostra a faixa.
 - **Conectar iFood**: botão novo, provisório, no lobby (sem desenho — ver bug abaixo).
 
 Arquivos novos: `live-party-provider.tsx`, `lib/live-answers.ts` (tradução dos ids do catálogo
